@@ -17,19 +17,27 @@
 package quic
 
 import (
+	"context"
+	"crypto/tls"
+	"io"
+	"net"
+
 	quicgo "github.com/lucas-clemente/quic-go"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/identity/identity"
 	"github.com/netfoundry/ziti-foundation/transport"
 	"github.com/sirupsen/logrus"
-	"io"
-	"net"
 )
 
 func Listen(bindAddress, name string, i *identity.TokenId, incoming chan transport.Connection) (io.Closer, error) {
 	log := pfxlog.ContextLogger(name + "/quic:" + bindAddress)
 
-	listener, err := quicgo.ListenAddr(bindAddress, i.ServerTLSConfig(), &quicgo.Config{})
+	tlsConfig := i.ServerTLSConfig()
+	if tlsConfig == nil {
+		tlsConfig = &tls.Config{}
+	}
+	tlsConfig.NextProtos = append(tlsConfig.NextProtos, "ziti-channel")
+	listener, err := quicgo.ListenAddr(bindAddress, tlsConfig, &quicgo.Config{})
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +51,7 @@ func acceptLoop(log *logrus.Entry, name string, listener quicgo.Listener, incomi
 	defer log.Error("exited")
 
 	for {
-		session, err := listener.Accept()
+		session, err := listener.Accept(context.Background())
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && !netErr.Temporary() {
 				log.WithField("err", err).Error("accept failed. Failure not recoverable. Exiting listen loop")
@@ -51,7 +59,7 @@ func acceptLoop(log *logrus.Entry, name string, listener quicgo.Listener, incomi
 			}
 			log.WithField("err", err).Error("accept failed")
 		} else {
-			stream, err := session.AcceptStream()
+			stream, err := session.AcceptStream(context.Background())
 			if err != nil {
 				log.WithField("err", err).Error("stream accept failed")
 

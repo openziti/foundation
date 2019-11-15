@@ -17,6 +17,9 @@
 package quic
 
 import (
+	"context"
+	"crypto/tls"
+
 	quicgo "github.com/lucas-clemente/quic-go"
 	"github.com/netfoundry/ziti-foundation/identity/identity"
 	"github.com/netfoundry/ziti-foundation/transport"
@@ -25,7 +28,12 @@ import (
 // Dial a connection over QUIC.
 //
 func Dial(destination, name string, i *identity.TokenId) (transport.Connection, error) {
-	session, err := quicgo.DialAddr(destination, i.ClientTLSConfig(), &quicgo.Config{})
+	tlsConfig := i.ClientTLSConfig()
+	if tlsConfig == nil {
+		tlsConfig = &tls.Config{}
+	}
+	tlsConfig.NextProtos = append(tlsConfig.NextProtos, "ziti-channel")
+	session, err := quicgo.DialAddr(destination, tlsConfig, &quicgo.Config{})
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +44,7 @@ func Dial(destination, name string, i *identity.TokenId) (transport.Connection, 
 		Name:    name,
 	}
 
-	stream, err := session.OpenStreamSync()
+	stream, err := session.OpenStreamSync(context.Background())
 	if err != nil {
 		return &Connection{
 			detail:  detail,
