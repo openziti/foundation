@@ -17,10 +17,9 @@
 package quic
 
 import (
-	"context"
+	quicgo "github.com/lucas-clemente/quic-go"
 	"github.com/netfoundry/ziti-foundation/identity/identity"
 	"github.com/netfoundry/ziti-foundation/transport"
-	quicgo "github.com/lucas-clemente/quic-go"
 )
 
 // Dial a connection over QUIC.
@@ -37,7 +36,7 @@ func Dial(destination, name string, i *identity.TokenId) (transport.Connection, 
 		Name:    name,
 	}
 
-	stream, err := session.OpenStreamSync(context.Background())
+	stream, err := session.OpenStreamSync()
 	if err != nil {
 		return &Connection{
 			detail:  detail,

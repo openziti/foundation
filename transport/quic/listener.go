@@ -17,7 +17,6 @@
 package quic
 
 import (
-	"context"
 	quicgo "github.com/lucas-clemente/quic-go"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/identity/identity"
@@ -44,7 +43,7 @@ func acceptLoop(log *logrus.Entry, name string, listener quicgo.Listener, incomi
 	defer log.Error("exited")
 
 	for {
-		session, err := listener.Accept(context.Background())
+		session, err := listener.Accept()
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && !netErr.Temporary() {
 				log.WithField("err", err).Error("accept failed. Failure not recoverable. Exiting listen loop")
@@ -52,7 +51,7 @@ func acceptLoop(log *logrus.Entry, name string, listener quicgo.Listener, incomi
 			}
 			log.WithField("err", err).Error("accept failed")
 		} else {
-			stream, err := session.AcceptStream(context.Background())
+			stream, err := session.AcceptStream()
 			if err != nil {
 				log.WithField("err", err).Error("stream accept failed")
 
