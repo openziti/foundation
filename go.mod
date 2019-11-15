@@ -17,5 +17,6 @@ require (
 	github.com/spf13/cobra v0.0.5
 	golang.org/x/crypto v0.0.0-20191112222119-e1110fd1c708
 	golang.org/x/sys v0.0.0-20191113165036-4c7a9d0fe056
+	golang.org/x/tools v0.0.0-20191114222411-4191b8cbba09 // indirect
 	gopkg.in/yaml.v2 v2.2.5
 )
