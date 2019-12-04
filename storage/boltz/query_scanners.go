@@ -17,8 +17,8 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/biogo/store/llrb"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"go.etcd.io/bbolt"
 	"math"
 )
@@ -53,7 +53,7 @@ type uniqueIndexScanner struct {
 	count   int64
 }
 
-func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([][]byte, int64, error) {
+func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	entityBucket := scanner.store.GetEntitiesBucket(tx)
 	if entityBucket == nil {
@@ -70,14 +70,14 @@ func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([][]byte
 		cursor = &ReverseBoltCursor{BaseBoltCursor{cursor: boltCursor}}
 	}
 
-	var result [][]byte
+	var result []string
 	isChildStore := scanner.store.IsChildStore()
 	for cursor.Init(); cursor.IsValid(); cursor.Next() {
-		id := cursor.Id()
-		if isChildStore && !scanner.store.IsEntityPresent(tx, string(id)) {
+		id := string(cursor.Id())
+		if isChildStore && !scanner.store.IsEntityPresent(tx, id) {
 			continue
 		}
-		rowCursor.NextRow(id)
+		rowCursor.NextRow(cursor.Id())
 		match, err := query.EvalBool(rowCursor)
 		if err != nil {
 			return nil, 0, err
@@ -104,7 +104,7 @@ type sortingScanner struct {
 	count  int64
 }
 
-func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([][]byte, int64, error) {
+func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	comparator, err := scanner.store.NewRowComparator(query.GetSortFields())
 	if err != nil {
@@ -142,12 +142,12 @@ func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([][]byte, in
 		}
 	}
 
-	var result [][]byte
+	var result []string
 	results.Do(func(row llrb.Comparable) bool {
 		if scanner.offset < scanner.targetOffset {
 			scanner.offset++
 		} else {
-			result = append(result, row.(*Row).id)
+			result = append(result, string(row.(*Row).id))
 		}
 		return false
 	})

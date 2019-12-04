@@ -21,6 +21,15 @@ func Contains(a []string, val string) bool {
 	return found
 }
 
+func ContainsAll(a []string, values ...string) bool {
+	for _, val := range values {
+		if !Contains(a, val) {
+			return false
+		}
+	}
+	return true
+}
+
 func FirstIndexOf(a []string, val string) (int, bool) {
 	for idx, s := range a {
 		if s == val {

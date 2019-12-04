@@ -17,9 +17,9 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/stringz"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -187,14 +187,14 @@ func (test *boltTest) setupScanEntity() {
 	test.peopleStore.AddFkSetSymbol("places", test.placesStore)
 }
 
-func (test *boltTest) toPersonList(ids [][]byte) []*testPerson {
+func (test *boltTest) toPersonList(ids []string) []*testPerson {
 	if test.err != nil {
 		return nil
 	}
 	var result []*testPerson
 	test.err = test.db.View(func(tx *bbolt.Tx) error {
 		for _, id := range ids {
-			person := test.loadPerson(tx, string(id))
+			person := test.loadPerson(tx, id)
 			if test.err == nil {
 				result = append(result, person)
 			} else {
@@ -237,10 +237,10 @@ func (test *boltTest) loadPerson(tx *bbolt.Tx, id string) *testPerson {
 	}
 }
 
-func (test *boltTest) query(queryString string) ([][]byte, int64) {
+func (test *boltTest) query(queryString string) ([]string, int64) {
 	test.err = nil
 
-	var result [][]byte
+	var result []string
 	var count int64
 	var err error
 	test.err = test.db.View(func(tx *bbolt.Tx) error {
