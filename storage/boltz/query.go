@@ -30,7 +30,7 @@ type RowComparator interface {
 }
 
 type Scanner interface {
-	Scan(tx *bbolt.Tx, query ast.Query) ([][]byte, int64, error)
+	Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
 }
 
 type RowCursor interface {

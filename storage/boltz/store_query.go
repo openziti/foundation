@@ -17,8 +17,8 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 	"strings"
@@ -246,23 +246,19 @@ func (store *BaseStore) addSetSymbol(name string, nodeType ast.NodeType, listSto
 	return result
 }
 
-func (store *BaseStore) NewScanner(sort []ast.SortField) (Scanner, error) {
+func (store *BaseStore) NewScanner(sort []ast.SortField) Scanner {
 	if len(sort) > SortMax {
 		sort = sort[:SortMax]
 	}
 
 	if len(sort) == 0 || sort[0].Symbol() == "id" {
 		if len(sort) < 1 || sort[0].IsAscending() {
-			return &uniqueIndexScanner{store: store, forward: true}, nil
+			return &uniqueIndexScanner{store: store, forward: true}
 		}
-		return &uniqueIndexScanner{store: store, forward: false}, nil
+		return &uniqueIndexScanner{store: store, forward: false}
 	}
-	return &sortingScanner{
-		store: store,
-	}, nil
+	return &sortingScanner{store: store}
 }
-
-
 
 type sortFieldImpl struct {
 	name  string
@@ -314,7 +310,7 @@ func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, e
 	return &rowComparatorImpl{symbols: symbolsComparators}, nil
 }
 
-func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([][]byte, int64, error) {
+func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([]string, int64, error) {
 	query, err := ast.Parse(store, queryString)
 	if err != nil {
 		return nil, 0, err
@@ -322,10 +318,7 @@ func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([][]byte, in
 	return store.QueryIdsC(tx, query)
 }
 
-func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([][]byte, int64, error) {
-	scanner, err := store.NewScanner(query.GetSortFields())
-	if err != nil {
-		return nil, 0, err
-	}
+func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
+	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.Scan(tx, query)
 }
