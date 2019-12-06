@@ -17,8 +17,6 @@
 package boltz
 
 import (
-	"fmt"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 	"sort"
@@ -50,7 +48,7 @@ func (collection *linkCollectionImpl) GetLinkedSymbol() EntitySymbol {
 func (collection *linkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id string) *TypedBucket {
 	entityBucket := collection.field.GetStore().GetEntityBucket(tx, []byte(id))
 	if entityBucket == nil {
-		return ErrBucket(fmt.Errorf("%v not found with id %v", collection.field.GetStore().GetEntityType(), id))
+		return ErrBucket(errors.Errorf("%v not found with id %v", collection.field.GetStore().GetEntityType(), id))
 	}
 	return entityBucket.GetOrCreatePath(collection.field.GetPath()...)
 }
@@ -88,14 +86,15 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
-		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+		for row, _ := cursor.First(); row != nil; row, _ = cursor.Next() {
+			_, val := getTypeAndValue(row)
 			if len(keys) == 0 {
-				if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
+				if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
 					return err
 				}
 				continue
 			}
-			_, val := getTypeAndValue(key)
+
 			cursorCurrent := string(val)
 			compare := keys[0]
 
@@ -109,7 +108,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 			}
 
 			if compare > cursorCurrent {
-				if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
+				if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
 					return err
 				}
 			} else if len(keys) != 0 {
@@ -183,14 +182,12 @@ func (collection *linkCollectionImpl) unlinkCursor(tx *bbolt.Tx, cursor *bbolt.C
 func (collection *linkCollectionImpl) unlinkOther(tx *bbolt.Tx, id []byte, associatedId []byte) error {
 	otherBaseBucket := collection.otherField.GetStore().GetEntityBucket(tx, associatedId)
 	if otherBaseBucket == nil {
-		pfxlog.Logger().Warnf("can't unlink %v with id %v because base bucket wasn't found",
-			collection.otherField.GetStore().GetEntityType(), string(associatedId))
+		// attempt to unlink something that doesn't exist. nothing to do on fk side
 		return nil
 	}
 	otherFieldBucket := otherBaseBucket.GetPath(collection.otherField.GetPath()...)
 	if otherFieldBucket == nil {
-		pfxlog.Logger().Warnf("can't unlink %v with id %v because field bucket wasn't found",
-			collection.otherField.GetStore().GetEntityType(), string(associatedId))
+		// attempt to unlink something that's not linked. nothing to do on fk side
 		return nil
 	}
 	return otherFieldBucket.DeleteListEntry(TypeString, id).Err

@@ -33,6 +33,16 @@ func Contains(a []string, val string) bool {
 	return found
 }
 
+func Remove(a []string, val string) []string {
+	var result []string
+	for _, next := range a {
+		if next != val {
+			result = append(result, next)
+		}
+	}
+	return result
+}
+
 func ContainsAll(a []string, values ...string) bool {
 	for _, val := range values {
 		if !Contains(a, val) {
