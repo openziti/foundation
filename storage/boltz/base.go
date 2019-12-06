@@ -160,6 +160,10 @@ func (ctx *PersistContext) SetStringList(field string, value []string) {
 	ctx.Bucket.SetStringList(field, value, ctx.FieldChecker)
 }
 
+func (ctx *PersistContext) GetAndSetStringList(field string, value []string) []string {
+	return ctx.Bucket.GetAndSetStringList(field, value, ctx.FieldChecker)
+}
+
 func (ctx *PersistContext) SetLinkedIds(field string, value []string) {
 	if ctx.Bucket.Err == nil && (ctx.FieldChecker == nil || ctx.FieldChecker.IsUpdated(field)) {
 		serviceLinks := ctx.Store.GetLinkCollection(field)
