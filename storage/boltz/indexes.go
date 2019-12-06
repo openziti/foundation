@@ -37,9 +37,9 @@ type Indexer struct {
 	basePath    []string
 }
 
-type fieldTypeAndValue struct {
+type FieldTypeAndValue struct {
 	FieldType
-	value []byte
+	Value []byte
 }
 
 type IndexingContext struct {
@@ -48,7 +48,7 @@ type IndexingContext struct {
 	rowId      []byte
 	errHolder  errorz.ErrorHolder
 	atomStates map[Constraint][]byte
-	setStates  map[Constraint][]fieldTypeAndValue
+	setStates  map[Constraint][]FieldTypeAndValue
 }
 
 func NewIndexer(basePath ...string) *Indexer {
@@ -114,7 +114,7 @@ func (indexer *Indexer) NewIndexingContext(isCreate bool, tx *bbolt.Tx, id strin
 		rowId:      []byte(id),
 		errHolder:  holder,
 		atomStates: map[Constraint][]byte{},
-		setStates:  map[Constraint][]fieldTypeAndValue{},
+		setStates:  map[Constraint][]FieldTypeAndValue{},
 	}
 }
 
@@ -161,9 +161,12 @@ type ReadIndex interface {
 	Read(tx *bbolt.Tx, val []byte) []byte
 }
 
+type SetChangeListener func(tx *bbolt.Tx, rowId []byte, old []FieldTypeAndValue, new []FieldTypeAndValue, holder errorz.ErrorHolder)
+
 type SetReadIndex interface {
 	GetSymbol() EntitySetSymbol
 	Read(tx *bbolt.Tx, key []byte, f func(val []byte))
+	AddListener(listener SetChangeListener)
 }
 
 type Constraint interface {
@@ -246,6 +249,11 @@ func (index *uniqueIndex) processDelete(ctx *IndexingContext) {
 type setIndex struct {
 	symbol    EntitySetSymbol
 	indexPath []string
+	listeners []SetChangeListener
+}
+
+func (index *setIndex) AddListener(listener SetChangeListener) {
+	index.listeners = append(index.listeners, listener)
 }
 
 func (index *setIndex) GetSymbol() EntitySetSymbol {
@@ -279,12 +287,12 @@ func (index *setIndex) visitCurrent(ctx *IndexingContext, f func(fieldType Field
 	}
 }
 
-func (index *setIndex) getCurrentValues(ctx *IndexingContext) []fieldTypeAndValue {
-	var result []fieldTypeAndValue
+func (index *setIndex) getCurrentValues(ctx *IndexingContext) []FieldTypeAndValue {
+	var result []FieldTypeAndValue
 	index.visitCurrent(ctx, func(fieldType FieldType, value []byte) {
-		result = append(result, fieldTypeAndValue{
+		result = append(result, FieldTypeAndValue{
 			FieldType: fieldType,
-			value:     value,
+			Value:     value,
 		})
 	})
 	return result
@@ -307,7 +315,7 @@ func (index *setIndex) processAfterUpdate(ctx *IndexingContext) {
 		} else {
 			for idx, oldVal := range oldValues {
 				newVal := newValues[idx]
-				if oldVal.FieldType != newVal.FieldType || !bytes.Equal(oldVal.value, newVal.value) {
+				if oldVal.FieldType != newVal.FieldType || !bytes.Equal(oldVal.Value, newVal.Value) {
 					changed = true
 					break
 				}
@@ -319,12 +327,15 @@ func (index *setIndex) processAfterUpdate(ctx *IndexingContext) {
 		}
 
 		for _, oldVal := range oldValues {
-			indexBucket := index.getIndexBucket(ctx.tx, oldVal.value)
+			indexBucket := index.getIndexBucket(ctx.tx, oldVal.Value)
 			ctx.errHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.rowId).Err)
 		}
 		for _, newVal := range newValues {
-			indexBucket := index.getIndexBucket(ctx.tx, newVal.value)
+			indexBucket := index.getIndexBucket(ctx.tx, newVal.Value)
 			ctx.errHolder.SetError(indexBucket.SetListEntry(TypeString, ctx.rowId).Err)
+		}
+		for _, listener := range index.listeners {
+			listener(ctx.tx, ctx.rowId, oldValues, newValues, ctx.errHolder)
 		}
 	}
 }
@@ -333,7 +344,7 @@ func (index *setIndex) processDelete(ctx *IndexingContext) {
 	if !ctx.errHolder.HasError() {
 		values := index.getCurrentValues(ctx)
 		for _, val := range values {
-			indexBucket := index.getIndexBucket(ctx.tx, val.value)
+			indexBucket := index.getIndexBucket(ctx.tx, val.Value)
 			ctx.errHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.rowId).Err)
 		}
 	}
@@ -440,4 +451,3 @@ func (index *fkDeleteConstraint) processDelete(ctx *IndexingContext) {
 func (index *fkDeleteConstraint) initialize(_ *bbolt.Tx, _ errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
 }
-

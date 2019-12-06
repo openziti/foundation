@@ -16,9 +16,30 @@
 
 package stringz
 
+func EqualSlices(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for idx, aVal := range a {
+		if aVal != b[idx] {
+			return false
+		}
+	}
+	return true
+}
+
 func Contains(a []string, val string) bool {
 	_, found := FirstIndexOf(a, val)
 	return found
+}
+
+func ContainsAll(a []string, values ...string) bool {
+	for _, val := range values {
+		if !Contains(a, val) {
+			return false
+		}
+	}
+	return true
 }
 
 func FirstIndexOf(a []string, val string) (int, bool) {
@@ -57,4 +78,20 @@ func OrEmpty(val *string) string {
 		return ""
 	}
 	return *val
+}
+
+func Permutations(v []string, f func([]string)) {
+	PermutationWith([]string{}, v, f)
+}
+
+func PermutationWith(base, v []string, f func([]string)) {
+	for i := 0; i < len(v); i++ {
+		var result []string
+		if len(base) > 0 {
+			result = append(result, base...)
+		}
+		result = append(result, v[i])
+		f(result)
+		PermutationWith(result, v[i+1:], f)
+	}
 }

@@ -556,6 +556,25 @@ func (bucket *TypedBucket) IsStringListEmpty(name string) bool {
 	return false
 }
 
+func (bucket *TypedBucket) GetAndSetStringList(name string, value []string, fieldChecker FieldChecker) []string {
+	result := bucket.GetStringList(name)
+	if bucket.ProceedWithSet(name, fieldChecker) {
+		listBucket, err := bucket.EmptyBucket(name)
+		if err != nil {
+			bucket.Err = err
+			return result
+		}
+
+		for _, key := range value {
+			if listBucket.SetListEntry(TypeString, []byte(key)).Err != nil {
+				bucket.Err = listBucket.Err
+				return result
+			}
+		}
+	}
+	return result
+}
+
 func (bucket *TypedBucket) SetStringList(name string, value []string, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
 		listBucket, err := bucket.EmptyBucket(name)

@@ -18,7 +18,7 @@ package errorz
 
 type ErrorHolder interface {
 	GetError() error
-	SetError(error)
+	SetError(error) bool
 	HasError() bool
 }
 
@@ -30,10 +30,11 @@ func (holder *ErrorHolderImpl) GetError() error {
 	return holder.Err
 }
 
-func (holder *ErrorHolderImpl) SetError(err error) {
+func (holder *ErrorHolderImpl) SetError(err error) bool {
 	if err != nil && holder.Err == nil {
 		holder.Err = err
 	}
+	return holder.Err != nil
 }
 
 func (holder *ErrorHolderImpl) HasError() bool {

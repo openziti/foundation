@@ -17,8 +17,8 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/kataras/go-events"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"go.etcd.io/bbolt"
 	"io"
 	"time"
@@ -73,10 +73,10 @@ type ListStore interface {
 	FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string
 
 	// QueryIds compiles the query and runs it against the store
-	QueryIds(tx *bbolt.Tx, query string) ([][]byte, int64, error)
+	QueryIds(tx *bbolt.Tx, query string) ([]string, int64, error)
 
 	// QueryIdsC executes a compile query against the store
-	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([][]byte, int64, error)
+	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
 }
 
 type CrudStore interface {
@@ -158,6 +158,10 @@ func (ctx *PersistContext) SetMap(field string, value map[string]interface{}) {
 
 func (ctx *PersistContext) SetStringList(field string, value []string) {
 	ctx.Bucket.SetStringList(field, value, ctx.FieldChecker)
+}
+
+func (ctx *PersistContext) GetAndSetStringList(field string, value []string) []string {
+	return ctx.Bucket.GetAndSetStringList(field, value, ctx.FieldChecker)
 }
 
 func (ctx *PersistContext) SetLinkedIds(field string, value []string) {
