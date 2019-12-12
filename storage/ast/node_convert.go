@@ -96,7 +96,7 @@ func (node *BinaryExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	}
 
 	setFunction, isSetFunction := node.left.(*SetFunctionNode)
-	if isSetFunction {
+	if isSetFunction && setFunction.IsCompare() {
 		node.left = setFunction.symbol
 	}
 
@@ -105,7 +105,7 @@ func (node *BinaryExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 		return nil, err
 	}
 
-	if isSetFunction {
+	if isSetFunction && setFunction.IsCompare() {
 		return setFunction.MoveUpTree(typedExpr)
 	}
 
@@ -456,6 +456,13 @@ func (node *SetFunctionNode) TypeTransform(s SymbolTypes) (Node, error) {
 			node.symbol.Symbol(), reflect.TypeOf(symbolNode))
 	}
 	node.symbol = newSymbolNode
+
+	if node.setFunction == SetFunctionCount {
+		return &CountSetExprNode{symbol: node.symbol}, nil
+	}
+	if node.setFunction == SetFunctionIsEmpty {
+		return &IsEmptySetExprNode{symbol: node.symbol}, nil
+	}
 	return node, nil
 }
 
@@ -464,7 +471,23 @@ func (node *SetFunctionNode) String() string {
 }
 
 func (node *SetFunctionNode) GetType() NodeType {
-	return node.symbol.GetType()
+	switch node.setFunction {
+	case SetFunctionCount:
+		return NodeTypeInt64
+	case SetFunctionIsEmpty:
+		return NodeTypeBool
+	default:
+		return node.symbol.GetType()
+	}
+}
+
+func (node *SetFunctionNode) IsCompare() bool {
+	switch node.setFunction {
+	case SetFunctionAllOf, SetFunctionAnyOf, SetFunctionNoneOf:
+		return true
+	default:
+		return false
+	}
 }
 
 func (node *SetFunctionNode) MoveUpTree(boolNode BoolNode) (BoolNode, error) {

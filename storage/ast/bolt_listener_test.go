@@ -17,8 +17,8 @@
 package ast
 
 import (
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"fmt"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"reflect"
@@ -214,10 +214,12 @@ var ts = &testSymbols{
 		"nci":      int64(123456789),
 		"ncf":      123456789.123,
 		"link.ids": []int64{123, 456, 789},
+		"lunk.ids": []int64{},
 	},
 	types: map[string]NodeType{
 		"n":        NodeTypeString,
 		"link.ids": NodeTypeInt64,
+		"lunk.ids": NodeTypeInt64,
 	},
 	cursors: map[string]*testSymbolsSetCursor{},
 }
@@ -576,6 +578,14 @@ func TestSetFunctions(t *testing.T) {
 		{"any of true in, false", "anyOf(link.ids) in [321, 654]", false},
 		{"any of true between, true", "anyOf(link.ids) between 123 and 124", true},
 		{"any of true between, false", "anyOf(link.ids) between 100 and 110", false},
+
+		{"count linkIds = 3, true", "count(link.ids) = 3", true},
+		{"count linkIds > 5, false", "count(link.ids) > 5", false},
+		{"count lunkIds = 0, true", "count(lunk.ids) = 0", true},
+		{"count lunkIds > 5, false", "count(lunk.ids) > 5", false},
+
+		{"isEmpty linkIds, false", "isEmpty(link.ids) = true", false},
+		{"isEmpty lunkIds, true", "isEmpty(lunk.ids) = true", true},
 	}
 
 	for _, tt := range tests {

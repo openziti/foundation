@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type AllOfSetExprNode struct {
@@ -153,4 +154,91 @@ func (node *NoneOfSetExprNode) EvalBool(s Symbols) (result bool, err error) {
 		cursor.Next()
 	}
 	return
+}
+
+type CountSetExprNode struct {
+	symbol SymbolNode
+}
+
+func (node *CountSetExprNode) Symbol() string {
+	return node.symbol.Symbol()
+}
+
+func (node *CountSetExprNode) String() string {
+	return fmt.Sprintf("count(%v)", node.Symbol())
+}
+
+func (node *CountSetExprNode) GetType() NodeType {
+	return NodeTypeInt64
+}
+
+func (node *CountSetExprNode) Accept(visitor Visitor) {
+	visitor.VisitCountSetExprNodeStart(node)
+	node.symbol.Accept(visitor)
+	visitor.VisitCountSetExprNodeEnd(node)
+}
+
+func (node *CountSetExprNode) EvalInt64(s Symbols) (*int64, error) {
+	var result int64
+	cursor, err := s.OpenSetCursor(node.Symbol())
+	if err != nil {
+		return nil, err
+	}
+	if cursor == nil {
+		return &result, err
+	}
+	defer cursor.Close()
+
+	for cursor.IsValid() {
+		result++
+		cursor.Next()
+	}
+	return &result, nil
+}
+
+func (node *CountSetExprNode) EvalString(s Symbols) (*string, error) {
+	result, err := node.EvalInt64(s)
+	if err != nil {
+		return nil, err
+	}
+	stringResult := strconv.FormatInt(*result, 10)
+	return &stringResult, nil
+}
+
+func (node *CountSetExprNode) ToFloat64() Float64Node {
+	return &Int64ToFloat64Node{node}
+}
+
+type IsEmptySetExprNode struct {
+	symbol SymbolNode
+}
+
+func (node *IsEmptySetExprNode) Symbol() string {
+	return node.symbol.Symbol()
+}
+
+func (node *IsEmptySetExprNode) String() string {
+	return fmt.Sprintf("isEmpty(%v)", node.Symbol())
+}
+
+func (node *IsEmptySetExprNode) GetType() NodeType {
+	return NodeTypeBool
+}
+
+func (node *IsEmptySetExprNode) Accept(visitor Visitor) {
+	visitor.VisitIsEmptySetExprNodeStart(node)
+	node.symbol.Accept(visitor)
+	visitor.VisitIsEmptySetExprNodeEnd(node)
+}
+
+func (node *IsEmptySetExprNode) EvalBool(s Symbols) (bool, error) {
+	cursor, err := s.OpenSetCursor(node.Symbol())
+	if err != nil {
+		return true, err
+	}
+	if cursor == nil {
+		return true, err
+	}
+	defer cursor.Close()
+	return !cursor.IsValid(), nil
 }
