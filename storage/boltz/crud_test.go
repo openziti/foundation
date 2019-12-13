@@ -17,14 +17,15 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"sort"
 	"testing"
@@ -35,8 +36,15 @@ const (
 	fieldManagerId      = "managerId"
 	fieldDirectReports  = "directReports"
 	fieldRoleAttributes = "roleAttributes"
-	entityTypeEmployee  = "employees"
+
+	entityTypeEmployee = "employees"
+	entityTypeLocation = "locations"
 )
+
+type testStores struct {
+	employee *employeeStoreImpl
+	location *locationStoreImpl
+}
 
 type Employee struct {
 	Id             string
@@ -81,8 +89,13 @@ func newEmployeeStore() *employeeStoreImpl {
 
 type employeeStoreImpl struct {
 	*BaseStore
-	indexName  ReadIndex
-	indexRoles SetReadIndex
+	stores *testStores
+
+	symbolLocations EntitySetSymbol
+	indexName       ReadIndex
+	indexRoles      SetReadIndex
+
+	locationsCollection LinkCollection
 }
 
 func (store *employeeStoreImpl) NewStoreEntity() BaseEntity {
@@ -100,9 +113,12 @@ func (store *employeeStoreImpl) initializeLocal() {
 	managerIdSymbol := store.AddFkSymbol(fieldManagerId, store)
 	directReportsSymbol := store.AddFkSetSymbol(fieldDirectReports, store)
 	store.AddNullableFkIndex(managerIdSymbol, directReportsSymbol)
+
+	store.symbolLocations = store.AddFkSetSymbol(entityTypeLocation, store.stores.location)
 }
 
 func (store *employeeStoreImpl) initializeLinked() {
+	store.locationsCollection = store.AddLinkCollection(store.symbolLocations, store.stores.location.symbolEmployees)
 }
 
 func (store *employeeStoreImpl) getEmployeesWithRoleAttribute(tx *bbolt.Tx, role string) []string {
@@ -114,12 +130,66 @@ func (store *employeeStoreImpl) getEmployeesWithRoleAttribute(tx *bbolt.Tx, role
 	return result
 }
 
+type Location struct {
+	Id string
+}
+
+func (entity *Location) GetId() string {
+	return entity.Id
+}
+
+func (entity *Location) SetId(id string) {
+	entity.Id = id
+}
+
+func (entity *Location) LoadValues(CrudStore, *TypedBucket) {
+}
+
+func (entity *Location) SetValues(*PersistContext) {
+}
+
+func (entity *Location) GetEntityType() string {
+	return entityTypeLocation
+}
+
+func newLocationStore() *locationStoreImpl {
+	store := &locationStoreImpl{
+		BaseStore: NewBaseStore(nil, entityTypeLocation, func(id string) error {
+			return errors.Errorf("entity of type %v with id %v not found", entityTypeLocation, id)
+		}, "stores"),
+	}
+	store.InitImpl(store)
+	return store
+}
+
+type locationStoreImpl struct {
+	*BaseStore
+	stores              *testStores
+	symbolEmployees     EntitySetSymbol
+	employeesCollection LinkCollection
+}
+
+func (store *locationStoreImpl) NewStoreEntity() BaseEntity {
+	return &Location{}
+}
+
+func (store *locationStoreImpl) initializeLocal() {
+	store.AddIdSymbol("id", ast.NodeTypeString)
+	store.symbolEmployees = store.AddFkSetSymbol(entityTypeEmployee, store.stores.employee)
+}
+
+func (store *locationStoreImpl) initializeLinked() {
+	store.employeesCollection = store.AddLinkCollection(store.symbolEmployees, store.stores.employee.symbolLocations)
+}
+
 type crudTest struct {
 	errorz.ErrorHolderImpl
 	*require.Assertions
-	dbFile        *os.File
-	db            *bbolt.DB
-	empStore      *employeeStoreImpl
+	dbFile *os.File
+	db     *bbolt.DB
+
+	empStore *employeeStoreImpl
+	locStore *locationStoreImpl
 }
 
 func (test *crudTest) init() {
@@ -130,15 +200,29 @@ func (test *crudTest) init() {
 	test.db, err = bbolt.Open(test.dbFile.Name(), 0, bbolt.DefaultOptions)
 	test.NoError(err)
 
-	test.empStore = newEmployeeStore()
-	test.empStore.initializeLocal()
-	test.empStore.initializeLinked()
+	stores := &testStores{
+		employee: newEmployeeStore(),
+		location: newLocationStore(),
+	}
+
+	stores.employee.stores = stores
+	stores.location.stores = stores
+
+	stores.employee.initializeLocal()
+	stores.location.initializeLocal()
+
+	stores.employee.initializeLinked()
+	stores.location.initializeLinked()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
-		test.empStore.InitializeIndexes(tx, test)
+		stores.employee.InitializeIndexes(tx, test)
+		stores.location.InitializeIndexes(tx, test)
 		return nil
 	})
 	test.NoError(err)
+
+	test.empStore = stores.employee
+	test.locStore = stores.location
 }
 
 func (test *crudTest) cleanup() {
@@ -165,6 +249,7 @@ func TestCrud(t *testing.T) {
 	t.Run("unique indexes", test.testUniqueIndex)
 	t.Run("set indexes", test.testSetIndex)
 	t.Run("fk indexes", test.testFkIndex)
+	t.Run("link collections", test.testLinkCollection)
 }
 
 func (test *crudTest) testUniqueIndex(_ *testing.T) {
@@ -477,6 +562,68 @@ func (test *crudTest) sortedIdList(employees ...*Employee) []string {
 	var result []string
 	for _, emp := range employees {
 		result = append(result, emp.Id)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func (test *crudTest) testLinkCollection(_ *testing.T) {
+	employee := &Employee{
+		Id:   uuid.New().String(),
+		Name: uuid.New().String(),
+	}
+
+	var locations []*Location
+
+	for i := 0; i < 100; i++ {
+		locations = append(locations, &Location{Id: uuid.New().String()})
+	}
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		ctx := NewMutateContext(tx)
+		if err := test.empStore.Create(ctx, employee); err != nil {
+			return err
+		}
+
+		for _, e := range locations {
+			if err := test.locStore.Create(ctx, e); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	for i := 0; i < 100; i++ {
+		setSize := rand.Intn(20)
+		var locIds []string
+		for j := 0; j < setSize; j++ {
+			locIds = append(locIds, locations[rand.Intn(len(locations))].Id)
+		}
+		err = test.db.Update(func(tx *bbolt.Tx) error {
+			return test.empStore.locationsCollection.SetLinks(tx, employee.Id, locIds)
+		})
+		test.NoError(err)
+		keys := toUniqueSortedSlice(locIds)
+		var currentIds []string
+		err = test.db.View(func(tx *bbolt.Tx) error {
+			currentIds = test.empStore.locationsCollection.GetLinks(tx, employee.Id)
+			return nil
+		})
+		test.NoError(err)
+		test.Equal(keys, currentIds)
+	}
+
+	test.NoError(err)
+}
+
+func toUniqueSortedSlice(vals []string) []string {
+	m := map[string]struct{}{}
+	for _, val := range vals {
+		m[val] = struct{}{}
+	}
+	var result []string
+	for k := range m {
+		result = append(result, k)
 	}
 	sort.Strings(result)
 	return result

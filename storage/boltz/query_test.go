@@ -61,24 +61,21 @@ func (p *testPerson) String() string {
 }
 
 type boltTest struct {
+	*require.Assertions
 	dbFile        *os.File
 	db            *bbolt.DB
 	referenceTime time.Time
-	err           error
 	placesStore   ListStore
 	peopleStore   ListStore
 }
 
 func (test *boltTest) openBoltDb() {
-	test.dbFile, test.err = ioutil.TempFile("", "query-bolt-test-db")
-	if test.err != nil {
-		return
-	}
-	test.err = test.dbFile.Close()
-	if test.err != nil {
-		return
-	}
-	test.db, test.err = bbolt.Open(test.dbFile.Name(), 0, bbolt.DefaultOptions)
+	var err error
+	test.dbFile, err = ioutil.TempFile("", "query-bolt-test-db")
+	test.NoError(err)
+	test.NoError(test.dbFile.Close())
+	test.db, err = bbolt.Open(test.dbFile.Name(), 0, bbolt.DefaultOptions)
+	test.NoError(err)
 }
 
 func (test *boltTest) cleanup() {
@@ -96,11 +93,7 @@ func (test *boltTest) cleanup() {
 }
 
 func (test *boltTest) createTestSchema() {
-	if test.err != nil {
-		return
-	}
-
-	test.err = test.db.Update(func(tx *bbolt.Tx) error {
+	err := test.db.Update(func(tx *bbolt.Tx) error {
 		businessIndex := 0
 		placesBucket := GetOrCreatePath(tx, "application", "places")
 		for _, place := range places {
@@ -160,13 +153,10 @@ func (test *boltTest) createTestSchema() {
 		}
 		return bucket.Err
 	})
+	test.NoError(err)
 }
 
 func (test *boltTest) setupScanEntity() {
-	if test.err != nil {
-		return
-	}
-
 	test.placesStore = NewBaseStore(nil, "places", nil, "application")
 	test.placesStore.AddIdSymbol("id", ast.NodeTypeString)
 	test.placesStore.AddSymbol("name", ast.NodeTypeString)
@@ -188,32 +178,20 @@ func (test *boltTest) setupScanEntity() {
 }
 
 func (test *boltTest) toPersonList(ids []string) []*testPerson {
-	if test.err != nil {
-		return nil
-	}
 	var result []*testPerson
-	test.err = test.db.View(func(tx *bbolt.Tx) error {
+	err := test.db.View(func(tx *bbolt.Tx) error {
 		for _, id := range ids {
-			person := test.loadPerson(tx, id)
-			if test.err == nil {
+			if person := test.loadPerson(tx, id); person != nil {
 				result = append(result, person)
-			} else {
-				return test.err
 			}
 		}
 		return nil
 	})
-	if test.err != nil {
-		return nil
-	}
+	test.NoError(err)
 	return result
 }
 
 func (test *boltTest) loadPerson(tx *bbolt.Tx, id string) *testPerson {
-	if test.err != nil {
-		return nil
-	}
-
 	bucket := Path(tx, "application", "people", id)
 	if bucket == nil {
 		return nil
@@ -238,33 +216,32 @@ func (test *boltTest) loadPerson(tx *bbolt.Tx, id string) *testPerson {
 }
 
 func (test *boltTest) query(queryString string) ([]string, int64) {
-	test.err = nil
-
 	var result []string
 	var count int64
 	var err error
-	test.err = test.db.View(func(tx *bbolt.Tx) error {
+	err = test.db.View(func(tx *bbolt.Tx) error {
 		result, count, err = test.peopleStore.QueryIds(tx, queryString)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
+	test.NoError(err)
 
 	return result, count
 }
 
 func TestQuery(t *testing.T) {
-	boltTestContext := &boltTest{referenceTime: time.Now()}
+	boltTestContext := &boltTest{
+		Assertions:    require.New(t),
+		referenceTime: time.Now(),
+	}
 	defer boltTestContext.cleanup()
 	boltTestContext.openBoltDb()
 	boltTestContext.createTestSchema()
 	boltTestContext.setupScanEntity()
 
-	assertions := require.New(t)
-	assertions.NoError(boltTestContext.err)
-
-	tests := &boltTests{context: boltTestContext}
+	tests := &boltQueryTests{boltTest: boltTestContext}
 
 	t.Run("first name", tests.testFirstName)
 	t.Run("numbers in", tests.testNumbers)
@@ -276,331 +253,275 @@ func TestQuery(t *testing.T) {
 	t.Run("map queries", tests.testMapQueries)
 }
 
-type boltTests struct {
-	context *boltTest
+type boltQueryTests struct {
+	*boltTest
 }
 
-func (test *boltTests) testFirstName(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := context.query(`firstName = "Alice"`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(10), count)
+func (test *boltQueryTests) testFirstName(*testing.T) {
+	ids, count := test.query(`firstName = "Alice"`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(10), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people := test.toPersonList(ids)
 
-	assertions.Equal(10, len(people))
+	test.Equal(10, len(people))
 
 	var foundNames []string
 	for _, person := range people {
-		assertions.Equal("Alice", person.firstName)
-		assertions.True(stringz.Contains(lastNames, person.lastName))
-		assertions.False(stringz.Contains(foundNames, person.lastName))
+		test.Equal("Alice", person.firstName)
+		test.True(stringz.Contains(lastNames, person.lastName))
+		test.False(stringz.Contains(foundNames, person.lastName))
 		foundNames = append(foundNames, person.lastName)
 		fmt.Println(person.String())
 	}
 }
 
-func (test *boltTests) testNumbers(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := test.context.query(`anyOf(numbers) in [5, 15, 17, 27]`)
-	assertions.NoError(context.err)
-	assertions.Equal(3, len(ids))
-	assertions.Equal(int64(3), count)
+func (test *boltQueryTests) testNumbers(*testing.T) {
+	ids, count := test.query(`anyOf(numbers) in [5, 15, 17, 27]`)
+	test.Equal(3, len(ids))
+	test.Equal(int64(3), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people := test.toPersonList(ids)
 
-	assertions.Equal(3, len(people))
+	test.Equal(3, len(people))
 }
 
-func (test *boltTests) testPlaceName(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := test.context.query(`anyOf(places.name) = "Alphaville"`)
-	assertions.NoError(context.err)
-	assertions.Equal(40, len(ids))
-	assertions.Equal(int64(40), count)
+func (test *boltQueryTests) testPlaceName(*testing.T) {
+	ids, count := test.query(`anyOf(places.name) = "Alphaville"`)
+	test.Equal(40, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
-
-	assertions.Equal(40, len(people))
+	people := test.toPersonList(ids)
+	test.Equal(40, len(people))
 }
 
-func (test *boltTests) testPlaceIdsIn(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
+func (test *boltQueryTests) testPlaceIdsIn(*testing.T) {
 	var alphaVilleId string
 
-	err := test.context.db.View(func(tx *bbolt.Tx) error {
-		ids, _, err := test.context.placesStore.QueryIds(tx, `name = "Alphaville"`)
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		ids, _, err := test.placesStore.QueryIds(tx, `name = "Alphaville"`)
 		if err != nil {
 			return err
 		}
 		if len(ids) != 1 {
 			return errors.Errorf("unexpected number of places with name Alphaville: %v", len(ids))
 		}
-		alphaVilleId = string(ids[0])
+		alphaVilleId = ids[0]
 		return nil
 	})
-	assertions.NoError(err)
+	test.NoError(err)
 
-	ids, count := test.context.query(fmt.Sprintf(`anyOf(places.id) = "%v"`, alphaVilleId))
-	assertions.NoError(context.err)
-	assertions.Equal(40, len(ids))
-	assertions.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
-	}
-
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
-
-	assertions.Equal(40, len(people))
-}
-
-func (test *boltTests) testPlaceNamesIn(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := context.query(`anyOf(places.name) in ["Alphaville", "Betaville"]`)
-	assertions.NoError(context.err)
-	assertions.Equal(60, len(ids))
-	assertions.Equal(int64(60), count)
+	ids, count := test.query(fmt.Sprintf(`anyOf(places.id) = "%v"`, alphaVilleId))
+	test.Equal(40, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people := test.toPersonList(ids)
 
-	assertions.Equal(60, len(people))
+	test.Equal(40, len(people))
 }
 
-func (test *boltTests) testBusinessEquals(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := context.query(`anyOf(places.businesses) = "Big Boxes Store"`)
-	assertions.NoError(context.err)
-	assertions.Equal(60, len(ids))
-	assertions.Equal(int64(60), count)
+func (test *boltQueryTests) testPlaceNamesIn(*testing.T) {
+	ids, count := test.query(`anyOf(places.name) in ["Alphaville", "Betaville"]`)
+	test.Equal(60, len(ids))
+	test.Equal(int64(60), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
-
-	assertions.Equal(60, len(people))
+	people := test.toPersonList(ids)
+	test.Equal(60, len(people))
 }
 
-func (test *boltTests) testSortPage(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
+func (test *boltQueryTests) testBusinessEquals(*testing.T) {
+	ids, count := test.query(`anyOf(places.businesses) = "Big Boxes Store"`)
+	test.Equal(60, len(ids))
+	test.Equal(int64(60), count)
 
+	for i, id := range ids {
+		fmt.Printf("%v: %v\n", i, id)
+	}
+
+	people := test.toPersonList(ids)
+	test.Equal(60, len(people))
+}
+
+func (test *boltQueryTests) testSortPage(*testing.T) {
 	//paging := &predicate.Paging{Offset: 0, Limit: 10}
 	//sorts := []predicate.SortField{{Field: "lastName", Direction: predicate.DESC}, {Field: "firstName", Direction: predicate.ASC}}
-	ids, count := context.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName limit 10`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(40), count)
+	ids, count := test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people := test.toPersonList(ids)
+	test.Equal(10, len(people))
+	test.Equal("Wilson", people[0].lastName)
+	test.Equal("Alice", people[0].firstName)
+	test.Equal("Wilson", people[1].lastName)
+	test.Equal("Bob", people[1].firstName)
+	test.Equal("Wilson", people[2].lastName)
+	test.Equal("Cecilia", people[2].firstName)
+	test.Equal("Wilson", people[3].lastName)
+	test.Equal("David", people[3].firstName)
+	test.Equal("Williams", people[4].lastName)
+	test.Equal("Alice", people[4].firstName)
+	test.Equal("Williams", people[5].lastName)
+	test.Equal("Bob", people[5].firstName)
+	test.Equal("Williams", people[6].lastName)
+	test.Equal("Cecilia", people[6].firstName)
+	test.Equal("Williams", people[7].lastName)
+	test.Equal("David", people[7].firstName)
+	test.Equal("Smith", people[8].lastName)
+	test.Equal("Alice", people[8].firstName)
+	test.Equal("Smith", people[9].lastName)
+	test.Equal("Bob", people[9].firstName)
 
-	assertions.Equal(10, len(people))
-	assertions.Equal("Wilson", people[0].lastName)
-	assertions.Equal("Alice", people[0].firstName)
-	assertions.Equal("Wilson", people[1].lastName)
-	assertions.Equal("Bob", people[1].firstName)
-	assertions.Equal("Wilson", people[2].lastName)
-	assertions.Equal("Cecilia", people[2].firstName)
-	assertions.Equal("Wilson", people[3].lastName)
-	assertions.Equal("David", people[3].firstName)
-	assertions.Equal("Williams", people[4].lastName)
-	assertions.Equal("Alice", people[4].firstName)
-	assertions.Equal("Williams", people[5].lastName)
-	assertions.Equal("Bob", people[5].firstName)
-	assertions.Equal("Williams", people[6].lastName)
-	assertions.Equal("Cecilia", people[6].firstName)
-	assertions.Equal("Williams", people[7].lastName)
-	assertions.Equal("David", people[7].firstName)
-	assertions.Equal("Smith", people[8].lastName)
-	assertions.Equal("Alice", people[8].firstName)
-	assertions.Equal("Smith", people[9].lastName)
-	assertions.Equal("Bob", people[9].firstName)
-
-	ids, count = context.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 10 limit 10`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(40), count)
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 10 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people = context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people = test.toPersonList(ids)
+	test.Equal(10, len(people))
+	test.Equal("Smith", people[0].lastName)
+	test.Equal("Cecilia", people[0].firstName)
+	test.Equal("Smith", people[1].lastName)
+	test.Equal("David", people[1].firstName)
 
-	assertions.Equal(10, len(people))
-	assertions.Equal("Smith", people[0].lastName)
-	assertions.Equal("Cecilia", people[0].firstName)
-	assertions.Equal("Smith", people[1].lastName)
-	assertions.Equal("David", people[1].firstName)
+	test.Equal("Rodriguez", people[2].lastName)
+	test.Equal("Alice", people[2].firstName)
+	test.Equal("Rodriguez", people[3].lastName)
+	test.Equal("Bob", people[3].firstName)
+	test.Equal("Rodriguez", people[4].lastName)
+	test.Equal("Cecilia", people[4].firstName)
+	test.Equal("Rodriguez", people[5].lastName)
+	test.Equal("David", people[5].firstName)
 
-	assertions.Equal("Rodriguez", people[2].lastName)
-	assertions.Equal("Alice", people[2].firstName)
-	assertions.Equal("Rodriguez", people[3].lastName)
-	assertions.Equal("Bob", people[3].firstName)
-	assertions.Equal("Rodriguez", people[4].lastName)
-	assertions.Equal("Cecilia", people[4].firstName)
-	assertions.Equal("Rodriguez", people[5].lastName)
-	assertions.Equal("David", people[5].firstName)
+	test.Equal("Miller", people[6].lastName)
+	test.Equal("Alice", people[6].firstName)
+	test.Equal("Miller", people[7].lastName)
+	test.Equal("Bob", people[7].firstName)
+	test.Equal("Miller", people[8].lastName)
+	test.Equal("Cecilia", people[8].firstName)
+	test.Equal("Miller", people[9].lastName)
+	test.Equal("David", people[9].firstName)
 
-	assertions.Equal("Miller", people[6].lastName)
-	assertions.Equal("Alice", people[6].firstName)
-	assertions.Equal("Miller", people[7].lastName)
-	assertions.Equal("Bob", people[7].firstName)
-	assertions.Equal("Miller", people[8].lastName)
-	assertions.Equal("Cecilia", people[8].firstName)
-	assertions.Equal("Miller", people[9].lastName)
-	assertions.Equal("David", people[9].firstName)
-
-	ids, count = context.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 20 limit 10`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(40), count)
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 20 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people = context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people = test.toPersonList(ids)
+	test.Equal(10, len(people))
+	test.Equal("Jones", people[0].lastName)
+	test.Equal("Alice", people[0].firstName)
+	test.Equal("Jones", people[1].lastName)
+	test.Equal("Bob", people[1].firstName)
+	test.Equal("Jones", people[2].lastName)
+	test.Equal("Cecilia", people[2].firstName)
+	test.Equal("Jones", people[3].lastName)
+	test.Equal("David", people[3].firstName)
 
-	assertions.Equal(10, len(people))
-	assertions.Equal("Jones", people[0].lastName)
-	assertions.Equal("Alice", people[0].firstName)
-	assertions.Equal("Jones", people[1].lastName)
-	assertions.Equal("Bob", people[1].firstName)
-	assertions.Equal("Jones", people[2].lastName)
-	assertions.Equal("Cecilia", people[2].firstName)
-	assertions.Equal("Jones", people[3].lastName)
-	assertions.Equal("David", people[3].firstName)
+	test.Equal("Johnson", people[4].lastName)
+	test.Equal("Alice", people[4].firstName)
+	test.Equal("Johnson", people[5].lastName)
+	test.Equal("Bob", people[5].firstName)
+	test.Equal("Johnson", people[6].lastName)
+	test.Equal("Cecilia", people[6].firstName)
+	test.Equal("Johnson", people[7].lastName)
+	test.Equal("David", people[7].firstName)
 
-	assertions.Equal("Johnson", people[4].lastName)
-	assertions.Equal("Alice", people[4].firstName)
-	assertions.Equal("Johnson", people[5].lastName)
-	assertions.Equal("Bob", people[5].firstName)
-	assertions.Equal("Johnson", people[6].lastName)
-	assertions.Equal("Cecilia", people[6].firstName)
-	assertions.Equal("Johnson", people[7].lastName)
-	assertions.Equal("David", people[7].firstName)
+	test.Equal("Garcia", people[8].lastName)
+	test.Equal("Alice", people[8].firstName)
+	test.Equal("Garcia", people[9].lastName)
+	test.Equal("Bob", people[9].firstName)
 
-	assertions.Equal("Garcia", people[8].lastName)
-	assertions.Equal("Alice", people[8].firstName)
-	assertions.Equal("Garcia", people[9].lastName)
-	assertions.Equal("Bob", people[9].firstName)
-
-	ids, count = context.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 30 limit 10`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(40), count)
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 30 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people = context.toPersonList(ids)
-	assertions.NoError(context.err)
+	people = test.toPersonList(ids)
+	test.Equal(10, len(people))
+	test.Equal("Garcia", people[0].lastName)
+	test.Equal("Cecilia", people[0].firstName)
+	test.Equal("Garcia", people[1].lastName)
+	test.Equal("David", people[1].firstName)
 
-	assertions.Equal(10, len(people))
-	assertions.Equal("Garcia", people[0].lastName)
-	assertions.Equal("Cecilia", people[0].firstName)
-	assertions.Equal("Garcia", people[1].lastName)
-	assertions.Equal("David", people[1].firstName)
+	test.Equal("Davis", people[2].lastName)
+	test.Equal("Alice", people[2].firstName)
+	test.Equal("Davis", people[3].lastName)
+	test.Equal("Bob", people[3].firstName)
+	test.Equal("Davis", people[4].lastName)
+	test.Equal("Cecilia", people[4].firstName)
+	test.Equal("Davis", people[5].lastName)
+	test.Equal("David", people[5].firstName)
 
-	assertions.Equal("Davis", people[2].lastName)
-	assertions.Equal("Alice", people[2].firstName)
-	assertions.Equal("Davis", people[3].lastName)
-	assertions.Equal("Bob", people[3].firstName)
-	assertions.Equal("Davis", people[4].lastName)
-	assertions.Equal("Cecilia", people[4].firstName)
-	assertions.Equal("Davis", people[5].lastName)
-	assertions.Equal("David", people[5].firstName)
+	test.Equal("Brown", people[6].lastName)
+	test.Equal("Alice", people[6].firstName)
+	test.Equal("Brown", people[7].lastName)
+	test.Equal("Bob", people[7].firstName)
+	test.Equal("Brown", people[8].lastName)
+	test.Equal("Cecilia", people[8].firstName)
+	test.Equal("Brown", people[9].lastName)
+	test.Equal("David", people[9].firstName)
 
-	assertions.Equal("Brown", people[6].lastName)
-	assertions.Equal("Alice", people[6].firstName)
-	assertions.Equal("Brown", people[7].lastName)
-	assertions.Equal("Bob", people[7].firstName)
-	assertions.Equal("Brown", people[8].lastName)
-	assertions.Equal("Cecilia", people[8].firstName)
-	assertions.Equal("Brown", people[9].lastName)
-	assertions.Equal("David", people[9].firstName)
-
-	ids, count = context.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 40 limit 10`)
-	assertions.NoError(context.err)
-	assertions.Equal(0, len(ids))
-	assertions.Equal(int64(40), count)
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 40 limit 10`)
+	test.Equal(0, len(ids))
+	test.Equal(int64(40), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people = context.toPersonList(ids)
-	assertions.Equal(0, len(people))
-	assertions.NoError(context.err)
+	people = test.toPersonList(ids)
+	test.Equal(0, len(people))
 }
 
-func (test *boltTests) testMapQueries(t *testing.T) {
-	assertions := require.New(t)
-	context := test.context
-
-	ids, count := context.query(`tags.age >= 90`)
-	assertions.NoError(context.err)
-	assertions.Equal(10, len(ids))
-	assertions.Equal(int64(10), count)
+func (test *boltQueryTests) testMapQueries(*testing.T) {
+	ids, count := test.query(`tags.age >= 90`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(10), count)
 
 	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, string(id))
+		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := context.toPersonList(ids)
-	assertions.NoError(context.err)
-
-	assertions.Equal(10, len(people))
+	people := test.toPersonList(ids)
+	test.Equal(10, len(people))
 
 	for _, person := range people {
 		fmt.Printf("%v\n", person.tags)
 		age := person.tags["age"].(int32)
-		assertions.True(age >= 90)
+		test.True(age >= 90)
 	}
 }
