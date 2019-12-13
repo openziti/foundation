@@ -99,12 +99,16 @@ const (
 	SetFunctionAllOf SetFunction = iota
 	SetFunctionAnyOf
 	SetFunctionNoneOf
+	SetFunctionCount
+	SetFunctionIsEmpty
 )
 
 var SetFunctionNames = map[SetFunction]string{
-	SetFunctionAllOf:  "allOf",
-	SetFunctionAnyOf:  "anyOf",
-	SetFunctionNoneOf: "noneOf",
+	SetFunctionAllOf:   "allOf",
+	SetFunctionAnyOf:   "anyOf",
+	SetFunctionNoneOf:  "noneOf",
+	SetFunctionCount:   "count",
+	SetFunctionIsEmpty: "isEmpty",
 }
 
 type SymbolTypes interface {

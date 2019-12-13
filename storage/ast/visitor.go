@@ -99,6 +99,10 @@ type Visitor interface {
 	VisitNoneOfSetExprNodeEnd(node *NoneOfSetExprNode)
 	VisitAnyOfSetExprNodeStart(node *AnyOfSetExprNode)
 	VisitAnyOfSetExprNodeEnd(node *AnyOfSetExprNode)
+	VisitCountSetExprNodeStart(node *CountSetExprNode)
+	VisitCountSetExprNodeEnd(node *CountSetExprNode)
+	VisitIsEmptySetExprNodeStart(node *IsEmptySetExprNode)
+	VisitIsEmptySetExprNodeEnd(node *IsEmptySetExprNode)
 
 	VisitQueryNode(node *QueryNodeImpl)
 	VisitSortByNode(node *SortByNode)
@@ -114,11 +118,11 @@ var _ Visitor = (*DefaultVisitor)(nil)
 type DefaultVisitor struct {
 }
 
-func (d DefaultVisitor) VisitQueryNode(_ *QueryNodeImpl)        {}
-func (d DefaultVisitor) VisitSortByNode(_ *SortByNode)          {}
-func (d DefaultVisitor) VisitSortFieldNode(_ *SortFieldNode)    {}
-func (d DefaultVisitor) VisitLimitExprNode(node *LimitExprNode) {}
-func (d DefaultVisitor) VisitSkipExprNode(node *SkipExprNode)   {}
+func (d DefaultVisitor) VisitQueryNode(_ *QueryNodeImpl)     {}
+func (d DefaultVisitor) VisitSortByNode(_ *SortByNode)       {}
+func (d DefaultVisitor) VisitSortFieldNode(_ *SortFieldNode) {}
+func (d DefaultVisitor) VisitLimitExprNode(_ *LimitExprNode) {}
+func (d DefaultVisitor) VisitSkipExprNode(_ *SkipExprNode)   {}
 
 func (d DefaultVisitor) VisitNotExprNodeStart(_ *NotExprNode) {}
 func (d DefaultVisitor) VisitNotExprNodeEnd(_ *NotExprNode)   {}
@@ -191,14 +195,16 @@ func (d DefaultVisitor) VisitStringSymbolNode(_ *StringSymbolNode)          {}
 func (d DefaultVisitor) VisitAnyTypeSymbolNode(_ *AnyTypeSymbolNode)        {}
 func (d DefaultVisitor) VisitInt64ToFloat64NodeStart(_ *Int64ToFloat64Node) {}
 func (d DefaultVisitor) VisitInt64ToFloat64NodeEnd(_ *Int64ToFloat64Node)   {}
+
 func (d DefaultVisitor) VisitAllOfSetExprNodeStart(_ *AllOfSetExprNode)     {}
 func (d DefaultVisitor) VisitAllOfSetExprNodeEnd(_ *AllOfSetExprNode)       {}
+func (d DefaultVisitor) VisitNoneOfSetExprNodeStart(_ *NoneOfSetExprNode)   {}
+func (d DefaultVisitor) VisitNoneOfSetExprNodeEnd(_ *NoneOfSetExprNode)     {}
+func (d DefaultVisitor) VisitAnyOfSetExprNodeStart(_ *AnyOfSetExprNode)     {}
+func (d DefaultVisitor) VisitAnyOfSetExprNodeEnd(_ *AnyOfSetExprNode)       {}
+func (d DefaultVisitor) VisitCountSetExprNodeStart(_ *CountSetExprNode)     {}
+func (d DefaultVisitor) VisitCountSetExprNodeEnd(_ *CountSetExprNode)       {}
+func (d DefaultVisitor) VisitIsEmptySetExprNodeStart(_ *IsEmptySetExprNode) {}
+func (d DefaultVisitor) VisitIsEmptySetExprNodeEnd(_ *IsEmptySetExprNode)   {}
 
-func (d DefaultVisitor) VisitNoneOfSetExprNodeStart(_ *NoneOfSetExprNode) {}
-func (d DefaultVisitor) VisitNoneOfSetExprNodeEnd(_ *NoneOfSetExprNode)   {}
-func (d DefaultVisitor) VisitAnyOfSetExprNodeStart(_ *AnyOfSetExprNode)   {}
-func (d DefaultVisitor) VisitAnyOfSetExprNodeEnd(_ *AnyOfSetExprNode)     {}
-
-func (d DefaultVisitor) VisitSymbol(symbol string, nodeType NodeType) {}
-
-
+func (d DefaultVisitor) VisitSymbol(_ string, _ NodeType) {}

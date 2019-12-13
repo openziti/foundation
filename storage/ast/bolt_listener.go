@@ -17,9 +17,9 @@
 package ast
 
 import (
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
@@ -288,6 +288,10 @@ func (bl *ToBoltListener) VisitTerminal(node antlr.TerminalNode) {
 		bl.pushStack(SetFunctionAnyOf)
 	case zitiql.ZitiQlLexerNONE_OF:
 		bl.pushStack(SetFunctionNoneOf)
+	case zitiql.ZitiQlLexerCOUNT:
+		bl.pushStack(SetFunctionCount)
+	case zitiql.ZitiQlLexerISEMPTY:
+		bl.pushStack(SetFunctionIsEmpty)
 	case zitiql.ZitiQlLexerASC:
 		bl.pushStack(SortAscending)
 	case zitiql.ZitiQlLexerDESC:
