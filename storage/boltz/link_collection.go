@@ -88,31 +88,35 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 		cursor := fieldBucket.Cursor()
 		for row, _ := cursor.First(); row != nil; row, _ = cursor.Next() {
 			_, val := getTypeAndValue(row)
-			if len(keys) == 0 {
+			rowHandled := false
+			for len(keys) > 0 {
+				cursorCurrent := string(val)
+				compare := keys[0]
+
+				if compare < cursorCurrent {
+					toAdd = append(toAdd, compare)
+					keys = keys[1:]
+					for len(keys) > 0 && keys[0] == compare { // skip over duplicate entries
+						keys = keys[1:]
+					}
+				} else if compare > cursorCurrent {
+					if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
+						return err
+					}
+					rowHandled = true
+					break
+				} else {
+					keys = keys[1:]
+					rowHandled = true
+					break
+				}
+			}
+
+			if !rowHandled {
 				if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
 					return err
 				}
 				continue
-			}
-
-			cursorCurrent := string(val)
-			compare := keys[0]
-
-			for compare < cursorCurrent {
-				toAdd = append(toAdd, compare)
-				keys = keys[1:]
-				if len(keys) == 0 {
-					break
-				}
-				compare = keys[0]
-			}
-
-			if compare > cursorCurrent {
-				if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
-					return err
-				}
-			} else if len(keys) != 0 {
-				keys = keys[1:]
 			}
 		}
 	}
