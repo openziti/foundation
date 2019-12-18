@@ -40,11 +40,20 @@ type ZitiQlListener interface {
 	// EnterBoolConst is called when entering the BoolConst production.
 	EnterBoolConst(c *BoolConstContext)
 
+	// EnterIsEmptyFunction is called when entering the IsEmptyFunction production.
+	EnterIsEmptyFunction(c *IsEmptyFunctionContext)
+
 	// EnterOrConjunction is called when entering the OrConjunction production.
 	EnterOrConjunction(c *OrConjunctionContext)
 
+	// EnterNotExpr is called when entering the NotExpr production.
+	EnterNotExpr(c *NotExprContext)
+
 	// EnterOperationOp is called when entering the OperationOp production.
 	EnterOperationOp(c *OperationOpContext)
+
+	// EnterBoolSymbol is called when entering the BoolSymbol production.
+	EnterBoolSymbol(c *BoolSymbolContext)
 
 	// EnterAndConjunction is called when entering the AndConjunction production.
 	EnterAndConjunction(c *AndConjunctionContext)
@@ -133,11 +142,20 @@ type ZitiQlListener interface {
 	// ExitBoolConst is called when exiting the BoolConst production.
 	ExitBoolConst(c *BoolConstContext)
 
+	// ExitIsEmptyFunction is called when exiting the IsEmptyFunction production.
+	ExitIsEmptyFunction(c *IsEmptyFunctionContext)
+
 	// ExitOrConjunction is called when exiting the OrConjunction production.
 	ExitOrConjunction(c *OrConjunctionContext)
 
+	// ExitNotExpr is called when exiting the NotExpr production.
+	ExitNotExpr(c *NotExprContext)
+
 	// ExitOperationOp is called when exiting the OperationOp production.
 	ExitOperationOp(c *OperationOpContext)
+
+	// ExitBoolSymbol is called when exiting the BoolSymbol production.
+	ExitBoolSymbol(c *BoolSymbolContext)
 
 	// ExitAndConjunction is called when exiting the AndConjunction production.
 	ExitAndConjunction(c *AndConjunctionContext)

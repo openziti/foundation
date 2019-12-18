@@ -18,25 +18,76 @@ package ast
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
+	"reflect"
 	"strings"
 )
 
-type QueryNodeImpl struct {
+type untypedQueryNode struct {
+	predicate Node
+	sortBy    *SortByNode
+	skip      *SkipExprNode
+	limit     *LimitExprNode
+}
+
+func (node *untypedQueryNode) String() string {
+	return node.predicate.String() + " " + node.sortBy.String() + " " + node.limit.String()
+}
+
+func (node *untypedQueryNode) GetType() NodeType {
+	return NodeTypeBool
+}
+
+func (node *untypedQueryNode) Accept(visitor Visitor) {
+	visitor.VisitUntypedQueryNodeStart(node)
+	node.predicate.Accept(visitor)
+	node.sortBy.Accept(visitor)
+	node.skip.Accept(visitor)
+	node.limit.Accept(visitor)
+	visitor.VisitUntypedQueryNodeEnd(node)
+}
+
+func (node *untypedQueryNode) EvalBool(Symbols) (bool, error) {
+	return false, errors.Errorf("cannot evaluate transitory untyped query node %v", node)
+}
+
+func (node *untypedQueryNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
+	if err := transformTypes(s, &node.predicate); err != nil {
+		return node, err
+	}
+	if _, err := node.sortBy.TypeTransform(s); err != nil {
+		return node, err
+	}
+
+	boolNode, ok := node.predicate.(BoolNode)
+	if !ok {
+		return node, errors.Errorf("query expr predicate must be a boolean expr. contains %v", reflect.TypeOf(node.predicate))
+	}
+
+	return &queryNode{
+		Predicate: boolNode,
+		SortBy:    node.sortBy,
+		Skip:      node.skip,
+		Limit:     node.limit,
+	}, nil
+}
+
+type queryNode struct {
 	Predicate BoolNode
 	SortBy    *SortByNode
 	Skip      *SkipExprNode
 	Limit     *LimitExprNode
 }
 
-func (node *QueryNodeImpl) SetSkip(skip int64) {
+func (node *queryNode) SetSkip(skip int64) {
 	node.Skip = &SkipExprNode{Int64ConstNode{value: skip}}
 }
 
-func (node *QueryNodeImpl) SetLimit(limit int64) {
+func (node *queryNode) SetLimit(limit int64) {
 	node.Limit = &LimitExprNode{Int64ConstNode{value: limit}}
 }
 
-func (node *QueryNodeImpl) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
+func (node *queryNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	if err := transformBools(s, &node.Predicate); err != nil {
 		return node, err
 	}
@@ -46,46 +97,47 @@ func (node *QueryNodeImpl) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, nil
 }
 
-func (node *QueryNodeImpl) EvalBool(s Symbols) (bool, error) {
+func (node *queryNode) EvalBool(s Symbols) (bool, error) {
 	return node.Predicate.EvalBool(s)
 }
 
-func (node *QueryNodeImpl) GetPredicate() BoolNode {
+func (node *queryNode) GetPredicate() BoolNode {
 	return node.Predicate
 }
 
-func (node *QueryNodeImpl) GetSortFields() []SortField {
+func (node *queryNode) GetSortFields() []SortField {
 	return node.SortBy.getSortFields()
 }
 
-func (node *QueryNodeImpl) GetSkip() *int64 {
+func (node *queryNode) GetSkip() *int64 {
 	if node.Skip == nil {
 		return nil
 	}
 	return &node.Skip.value
 }
 
-func (node *QueryNodeImpl) GetLimit() *int64 {
+func (node *queryNode) GetLimit() *int64 {
 	if node.Limit == nil {
 		return nil
 	}
 	return &node.Limit.value
 }
 
-func (node *QueryNodeImpl) String() string {
-	return node.Predicate.String() + " " + node.SortBy.String()
+func (node *queryNode) String() string {
+	return node.Predicate.String() + " " + node.SortBy.String() + " " + node.Limit.String()
 }
 
-func (node *QueryNodeImpl) GetType() NodeType {
-	return NodeTypeOther
+func (node *queryNode) GetType() NodeType {
+	return NodeTypeBool
 }
 
-func (node *QueryNodeImpl) Accept(visitor Visitor) {
+func (node *queryNode) Accept(visitor Visitor) {
+	visitor.VisitQueryNodeStart(node)
 	node.Predicate.Accept(visitor)
 	node.SortBy.Accept(visitor)
 	node.Skip.Accept(visitor)
 	node.Limit.Accept(visitor)
-	visitor.VisitQueryNode(node)
+	visitor.VisitQueryNodeEnd(node)
 }
 
 type SortByNode struct {
@@ -190,7 +242,7 @@ type LimitExprNode struct {
 }
 
 func (node *LimitExprNode) String() string {
-	if node.value == -1 {
+	if node == nil || node.value == -1 {
 		return "limit none"
 	}
 	return fmt.Sprintf("limit %v", node.value)
@@ -207,6 +259,9 @@ type SkipExprNode struct {
 }
 
 func (node *SkipExprNode) String() string {
+	if node == nil {
+		return "skip 0"
+	}
 	return fmt.Sprintf("skip %v", node.value)
 }
 
@@ -215,5 +270,3 @@ func (node *SkipExprNode) Accept(visitor Visitor) {
 		visitor.VisitSkipExprNode(node)
 	}
 }
-
-

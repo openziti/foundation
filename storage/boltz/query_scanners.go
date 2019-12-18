@@ -51,6 +51,10 @@ type uniqueIndexScanner struct {
 	forward bool
 	offset  int64
 	count   int64
+
+	cursor    boltCursorFacade
+	rowCursor *rowCursorImpl
+	filter    ast.BoolNode
 }
 
 func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
@@ -60,41 +64,63 @@ func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string
 		return nil, 0, nil
 	}
 	boltCursor := entityBucket.Cursor()
-
-	rowCursor := newRowCursor(scanner.store, tx)
-
-	var cursor boltCursorFacade
-	if scanner.forward {
-		cursor = &ForwardBoltCursor{BaseBoltCursor{cursor: boltCursor}}
-	} else {
-		cursor = &ReverseBoltCursor{BaseBoltCursor{cursor: boltCursor}}
-	}
+	scanner.init(boltCursor, query)
 
 	var result []string
-	isChildStore := scanner.store.IsChildStore()
-	for cursor.Init(); cursor.IsValid(); cursor.Next() {
-		id := string(cursor.Id())
-		if isChildStore && !scanner.store.IsEntityPresent(tx, id) {
-			continue
-		}
-		rowCursor.NextRow(cursor.Id())
-		match, err := query.EvalBool(rowCursor)
+	for {
+		id, valid, err := scanner.next()
 		if err != nil {
 			return nil, 0, err
 		}
-		if match {
+		if valid {
 			if scanner.offset < scanner.targetOffset {
 				scanner.offset++
 			} else {
 				if scanner.count < scanner.targetLimit {
-					result = append(result, id)
+					result = append(result, string(id))
 				}
 				scanner.count++
 			}
+		} else {
+			return result, scanner.count, nil
 		}
 	}
+}
 
-	return result, scanner.count, nil
+func (scanner *uniqueIndexScanner) init(boltCursor *bbolt.Cursor, filter ast.BoolNode) {
+	scanner.rowCursor = newRowCursor(scanner.store, boltCursor.Bucket().Tx())
+	scanner.filter = filter
+
+	if scanner.forward {
+		scanner.cursor = &ForwardBoltCursor{BaseBoltCursor{cursor: boltCursor}}
+	} else {
+		scanner.cursor = &ReverseBoltCursor{BaseBoltCursor{cursor: boltCursor}}
+	}
+	scanner.cursor.Init()
+}
+
+func (scanner *uniqueIndexScanner) next() ([]byte, bool, error) {
+	cursor := scanner.cursor
+	rowCursor := scanner.rowCursor
+	for {
+		if !cursor.IsValid() {
+			return nil, false, nil
+		}
+
+		id := cursor.Id()
+		cursor.Next()
+		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(id)) {
+			continue
+		}
+		rowCursor.NextRow(id)
+		match, err := scanner.filter.EvalBool(rowCursor)
+		if err != nil {
+			return nil, false, err
+		}
+		if match {
+			return id, true, nil
+		}
+	}
 }
 
 type sortingScanner struct {

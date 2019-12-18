@@ -502,3 +502,38 @@ func (node *SetFunctionNode) MoveUpTree(boolNode BoolNode) (BoolNode, error) {
 		return nil, errors.Errorf("unhandled set function %v", node.setFunction)
 	}
 }
+
+type UntypedNotExprNode struct {
+	expr Node
+}
+
+func (node *UntypedNotExprNode) String() string {
+	return fmt.Sprintf("not (%v)", node.expr.String())
+}
+
+func (node *UntypedNotExprNode) Accept(visitor Visitor) {
+	visitor.VisitUntypedNotExprStart(node)
+	node.expr.Accept(visitor)
+	visitor.VisitUntypedNotExprEnd(node)
+}
+
+func (node *UntypedNotExprNode) GetType() NodeType {
+	return NodeTypeBool
+}
+
+func (node *UntypedNotExprNode) EvalBool(_ Symbols) (bool, error) {
+	return false, errors.Errorf("cannot evaluate transitory untyped not node %v", node)
+}
+
+func (node *UntypedNotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
+	if err := transformTypes(s, &node.expr); err != nil {
+		return node, err
+	}
+
+	boolNode, ok := node.expr.(BoolNode)
+	if !ok {
+		return node, errors.Errorf("not expr must wrap bool expr. contains %v", reflect.TypeOf(node.expr))
+	}
+
+	return &NotExprNode{expr: boolNode}, nil
+}

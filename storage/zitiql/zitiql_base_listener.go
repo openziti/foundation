@@ -86,17 +86,35 @@ func (s *BaseZitiQlListener) EnterBoolConst(ctx *BoolConstContext) {}
 // ExitBoolConst is called when production BoolConst is exited.
 func (s *BaseZitiQlListener) ExitBoolConst(ctx *BoolConstContext) {}
 
+// EnterIsEmptyFunction is called when production IsEmptyFunction is entered.
+func (s *BaseZitiQlListener) EnterIsEmptyFunction(ctx *IsEmptyFunctionContext) {}
+
+// ExitIsEmptyFunction is called when production IsEmptyFunction is exited.
+func (s *BaseZitiQlListener) ExitIsEmptyFunction(ctx *IsEmptyFunctionContext) {}
+
 // EnterOrConjunction is called when production OrConjunction is entered.
 func (s *BaseZitiQlListener) EnterOrConjunction(ctx *OrConjunctionContext) {}
 
 // ExitOrConjunction is called when production OrConjunction is exited.
 func (s *BaseZitiQlListener) ExitOrConjunction(ctx *OrConjunctionContext) {}
 
+// EnterNotExpr is called when production NotExpr is entered.
+func (s *BaseZitiQlListener) EnterNotExpr(ctx *NotExprContext) {}
+
+// ExitNotExpr is called when production NotExpr is exited.
+func (s *BaseZitiQlListener) ExitNotExpr(ctx *NotExprContext) {}
+
 // EnterOperationOp is called when production OperationOp is entered.
 func (s *BaseZitiQlListener) EnterOperationOp(ctx *OperationOpContext) {}
 
 // ExitOperationOp is called when production OperationOp is exited.
 func (s *BaseZitiQlListener) ExitOperationOp(ctx *OperationOpContext) {}
+
+// EnterBoolSymbol is called when production BoolSymbol is entered.
+func (s *BaseZitiQlListener) EnterBoolSymbol(ctx *BoolSymbolContext) {}
+
+// ExitBoolSymbol is called when production BoolSymbol is exited.
+func (s *BaseZitiQlListener) ExitBoolSymbol(ctx *BoolSymbolContext) {}
 
 // EnterAndConjunction is called when production AndConjunction is entered.
 func (s *BaseZitiQlListener) EnterAndConjunction(ctx *AndConjunctionContext) {}

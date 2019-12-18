@@ -232,10 +232,12 @@ type testDef struct {
 
 func TestBoolAndIsNullFilters(t *testing.T) {
 	tests := []testDef{
+		{"bool, result true", "flag", true},
+		{"not bool, result false", "not flag", false},
 		{"bool EQ, result true", "flag = true", true},
 		{"bool EQ, result false", "flag = false", false},
-		{"bool NEQ, result false", "flag != true", false},
-		{"bool NEQ, result true", "flag != false", true},
+		{"bool NEQ, result true", "flag != true", false},
+		{"bool NEQ, result false", "flag != false", true},
 
 		{"is nil, result true", "n = null", true},
 		{"is nil, result false", "a = null", false},
@@ -584,8 +586,11 @@ func TestSetFunctions(t *testing.T) {
 		{"count lunkIds = 0, true", "count(lunk.ids) = 0", true},
 		{"count lunkIds > 5, false", "count(lunk.ids) > 5", false},
 
-		{"isEmpty linkIds, false", "isEmpty(link.ids) = true", false},
-		{"isEmpty lunkIds, true", "isEmpty(lunk.ids) = true", true},
+		{"isEmpty linkIds, false", "isEmpty(link.ids)", false},
+		{"isEmpty lunkIds, true", "isEmpty(lunk.ids)", true},
+
+		{"not isEmpty linkIds, true", "not isEmpty(link.ids)", true},
+		{"not isEmpty lunkIds, false", "not isEmpty(lunk.ids)", false},
 	}
 
 	for _, tt := range tests {

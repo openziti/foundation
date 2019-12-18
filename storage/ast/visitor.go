@@ -62,6 +62,8 @@ type Visitor interface {
 	VisitUntypedSymbolNode(node *UntypedSymbolNode)
 	VisitSetFunctionNodeStart(node *SetFunctionNode)
 	VisitSetFunctionNodeEnd(node *SetFunctionNode)
+	VisitUntypedNotExprStart(node *UntypedNotExprNode)
+	VisitUntypedNotExprEnd(node *UntypedNotExprNode)
 
 	// const nodes
 	VisitBoolConstNode(node *BoolConstNode)
@@ -104,7 +106,10 @@ type Visitor interface {
 	VisitIsEmptySetExprNodeStart(node *IsEmptySetExprNode)
 	VisitIsEmptySetExprNodeEnd(node *IsEmptySetExprNode)
 
-	VisitQueryNode(node *QueryNodeImpl)
+	VisitUntypedQueryNodeStart(node *untypedQueryNode)
+	VisitUntypedQueryNodeEnd(node *untypedQueryNode)
+	VisitQueryNodeStart(node *queryNode)
+	VisitQueryNodeEnd(node *queryNode)
 	VisitSortByNode(node *SortByNode)
 	VisitSortFieldNode(node *SortFieldNode)
 	VisitLimitExprNode(node *LimitExprNode)
@@ -118,18 +123,25 @@ var _ Visitor = (*DefaultVisitor)(nil)
 type DefaultVisitor struct {
 }
 
-func (d DefaultVisitor) VisitQueryNode(_ *QueryNodeImpl)     {}
+func (d DefaultVisitor) VisitUntypedQueryNodeStart(_ *untypedQueryNode) {}
+func (d DefaultVisitor) VisitUntypedQueryNodeEnd(_ *untypedQueryNode)   {}
+
+func (d DefaultVisitor) VisitQueryNodeStart(_ *queryNode) {}
+func (d DefaultVisitor) VisitQueryNodeEnd(_ *queryNode)   {}
+
 func (d DefaultVisitor) VisitSortByNode(_ *SortByNode)       {}
 func (d DefaultVisitor) VisitSortFieldNode(_ *SortFieldNode) {}
 func (d DefaultVisitor) VisitLimitExprNode(_ *LimitExprNode) {}
 func (d DefaultVisitor) VisitSkipExprNode(_ *SkipExprNode)   {}
 
-func (d DefaultVisitor) VisitNotExprNodeStart(_ *NotExprNode) {}
-func (d DefaultVisitor) VisitNotExprNodeEnd(_ *NotExprNode)   {}
-func (d DefaultVisitor) VisitAndExprNodeStart(_ *AndExprNode) {}
-func (d DefaultVisitor) VisitAndExprNodeEnd(_ *AndExprNode)   {}
-func (d DefaultVisitor) VisitOrExprNodeStart(_ *OrExprNode)   {}
-func (d DefaultVisitor) VisitOrExprNodeEnd(_ *OrExprNode)     {}
+func (d DefaultVisitor) VisitUntypedNotExprStart(node *UntypedNotExprNode) {}
+func (d DefaultVisitor) VisitUntypedNotExprEnd(node *UntypedNotExprNode)   {}
+func (d DefaultVisitor) VisitNotExprNodeStart(_ *NotExprNode)              {}
+func (d DefaultVisitor) VisitNotExprNodeEnd(_ *NotExprNode)                {}
+func (d DefaultVisitor) VisitAndExprNodeStart(_ *AndExprNode)              {}
+func (d DefaultVisitor) VisitAndExprNodeEnd(_ *AndExprNode)                {}
+func (d DefaultVisitor) VisitOrExprNodeStart(_ *OrExprNode)                {}
+func (d DefaultVisitor) VisitOrExprNodeEnd(_ *OrExprNode)                  {}
 
 func (d DefaultVisitor) VisitBinaryBoolExprNodeStart(_ *BinaryBoolExprNode)         {}
 func (d DefaultVisitor) VisitBinaryBoolExprNodeEnd(_ *BinaryBoolExprNode)           {}

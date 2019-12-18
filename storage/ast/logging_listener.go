@@ -17,9 +17,9 @@
 package ast
 
 import (
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"runtime"
 	"strings"
 )
@@ -298,10 +298,6 @@ func (l LoggingListener) ExitBinaryEqualToDatetimeOp(c *zitiql.BinaryEqualToDate
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitBinaryEqualToBoolOp(c *zitiql.BinaryEqualToBoolOpContext) {
-	l.printDebug(c)
-}
-
 func (l LoggingListener) ExitBinaryEqualToNullOp(c *zitiql.BinaryEqualToNullOpContext) {
 	l.printDebug(c)
 }
@@ -315,5 +311,29 @@ func (l *LoggingListener) EnterBoolConst(c *zitiql.BoolConstContext) {
 }
 
 func (l *LoggingListener) ExitBoolConst(c *zitiql.BoolConstContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterIsEmptyFunction(c *zitiql.IsEmptyFunctionContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterBoolSymbol(c *zitiql.BoolSymbolContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitIsEmptyFunction(c *zitiql.IsEmptyFunctionContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitBoolSymbol(c *zitiql.BoolSymbolContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterNotExpr(c *zitiql.NotExprContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitNotExpr(c *zitiql.NotExprContext) {
 	l.printDebug(c)
 }

@@ -76,6 +76,7 @@ ISEMPTY: I S E M P T Y;
 STRING: '"' (ESC | SAFECODEPOINT)* '"';
 NUMBER: '-'? INT ('.' [0-9] +)? EXP?;
 NULL: N U L L;
+NOT : N O T;
 
 ASC: A S C;
 DESC: D E S C;
@@ -109,7 +110,7 @@ datetime_array: LBRACKET WS* DATETIME (WS* ',' WS* DATETIME)* WS* RBRACKET;
 
 start: WS* query* WS* EOF #End;
 
-query: expression (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt;
+query: bool_expr (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt;
 
 skip: SKIP_ROWS WS+ NUMBER #SkipExpr;
 
@@ -119,12 +120,15 @@ sortBy: SORT WS+ BY WS+ sortField (WS* ',' WS* sortField)* #SortByExpr;
 
 sortField: IDENTIFIER (WS+ (ASC | DESC))? #SortFieldExpr;
 
-expression:
+bool_expr:
   operation #OperationOp
-  | LPAREN WS* expression WS* RPAREN #Group
-  | expression (WS+ AND WS+ expression)+ #AndConjunction
-  | expression (WS+ OR WS+ expression)+ #OrConjunction
+  | LPAREN WS* bool_expr WS* RPAREN #Group
+  | bool_expr (WS+ AND WS+ bool_expr)+ #AndConjunction
+  | bool_expr (WS+ OR WS+ bool_expr)+ #OrConjunction
   | BOOL #BoolConst
+  | ISEMPTY LPAREN IDENTIFIER RPAREN #IsEmptyFunction
+  | IDENTIFIER #BoolSymbol
+  | NOT WS+ bool_expr #NotExpr
   ;
 
 
@@ -153,5 +157,4 @@ set_function:
   | NONE_OF LPAREN IDENTIFIER RPAREN #SetFunction
   | ANY_OF LPAREN IDENTIFIER RPAREN #SetFunction
   | COUNT LPAREN IDENTIFIER RPAREN #SetFunction
-  | ISEMPTY LPAREN IDENTIFIER RPAREN #SetFunction
   ;

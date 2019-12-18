@@ -13,3 +13,4 @@ This library contains a entity framework for bbolt, including CRUD (Create, Read
        * bbolt utilities for getting/setting typed data from bbolt (see typed_bucket.go) 
        * Implementation of AST interfaces for reading symbols and getting symbol type information
       
+filter(servicePolicies where type = 'Dial' and anyOf(identities) = "%v")

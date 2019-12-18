@@ -17,8 +17,8 @@
 package ast
 
 import (
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"github.com/michaelquigley/pfxlog"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 )
 
 func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
@@ -27,7 +27,7 @@ func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
 	listener := NewListener()
 
 	if query == "" {
-		return &QueryNodeImpl{
+		return &queryNode{
 			Predicate: &BoolConstNode{value: true},
 			SortBy:    &SortByNode{},
 		}, nil
