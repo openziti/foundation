@@ -541,7 +541,7 @@ func (test *boltQueryTests) testMapQueries(*testing.T) {
 }
 
 func (test *boltQueryTests) testSubQueries(*testing.T) {
-	ids, count := test.query(`not isEmpty(from places where (name = "Alphaville" and anyOf(businesses) = "Big Boxes Store"))`)
+	ids, count := test.query(`not isEmpty(from places where name = "Alphaville" and anyOf(businesses) = "Big Boxes Store")`)
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
 

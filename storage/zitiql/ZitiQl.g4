@@ -163,4 +163,4 @@ set_expr:
   | subquery_expr
   ;
 
-subquery_expr: FROM WS+ IDENTIFIER WS+ WHERE WS+ LPAREN WS* query WS* RPAREN #SubQuery;
+subquery_expr: FROM WS+ IDENTIFIER WS+ WHERE WS+ query #SubQuery;
