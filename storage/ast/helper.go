@@ -44,8 +44,8 @@ func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
 func PostProcess(symbolTypes SymbolTypes, node *BoolNode) error {
 	setSymbolValidator := &SymbolValidator{symbolTypes: symbolTypes}
 	(*node).Accept(setSymbolValidator)
-	if setSymbolValidator.err != nil {
-		return setSymbolValidator.err
+	if setSymbolValidator.HasError() {
+		return setSymbolValidator.GetError()
 	}
 
 	return transformBools(symbolTypes, node)

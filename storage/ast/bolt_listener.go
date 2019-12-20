@@ -18,12 +18,13 @@ package ast
 
 import (
 	"fmt"
-	"github.com/antlr/antlr4/runtime/Go/antlr"
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
-	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/antlr/antlr4/runtime/Go/antlr"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
+	"github.com/pkg/errors"
 )
 
 type Stack struct {
@@ -286,8 +287,6 @@ func (bl *ToBoltListener) VisitTerminal(node antlr.TerminalNode) {
 		bl.pushStack(SetFunctionAllOf)
 	case zitiql.ZitiQlLexerANY_OF:
 		bl.pushStack(SetFunctionAnyOf)
-	case zitiql.ZitiQlLexerNONE_OF:
-		bl.pushStack(SetFunctionNoneOf)
 	case zitiql.ZitiQlLexerCOUNT:
 		bl.pushStack(SetFunctionCount)
 	case zitiql.ZitiQlLexerISEMPTY:
@@ -433,7 +432,7 @@ func (bl *ToBoltListener) ExitDatetime_array(c *zitiql.Datetime_arrayContext) {
 	bl.pushStack(arrayNode)
 }
 
-func (bl *ToBoltListener) ExitOrConjunction(c *zitiql.OrConjunctionContext) {
+func (bl *ToBoltListener) ExitOrExpr(c *zitiql.OrExprContext) {
 	bl.printDebug(c)
 	right := bl.popBoolNode()
 	left := bl.popBoolNode()
@@ -443,7 +442,7 @@ func (bl *ToBoltListener) ExitOrConjunction(c *zitiql.OrConjunctionContext) {
 	}
 }
 
-func (bl *ToBoltListener) ExitAndConjunction(c *zitiql.AndConjunctionContext) {
+func (bl *ToBoltListener) ExitAndExpr(c *zitiql.AndExprContext) {
 	bl.printDebug(c)
 
 	right := bl.popBoolNode()
@@ -475,7 +474,7 @@ func (bl *ToBoltListener) exitInArrayOp() {
 	left := bl.popNode()
 
 	if !bl.HasError() {
-		node := &InArrayExprNode{left: left, right: right}
+		node := NewInArrayExprNode(left, right)
 
 		if op == BinaryOpIn {
 			bl.pushStack(node)
@@ -694,6 +693,28 @@ func (bl *ToBoltListener) ExitQueryStmt(c *zitiql.QueryStmtContext) {
 	result.predicate = bl.popNode()
 	if !bl.HasError() {
 		bl.pushStack(result)
+	}
+}
+
+func (bl *ToBoltListener) ExitSubQuery(c *zitiql.SubQueryContext) {
+	bl.printDebug(c)
+	queryNode := bl.popNode()
+	node := bl.popNode()
+	if bl.HasError() {
+		return
+	}
+	symbolNode, ok := node.(SymbolNode)
+	if !ok {
+		bl.SetError(errors.Errorf("subquery node must have identifier symbol. had %v instead", reflect.TypeOf(node)))
+		return
+	}
+
+	if !bl.HasError() {
+		subQueryNode := &UntypedSubQueryNode{
+			symbol: symbolNode,
+			query:  queryNode,
+		}
+		bl.pushStack(subQueryNode)
 	}
 }
 

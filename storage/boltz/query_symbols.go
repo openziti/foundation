@@ -46,6 +46,10 @@ func (symbol *entitySymbol) GetStore() ListStore {
 	return symbol.store
 }
 
+func (symbol *entitySymbol) GetLinkedType() ListStore {
+	return symbol.linkedType
+}
+
 func (symbol *entitySymbol) GetPath() []string {
 	return symbol.path
 }
@@ -103,6 +107,10 @@ type entityIdSymbol struct {
 
 func (symbol *entityIdSymbol) GetStore() ListStore {
 	return symbol.store
+}
+
+func (symbol *entityIdSymbol) GetLinkedType() ListStore {
+	return nil
 }
 
 func (symbol *entityIdSymbol) GetPath() []string {
@@ -200,19 +208,20 @@ type entitySetSymbolRuntime struct {
 	value  []byte
 }
 
-func (symbol *entitySetSymbolRuntime) Next() {
+func (symbol *entitySetSymbolRuntime) Current() []byte {
+	_, value := getTypeAndValue(symbol.value)
+	return value
+}
+
+func (symbol *entitySetSymbolRuntime) Next() error {
 	if symbol.cursor != nil {
 		symbol.value, _ = symbol.cursor.Next()
 	}
+	return nil
 }
 
 func (symbol *entitySetSymbolRuntime) IsValid() bool {
 	return symbol.value != nil
-}
-
-func (symbol *entitySetSymbolRuntime) Close() {
-	symbol.cursor = nil
-	symbol.value = nil
 }
 
 func (symbol *entitySetSymbolRuntime) OpenCursor(tx *bbolt.Tx, rowId []byte) ast.SetCursor {
@@ -260,6 +269,10 @@ func (symbol *nonSetCompositeEntitySymbol) GetStore() ListStore {
 	return symbol.chain[0].GetStore()
 }
 
+func (symbol *nonSetCompositeEntitySymbol) GetLinkedType() ListStore {
+	return symbol.chain[len(symbol.chain)-1].GetLinkedType()
+}
+
 func (symbol *nonSetCompositeEntitySymbol) GetPath() []string {
 	return symbol.chain[0].GetPath()
 }
@@ -295,6 +308,10 @@ type compositeEntitySetSymbol struct {
 
 func (symbol *compositeEntitySetSymbol) GetStore() ListStore {
 	return symbol.chain[0].GetStore()
+}
+
+func (symbol *compositeEntitySetSymbol) GetLinkedType() ListStore {
+	return symbol.chain[len(symbol.chain)-1].GetLinkedType()
 }
 
 func (symbol *compositeEntitySetSymbol) GetPath() []string {
@@ -376,21 +393,20 @@ type stackedCursor struct {
 	valid  bool
 }
 
-func (cursor *stackedCursor) Next() {
+func (cursor *stackedCursor) Current() []byte {
+	_, value := getTypeAndValue(cursor.key)
+	return value
+}
+
+func (cursor *stackedCursor) Next() error {
 	if cursor.IsValid() {
 		topStackElem := cursor.stack[len(cursor.stack)-1]
 		key := topStackElem.Next()
 		calculateNextCursorPosition(cursor, topStackElem, key)
 	}
+	return nil
 }
 
 func (cursor *stackedCursor) IsValid() bool {
 	return cursor.valid
-}
-
-func (cursor *stackedCursor) Close() {
-	cursor.symbol.cursor = nil
-	cursor.tx = nil
-	cursor.stack = nil
-	cursor.key = nil
 }

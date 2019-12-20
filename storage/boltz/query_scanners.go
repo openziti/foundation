@@ -17,10 +17,11 @@
 package boltz
 
 import (
+	"math"
+
 	"github.com/biogo/store/llrb"
 	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"go.etcd.io/bbolt"
-	"math"
 )
 
 type scanner struct {
@@ -52,9 +53,25 @@ type uniqueIndexScanner struct {
 	offset  int64
 	count   int64
 
-	cursor    boltCursorFacade
+	cursor    ast.SetCursor
 	rowCursor *rowCursorImpl
 	filter    ast.BoolNode
+	current   []byte
+}
+
+func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query ast.Query) (ast.SetCursor, error) {
+	result := &uniqueIndexScanner{
+		store:     store,
+		forward:   true,
+		cursor:    cursor,
+		rowCursor: newRowCursor(store, tx),
+		filter:    query,
+	}
+	result.setPaging(query)
+	if err := result.Next(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
@@ -64,61 +81,62 @@ func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string
 		return nil, 0, nil
 	}
 	boltCursor := entityBucket.Cursor()
-	scanner.init(boltCursor, query)
+	scanner.rowCursor = newRowCursor(scanner.store, boltCursor.Bucket().Tx())
+	scanner.filter = query
+	scanner.cursor = NewBoltCursor(boltCursor, scanner.forward)
+	if err := scanner.Next(); err != nil {
+		return nil, 0, err
+	}
 
 	var result []string
-	for {
-		id, valid, err := scanner.next()
-		if err != nil {
+	for scanner.IsValid() {
+		id := scanner.Current()
+		if scanner.offset < scanner.targetOffset {
+			scanner.offset++
+		} else {
+			if scanner.count < scanner.targetLimit {
+				result = append(result, string(id))
+			}
+			scanner.count++
+		}
+		if err := scanner.Next(); err != nil {
 			return nil, 0, err
 		}
-		if valid {
-			if scanner.offset < scanner.targetOffset {
-				scanner.offset++
-			} else {
-				if scanner.count < scanner.targetLimit {
-					result = append(result, string(id))
-				}
-				scanner.count++
-			}
-		} else {
-			return result, scanner.count, nil
-		}
 	}
+	return result, scanner.count, nil
 }
 
-func (scanner *uniqueIndexScanner) init(boltCursor *bbolt.Cursor, filter ast.BoolNode) {
-	scanner.rowCursor = newRowCursor(scanner.store, boltCursor.Bucket().Tx())
-	scanner.filter = filter
-
-	if scanner.forward {
-		scanner.cursor = &ForwardBoltCursor{BaseBoltCursor{cursor: boltCursor}}
-	} else {
-		scanner.cursor = &ReverseBoltCursor{BaseBoltCursor{cursor: boltCursor}}
-	}
-	scanner.cursor.Init()
+func (scanner *uniqueIndexScanner) IsValid() bool {
+	return scanner.current != nil
 }
 
-func (scanner *uniqueIndexScanner) next() ([]byte, bool, error) {
+func (scanner *uniqueIndexScanner) Current() []byte {
+	return scanner.current
+}
+
+func (scanner *uniqueIndexScanner) Next() error {
 	cursor := scanner.cursor
 	rowCursor := scanner.rowCursor
 	for {
 		if !cursor.IsValid() {
-			return nil, false, nil
+			scanner.current = nil
+			return nil
 		}
 
-		id := cursor.Id()
-		cursor.Next()
-		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(id)) {
+		scanner.current = cursor.Current()
+		if err := cursor.Next(); err != nil {
+			return err
+		}
+		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) {
 			continue
 		}
-		rowCursor.NextRow(id)
+		rowCursor.NextRow(scanner.current)
 		match, err := scanner.filter.EvalBool(rowCursor)
 		if err != nil {
-			return nil, false, err
+			return err
 		}
 		if match {
-			return id, true, nil
+			return nil
 		}
 	}
 }
@@ -142,7 +160,7 @@ func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, in
 	}
 
 	rowCursor := newRowCursor(scanner.store, tx)
-	cursor := &ForwardBoltCursor{BaseBoltCursor{cursor: entityBucket.Cursor()}}
+	cursor := NewForwardBoltCursor(entityBucket.Cursor())
 	rowContext := &RowContext{comparator: comparator, rowCursor1: rowCursor, rowCursor2: newRowCursor(scanner.store, tx)}
 
 	// Longer term, if we're looking for better performance, we could make a version of llrb which takes a comparator
@@ -150,17 +168,21 @@ func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, in
 	results := &llrb.Tree{}
 	isChildStore := scanner.store.IsChildStore()
 	maxResults := scanner.targetOffset + scanner.targetLimit
-	for cursor.Init(); cursor.IsValid(); cursor.Next() {
-		if isChildStore && !scanner.store.IsEntityPresent(tx, string(cursor.Id())) {
+	for cursor.IsValid() {
+		current := cursor.Current()
+		if err := cursor.Next(); err != nil {
+			return nil, 0, err
+		}
+		if isChildStore && !scanner.store.IsEntityPresent(tx, string(current)) {
 			continue
 		}
-		rowCursor.NextRow(cursor.Id())
+		rowCursor.NextRow(current)
 		match, err := query.EvalBool(rowCursor)
 		if err != nil {
 			return nil, 0, err
 		}
 		if match {
-			results.Insert(&Row{id: cursor.Id(), context: rowContext})
+			results.Insert(&Row{id: current, context: rowContext})
 			scanner.count++
 			if scanner.count > maxResults {
 				results.DeleteMax()

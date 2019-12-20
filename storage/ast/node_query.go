@@ -18,9 +18,10 @@ package ast
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"reflect"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type untypedQueryNode struct {
@@ -269,4 +270,83 @@ func (node *SkipExprNode) Accept(visitor Visitor) {
 	if node != nil {
 		visitor.VisitSkipExprNode(node)
 	}
+}
+
+type UntypedSubQueryNode struct {
+	symbol SymbolNode
+	query  Node
+}
+
+func (node *UntypedSubQueryNode) Symbol() string {
+	return node.symbol.Symbol()
+}
+
+func (node *UntypedSubQueryNode) Accept(visitor Visitor) {
+	visitor.VisitUntypedSubQueryNodeStart(node)
+	node.symbol.Accept(visitor)
+	node.query.Accept(visitor)
+	visitor.VisitUntypedSubQueryNodeEnd(node)
+}
+
+func (node *UntypedSubQueryNode) TypeTransform(s SymbolTypes) (Node, error) {
+	var symbolAsNode Node = node.symbol
+	if err := transformTypes(s, &symbolAsNode); err != nil {
+		return node, err
+	}
+
+	subQuerySymbolTypes := s.GetSetSymbolTypes(node.Symbol())
+	if subQuerySymbolTypes == nil {
+		return node, errors.Errorf("symbol for sub-query is not an entity type %v", node.Symbol())
+	}
+
+	if err := transformTypes(subQuerySymbolTypes, &node.query); err != nil {
+		return node, err
+	}
+
+	symbolNode, ok := symbolAsNode.(SymbolNode)
+	if !ok {
+		return node, errors.Errorf("from symbol must be an expr. contains %v", reflect.TypeOf(symbolAsNode))
+	}
+
+	queryNode, ok := node.query.(Query)
+	if !ok {
+		return node, errors.Errorf("from query must be a query instance. contains %v", reflect.TypeOf(node.query))
+	}
+
+	return &subQueryNode{
+		symbol: symbolNode,
+		query:  queryNode,
+	}, nil
+}
+
+func (node *UntypedSubQueryNode) String() string {
+	return fmt.Sprintf("from(%v where %v)", node.symbol.String(), node.query.String())
+}
+
+func (node *UntypedSubQueryNode) GetType() NodeType {
+	return NodeTypeOther
+}
+
+type subQueryNode struct {
+	symbol SymbolNode
+	query  Query
+}
+
+func (node *subQueryNode) Symbol() string {
+	return node.symbol.Symbol()
+}
+
+func (node *subQueryNode) Accept(visitor Visitor) {
+	visitor.VisitSubQueryNodeStart(node)
+	node.symbol.Accept(visitor)
+	node.query.Accept(visitor)
+	visitor.VisitSubQueryNodeEnd(node)
+}
+
+func (node *subQueryNode) String() string {
+	return fmt.Sprintf("from(%v where %v)", node.symbol.String(), node.query.String())
+}
+
+func (node *subQueryNode) GetType() NodeType {
+	return NodeTypeOther
 }

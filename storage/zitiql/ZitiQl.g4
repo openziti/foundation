@@ -68,7 +68,6 @@ fragment TIME_NUM_OFFSET_HOUR: ([01][0-9]|'2'[0-3]);
 fragment TIME_NUM_OFFSET_MINUTE: ([0-5][0-9]);
 
 ALL_OF: A L L O F;
-NONE_OF: N O N E O F;
 ANY_OF: A N Y O F;
 COUNT: C O U N T;
 ISEMPTY: I S E M P T Y;
@@ -86,6 +85,8 @@ BY: B Y;
 SKIP_ROWS: S K I P;
 LIMIT_ROWS: L I M I T;
 NONE: N O N E;
+WHERE: W H E R E;
+FROM: F R O M;
 
 fragment INT: '0' | [1-9] [0-9]*;
 fragment EXP: [Ee] [+\-]? INT;
@@ -123,14 +124,13 @@ sortField: IDENTIFIER (WS+ (ASC | DESC))? #SortFieldExpr;
 bool_expr:
   operation #OperationOp
   | LPAREN WS* bool_expr WS* RPAREN #Group
-  | bool_expr (WS+ AND WS+ bool_expr)+ #AndConjunction
-  | bool_expr (WS+ OR WS+ bool_expr)+ #OrConjunction
+  | bool_expr (WS+ AND WS+ bool_expr)+ #AndExpr
+  | bool_expr (WS+ OR WS+ bool_expr)+ #OrExpr
   | BOOL #BoolConst
-  | ISEMPTY LPAREN IDENTIFIER RPAREN #IsEmptyFunction
+  | ISEMPTY LPAREN WS* set_expr WS* RPAREN #IsEmptyFunction
   | IDENTIFIER #BoolSymbol
   | NOT WS+ bool_expr #NotExpr
   ;
-
 
 operation:
     binary_lhs WS+ IN WS+ string_array #InStringArrayOp
@@ -154,7 +154,13 @@ binary_lhs: IDENTIFIER | set_function;
 
 set_function:
     ALL_OF LPAREN IDENTIFIER RPAREN #SetFunction
-  | NONE_OF LPAREN IDENTIFIER RPAREN #SetFunction
   | ANY_OF LPAREN IDENTIFIER RPAREN #SetFunction
-  | COUNT LPAREN IDENTIFIER RPAREN #SetFunction
+  | COUNT LPAREN set_expr RPAREN #SetFunction
   ;
+
+set_expr:
+    IDENTIFIER
+  | subquery_expr
+  ;
+
+subquery_expr: FROM WS+ IDENTIFIER WS+ WHERE WS+ LPAREN WS* query WS* RPAREN #SubQuery;

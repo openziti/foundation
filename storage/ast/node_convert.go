@@ -18,8 +18,9 @@ package ast
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 func transformTypes(s SymbolTypes, nodes ...*Node) error {
@@ -457,11 +458,25 @@ func (node *SetFunctionNode) TypeTransform(s SymbolTypes) (Node, error) {
 	}
 	node.symbol = newSymbolNode
 
-	if node.setFunction == SetFunctionCount {
-		return &CountSetExprNode{symbol: node.symbol}, nil
-	}
-	if node.setFunction == SetFunctionIsEmpty {
-		return &IsEmptySetExprNode{symbol: node.symbol}, nil
+	if !node.IsCompare() {
+		symbol := node.symbol
+		var query Query
+		subQuery, ok := symbol.(*subQueryNode)
+		if ok {
+			symbol = subQuery.symbol
+			query = subQuery.query
+		}
+		if node.setFunction == SetFunctionCount {
+			return &CountSetExprNode{
+				symbol: node.symbol,
+			}, nil
+		}
+		if node.setFunction == SetFunctionIsEmpty {
+			return &IsEmptySetExprNode{
+				symbol: node.symbol,
+				query:  query,
+			}, nil
+		}
 	}
 	return node, nil
 }
@@ -483,7 +498,7 @@ func (node *SetFunctionNode) GetType() NodeType {
 
 func (node *SetFunctionNode) IsCompare() bool {
 	switch node.setFunction {
-	case SetFunctionAllOf, SetFunctionAnyOf, SetFunctionNoneOf:
+	case SetFunctionAllOf, SetFunctionAnyOf:
 		return true
 	default:
 		return false
@@ -496,8 +511,6 @@ func (node *SetFunctionNode) MoveUpTree(boolNode BoolNode) (BoolNode, error) {
 		return &AllOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
 	case SetFunctionAnyOf:
 		return &AnyOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
-	case SetFunctionNoneOf:
-		return &NoneOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
 	default:
 		return nil, errors.Errorf("unhandled set function %v", node.setFunction)
 	}

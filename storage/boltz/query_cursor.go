@@ -17,19 +17,20 @@
 package boltz
 
 import (
+	"time"
+
 	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
-	"time"
 )
 
 var _ ast.Symbols = (*rowCursorImpl)(nil)
 
 type rowCursorImpl struct {
-	symbolCache  map[string]EntitySymbol
-	entity       ListStore
-	currentRow   []byte
-	tx           *bbolt.Tx
+	symbolCache map[string]EntitySymbol
+	entity      ListStore
+	currentRow  []byte
+	tx          *bbolt.Tx
 }
 
 func newRowCursor(entity ListStore, tx *bbolt.Tx) *rowCursorImpl {
@@ -49,6 +50,10 @@ func (rs *rowCursorImpl) getSymbol(name string) EntitySymbol {
 		}
 	}
 	return result
+}
+
+func (rs *rowCursorImpl) GetSetSymbolTypes(name string) ast.SymbolTypes {
+	return rs.entity.GetSetSymbolTypes(name)
 }
 
 func (rs *rowCursorImpl) NextRow(id []byte) {
@@ -89,6 +94,19 @@ func (rs *rowCursorImpl) OpenSetCursor(name string) (ast.SetCursor, error) {
 		return nil, errors.Errorf("attempting to iterate non-set symbol %v", name)
 	}
 	return setRowSymbol.OpenCursor(rs.tx, rs.currentRow), nil
+}
+
+func (rs *rowCursorImpl) OpenSetCursorForQuery(name string, query ast.Query) (ast.SetCursor, error) {
+	symbol := rs.getSymbol(name)
+	if symbol == nil {
+		return nil, errors.Errorf("unknown symbol %v", name)
+	}
+	setRowSymbol, ok := symbol.(RuntimeEntitySetSymbol)
+	if !ok {
+		return nil, errors.Errorf("attempting to iterate non-set symbol %v", name)
+	}
+	setCursor := setRowSymbol.OpenCursor(rs.tx, rs.currentRow)
+	return newCursorScanner(rs.tx, symbol.GetLinkedType(), setCursor, query)
 }
 
 func (rs *rowCursorImpl) EvalBool(name string) (*bool, error) {

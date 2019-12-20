@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"bytes"
+
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/pkg/errors"
@@ -279,11 +280,13 @@ func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 func (index *setIndex) visitCurrent(ctx *IndexingContext, f func(fieldType FieldType, value []byte)) {
 	rtSymbol := index.symbol.GetRuntimeSymbol()
 	cursor := rtSymbol.OpenCursor(ctx.tx, ctx.rowId)
-	defer cursor.Close()
 	for cursor.IsValid() {
 		fieldType, value := rtSymbol.Eval(ctx.tx, ctx.rowId)
 		f(fieldType, value)
-		cursor.Next()
+		if err := cursor.Next(); err != nil {
+			ctx.errHolder.SetError(err)
+			return
+		}
 	}
 }
 
