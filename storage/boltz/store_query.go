@@ -17,11 +17,12 @@
 package boltz
 
 import (
+	"strings"
+
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
-	"strings"
 )
 
 func (store *BaseStore) GetPublicSymbols() []string {
@@ -33,6 +34,13 @@ func (store *BaseStore) GetSymbolType(name string) (ast.NodeType, bool) {
 		return symbol.GetType(), true
 	}
 	return 0, false
+}
+
+func (store *BaseStore) GetSetSymbolTypes(name string) ast.SymbolTypes {
+	if symbol := store.GetSymbol(name); symbol != nil {
+		return symbol.GetLinkedType()
+	}
+	return nil
 }
 
 func (store *BaseStore) IsSet(name string) (bool, bool) {

@@ -40,6 +40,7 @@ type RowCursor interface {
 
 type EntitySymbol interface {
 	GetStore() ListStore
+	GetLinkedType() ListStore
 	GetPath() []string
 	GetType() ast.NodeType
 	GetName() string

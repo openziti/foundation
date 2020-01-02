@@ -18,12 +18,13 @@ package ast
 
 import (
 	"fmt"
-	"github.com/antlr/antlr4/runtime/Go/antlr"
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
-	"github.com/pkg/errors"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/antlr/antlr4/runtime/Go/antlr"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
+	"github.com/pkg/errors"
 )
 
 type Stack struct {
@@ -178,7 +179,7 @@ func (bl *ToBoltListener) getQuery(symbols SymbolTypes) (Query, error) {
 	}
 
 	node := bl.popNode()
-	query, ok := node.(*QueryNodeImpl)
+	query, ok := node.(*untypedQueryNode)
 	if !ok {
 		return nil, errors.Errorf("unexpected result from query parsing. expected query, got %v", reflect.TypeOf(node))
 	}
@@ -286,8 +287,6 @@ func (bl *ToBoltListener) VisitTerminal(node antlr.TerminalNode) {
 		bl.pushStack(SetFunctionAllOf)
 	case zitiql.ZitiQlLexerANY_OF:
 		bl.pushStack(SetFunctionAnyOf)
-	case zitiql.ZitiQlLexerNONE_OF:
-		bl.pushStack(SetFunctionNoneOf)
 	case zitiql.ZitiQlLexerCOUNT:
 		bl.pushStack(SetFunctionCount)
 	case zitiql.ZitiQlLexerISEMPTY:
@@ -433,7 +432,7 @@ func (bl *ToBoltListener) ExitDatetime_array(c *zitiql.Datetime_arrayContext) {
 	bl.pushStack(arrayNode)
 }
 
-func (bl *ToBoltListener) ExitOrConjunction(c *zitiql.OrConjunctionContext) {
+func (bl *ToBoltListener) ExitOrExpr(c *zitiql.OrExprContext) {
 	bl.printDebug(c)
 	right := bl.popBoolNode()
 	left := bl.popBoolNode()
@@ -443,7 +442,7 @@ func (bl *ToBoltListener) ExitOrConjunction(c *zitiql.OrConjunctionContext) {
 	}
 }
 
-func (bl *ToBoltListener) ExitAndConjunction(c *zitiql.AndConjunctionContext) {
+func (bl *ToBoltListener) ExitAndExpr(c *zitiql.AndExprContext) {
 	bl.printDebug(c)
 
 	right := bl.popBoolNode()
@@ -475,12 +474,12 @@ func (bl *ToBoltListener) exitInArrayOp() {
 	left := bl.popNode()
 
 	if !bl.HasError() {
-		node := &InArrayExprNode{left: left, right: right}
+		node := NewInArrayExprNode(left, right)
 
 		if op == BinaryOpIn {
 			bl.pushStack(node)
 		} else if op == BinaryOpNotIn {
-			bl.pushStack(&NotExprNode{node: node})
+			bl.pushStack(&NotExprNode{expr: node})
 		} else {
 			bl.SetError(errors.Errorf("Unexpected operation: %v", op))
 		}
@@ -509,7 +508,7 @@ func (bl *ToBoltListener) exitBetweenOp() {
 		if op == BinaryOpBetween {
 			bl.pushStack(node)
 		} else if op == BinaryOpNotBetween {
-			bl.pushStack(&NotExprNode{node: node})
+			bl.pushStack(&NotExprNode{expr: node})
 		} else {
 			bl.SetError(errors.Errorf("Unexpected operation: %v", op))
 		}
@@ -582,6 +581,15 @@ func (bl *ToBoltListener) ExitBinaryOp() {
 
 func (bl *ToBoltListener) ExitSetFunction(c *zitiql.SetFunctionContext) {
 	bl.printDebug(c)
+	bl.pushSetFunction()
+}
+
+func (bl *ToBoltListener) ExitIsEmptyFunction(c *zitiql.IsEmptyFunctionContext) {
+	bl.printDebug(c)
+	bl.pushSetFunction()
+}
+
+func (bl *ToBoltListener) pushSetFunction() {
 	symbol := bl.popSymbolNode()
 	op := bl.popSetFunction()
 
@@ -599,6 +607,7 @@ func (bl *ToBoltListener) EnterSortByExpr(c *zitiql.SortByExprContext) {
 }
 
 func (bl *ToBoltListener) ExitSortByExpr(c *zitiql.SortByExprContext) {
+	bl.printDebug(c)
 	result := &SortByNode{
 		SortFields: make([]*SortFieldNode, len(bl.currentStack.values)),
 	}
@@ -664,25 +673,55 @@ func (bl *ToBoltListener) ExitLimitExpr(c *zitiql.LimitExprContext) {
 func (bl *ToBoltListener) ExitQueryStmt(c *zitiql.QueryStmtContext) {
 	bl.printDebug(c)
 
-	result := &QueryNodeImpl{}
+	result := &untypedQueryNode{}
 
 	if limit, ok := bl.peekStack().(*LimitExprNode); ok {
-		result.Limit = limit
+		result.limit = limit
 		bl.popStack()
 	}
 
 	if skip, ok := bl.peekStack().(*SkipExprNode); ok {
-		result.Skip = skip
+		result.skip = skip
 		bl.popStack()
 	}
 
 	if sortBy, ok := bl.peekStack().(*SortByNode); ok {
-		result.SortBy = sortBy
+		result.sortBy = sortBy
 		bl.popStack()
 	}
 
-	result.Predicate = bl.popBoolNode()
+	result.predicate = bl.popNode()
 	if !bl.HasError() {
 		bl.pushStack(result)
+	}
+}
+
+func (bl *ToBoltListener) ExitSubQuery(c *zitiql.SubQueryContext) {
+	bl.printDebug(c)
+	queryNode := bl.popNode()
+	node := bl.popNode()
+	if bl.HasError() {
+		return
+	}
+	symbolNode, ok := node.(SymbolNode)
+	if !ok {
+		bl.SetError(errors.Errorf("subquery node must have identifier symbol. had %v instead", reflect.TypeOf(node)))
+		return
+	}
+
+	if !bl.HasError() {
+		subQueryNode := &UntypedSubQueryNode{
+			symbol: symbolNode,
+			query:  queryNode,
+		}
+		bl.pushStack(subQueryNode)
+	}
+}
+
+func (bl *ToBoltListener) ExitNotExpr(c *zitiql.NotExprContext) {
+	bl.printDebug(c)
+	expr := bl.popNode()
+	if !bl.HasError() {
+		bl.pushStack(&UntypedNotExprNode{expr: expr})
 	}
 }

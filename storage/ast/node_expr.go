@@ -24,17 +24,17 @@ import (
 
 // NotExprNode implements logical NOT on a wrapped boolean expression
 type NotExprNode struct {
-	node BoolNode
+	expr BoolNode
 }
 
 func (node *NotExprNode) Accept(visitor Visitor) {
 	visitor.VisitNotExprNodeStart(node)
-	node.node.Accept(visitor)
+	node.expr.Accept(visitor)
 	visitor.VisitNotExprNodeEnd(node)
 }
 
 func (node *NotExprNode) String() string {
-	return fmt.Sprintf("not (%v)", node.node)
+	return fmt.Sprintf("not (%v)", node.expr)
 }
 
 func (node *NotExprNode) GetType() NodeType {
@@ -42,7 +42,7 @@ func (node *NotExprNode) GetType() NodeType {
 }
 
 func (node *NotExprNode) EvalBool(s Symbols) (bool, error) {
-	result, err := node.node.EvalBool(s)
+	result, err := node.expr.EvalBool(s)
 	if err != nil {
 		return false, err
 	}
@@ -50,7 +50,7 @@ func (node *NotExprNode) EvalBool(s Symbols) (bool, error) {
 }
 
 func (node *NotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
-	return node, transformBools(s, &node.node)
+	return node, transformBools(s, &node.expr)
 }
 
 // AndExprNode implements logical AND on two wrapped boolean expressions

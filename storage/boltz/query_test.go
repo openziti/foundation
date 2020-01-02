@@ -18,17 +18,18 @@ package boltz
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/stringz"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
-	"io/ioutil"
-	"os"
-	"strconv"
-	"testing"
-	"time"
 )
 
 var businesses = []string{"AllStuff", "Big Boxes Store", "Cables Galore", "Donut Shop", "Farm Equipment", "Game Snob", "Hotel", "Junk Food"}
@@ -110,6 +111,7 @@ func (test *boltTest) createTestSchema() {
 			businessIndex++
 
 			placeBucket.SetStringList("businesses", placeBusinesses, nil)
+			fmt.Printf("Place %v has businesses: %+v\n", place, placeBusinesses)
 		}
 
 		placeIndex := 0
@@ -119,8 +121,10 @@ func (test *boltTest) createTestSchema() {
 			id := uuid.New()
 			serviceBucket := bucket.GetOrCreatePath(id.String())
 
-			serviceBucket.SetString("firstName", firstNames[i%10], nil)
-			serviceBucket.SetString("lastName", lastNames[i/10], nil)
+			firstName := firstNames[i%10]
+			lastName := lastNames[i/10]
+			serviceBucket.SetString("firstName", firstName, nil)
+			serviceBucket.SetString("lastName", lastName, nil)
 
 			serviceBucket.SetInt32("age", int32(i), nil)
 			serviceBucket.SetInt32("index32", int32(i), nil)
@@ -143,13 +147,19 @@ func (test *boltTest) createTestSchema() {
 			}
 			serviceBucket.SetStringList("numbers", numbers, nil)
 
-			var personPlaces []string
-			personPlaces = append(personPlaces, placeMap[places[placeIndex%len(places)]])
+			var personPlaceNames []string
+			var personPlaceIds []string
+			placeName := places[placeIndex%len(places)]
+			personPlaceNames = append(personPlaceNames, placeName)
+			personPlaceIds = append(personPlaceIds, placeMap[placeName])
 			placeIndex++
-			personPlaces = append(personPlaces, placeMap[places[placeIndex%len(places)]])
+			placeName = places[placeIndex%len(places)]
+			personPlaceNames = append(personPlaceNames, placeName)
+			personPlaceIds = append(personPlaceIds, placeMap[placeName])
 			placeIndex++
 
-			serviceBucket.SetStringList("places", personPlaces, nil)
+			serviceBucket.SetStringList("places", personPlaceIds, nil)
+			fmt.Printf("created person %v %v with places %+v\n", firstName, lastName, personPlaceNames)
 		}
 		return bucket.Err
 	})
@@ -226,6 +236,9 @@ func (test *boltTest) query(queryString string) ([]string, int64) {
 		}
 		return nil
 	})
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+	}
 	test.NoError(err)
 
 	return result, count
@@ -251,6 +264,7 @@ func TestQuery(t *testing.T) {
 	t.Run("business equals", tests.testBusinessEquals)
 	t.Run("sorting/paging", tests.testSortPage)
 	t.Run("map queries", tests.testMapQueries)
+	t.Run("sub queries", tests.testSubQueries)
 }
 
 type boltQueryTests struct {
@@ -523,5 +537,24 @@ func (test *boltQueryTests) testMapQueries(*testing.T) {
 		fmt.Printf("%v\n", person.tags)
 		age := person.tags["age"].(int32)
 		test.True(age >= 90)
+	}
+}
+
+func (test *boltQueryTests) testSubQueries(*testing.T) {
+	ids, count := test.query(`not isEmpty(from places where name = "Alphaville" and anyOf(businesses) = "Big Boxes Store")`)
+	test.Equal(40, len(ids))
+	test.Equal(int64(40), count)
+
+	for i, id := range ids {
+		fmt.Printf("%v: %v\n", i, id)
+	}
+
+	people := test.toPersonList(ids)
+	test.Equal(40, len(people))
+
+	alphavilleId := placeMap["Alphaville"]
+
+	for _, person := range people {
+		test.True(stringz.Contains(person.places, alphavilleId))
 	}
 }

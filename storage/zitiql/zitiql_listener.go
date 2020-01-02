@@ -34,20 +34,29 @@ type ZitiQlListener interface {
 	// EnterSortFieldExpr is called when entering the SortFieldExpr production.
 	EnterSortFieldExpr(c *SortFieldExprContext)
 
+	// EnterAndExpr is called when entering the AndExpr production.
+	EnterAndExpr(c *AndExprContext)
+
 	// EnterGroup is called when entering the Group production.
 	EnterGroup(c *GroupContext)
 
 	// EnterBoolConst is called when entering the BoolConst production.
 	EnterBoolConst(c *BoolConstContext)
 
-	// EnterOrConjunction is called when entering the OrConjunction production.
-	EnterOrConjunction(c *OrConjunctionContext)
+	// EnterIsEmptyFunction is called when entering the IsEmptyFunction production.
+	EnterIsEmptyFunction(c *IsEmptyFunctionContext)
+
+	// EnterNotExpr is called when entering the NotExpr production.
+	EnterNotExpr(c *NotExprContext)
 
 	// EnterOperationOp is called when entering the OperationOp production.
 	EnterOperationOp(c *OperationOpContext)
 
-	// EnterAndConjunction is called when entering the AndConjunction production.
-	EnterAndConjunction(c *AndConjunctionContext)
+	// EnterOrExpr is called when entering the OrExpr production.
+	EnterOrExpr(c *OrExprContext)
+
+	// EnterBoolSymbol is called when entering the BoolSymbol production.
+	EnterBoolSymbol(c *BoolSymbolContext)
 
 	// EnterInStringArrayOp is called when entering the InStringArrayOp production.
 	EnterInStringArrayOp(c *InStringArrayOpContext)
@@ -100,6 +109,12 @@ type ZitiQlListener interface {
 	// EnterSetFunction is called when entering the SetFunction production.
 	EnterSetFunction(c *SetFunctionContext)
 
+	// EnterSet_expr is called when entering the set_expr production.
+	EnterSet_expr(c *Set_exprContext)
+
+	// EnterSubQuery is called when entering the SubQuery production.
+	EnterSubQuery(c *SubQueryContext)
+
 	// ExitString_array is called when exiting the string_array production.
 	ExitString_array(c *String_arrayContext)
 
@@ -127,20 +142,29 @@ type ZitiQlListener interface {
 	// ExitSortFieldExpr is called when exiting the SortFieldExpr production.
 	ExitSortFieldExpr(c *SortFieldExprContext)
 
+	// ExitAndExpr is called when exiting the AndExpr production.
+	ExitAndExpr(c *AndExprContext)
+
 	// ExitGroup is called when exiting the Group production.
 	ExitGroup(c *GroupContext)
 
 	// ExitBoolConst is called when exiting the BoolConst production.
 	ExitBoolConst(c *BoolConstContext)
 
-	// ExitOrConjunction is called when exiting the OrConjunction production.
-	ExitOrConjunction(c *OrConjunctionContext)
+	// ExitIsEmptyFunction is called when exiting the IsEmptyFunction production.
+	ExitIsEmptyFunction(c *IsEmptyFunctionContext)
+
+	// ExitNotExpr is called when exiting the NotExpr production.
+	ExitNotExpr(c *NotExprContext)
 
 	// ExitOperationOp is called when exiting the OperationOp production.
 	ExitOperationOp(c *OperationOpContext)
 
-	// ExitAndConjunction is called when exiting the AndConjunction production.
-	ExitAndConjunction(c *AndConjunctionContext)
+	// ExitOrExpr is called when exiting the OrExpr production.
+	ExitOrExpr(c *OrExprContext)
+
+	// ExitBoolSymbol is called when exiting the BoolSymbol production.
+	ExitBoolSymbol(c *BoolSymbolContext)
 
 	// ExitInStringArrayOp is called when exiting the InStringArrayOp production.
 	ExitInStringArrayOp(c *InStringArrayOpContext)
@@ -192,4 +216,10 @@ type ZitiQlListener interface {
 
 	// ExitSetFunction is called when exiting the SetFunction production.
 	ExitSetFunction(c *SetFunctionContext)
+
+	// ExitSet_expr is called when exiting the set_expr production.
+	ExitSet_expr(c *Set_exprContext)
+
+	// ExitSubQuery is called when exiting the SubQuery production.
+	ExitSubQuery(c *SubQueryContext)
 }

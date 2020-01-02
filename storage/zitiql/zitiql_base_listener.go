@@ -74,6 +74,12 @@ func (s *BaseZitiQlListener) EnterSortFieldExpr(ctx *SortFieldExprContext) {}
 // ExitSortFieldExpr is called when production SortFieldExpr is exited.
 func (s *BaseZitiQlListener) ExitSortFieldExpr(ctx *SortFieldExprContext) {}
 
+// EnterAndExpr is called when production AndExpr is entered.
+func (s *BaseZitiQlListener) EnterAndExpr(ctx *AndExprContext) {}
+
+// ExitAndExpr is called when production AndExpr is exited.
+func (s *BaseZitiQlListener) ExitAndExpr(ctx *AndExprContext) {}
+
 // EnterGroup is called when production Group is entered.
 func (s *BaseZitiQlListener) EnterGroup(ctx *GroupContext) {}
 
@@ -86,11 +92,17 @@ func (s *BaseZitiQlListener) EnterBoolConst(ctx *BoolConstContext) {}
 // ExitBoolConst is called when production BoolConst is exited.
 func (s *BaseZitiQlListener) ExitBoolConst(ctx *BoolConstContext) {}
 
-// EnterOrConjunction is called when production OrConjunction is entered.
-func (s *BaseZitiQlListener) EnterOrConjunction(ctx *OrConjunctionContext) {}
+// EnterIsEmptyFunction is called when production IsEmptyFunction is entered.
+func (s *BaseZitiQlListener) EnterIsEmptyFunction(ctx *IsEmptyFunctionContext) {}
 
-// ExitOrConjunction is called when production OrConjunction is exited.
-func (s *BaseZitiQlListener) ExitOrConjunction(ctx *OrConjunctionContext) {}
+// ExitIsEmptyFunction is called when production IsEmptyFunction is exited.
+func (s *BaseZitiQlListener) ExitIsEmptyFunction(ctx *IsEmptyFunctionContext) {}
+
+// EnterNotExpr is called when production NotExpr is entered.
+func (s *BaseZitiQlListener) EnterNotExpr(ctx *NotExprContext) {}
+
+// ExitNotExpr is called when production NotExpr is exited.
+func (s *BaseZitiQlListener) ExitNotExpr(ctx *NotExprContext) {}
 
 // EnterOperationOp is called when production OperationOp is entered.
 func (s *BaseZitiQlListener) EnterOperationOp(ctx *OperationOpContext) {}
@@ -98,11 +110,17 @@ func (s *BaseZitiQlListener) EnterOperationOp(ctx *OperationOpContext) {}
 // ExitOperationOp is called when production OperationOp is exited.
 func (s *BaseZitiQlListener) ExitOperationOp(ctx *OperationOpContext) {}
 
-// EnterAndConjunction is called when production AndConjunction is entered.
-func (s *BaseZitiQlListener) EnterAndConjunction(ctx *AndConjunctionContext) {}
+// EnterOrExpr is called when production OrExpr is entered.
+func (s *BaseZitiQlListener) EnterOrExpr(ctx *OrExprContext) {}
 
-// ExitAndConjunction is called when production AndConjunction is exited.
-func (s *BaseZitiQlListener) ExitAndConjunction(ctx *AndConjunctionContext) {}
+// ExitOrExpr is called when production OrExpr is exited.
+func (s *BaseZitiQlListener) ExitOrExpr(ctx *OrExprContext) {}
+
+// EnterBoolSymbol is called when production BoolSymbol is entered.
+func (s *BaseZitiQlListener) EnterBoolSymbol(ctx *BoolSymbolContext) {}
+
+// ExitBoolSymbol is called when production BoolSymbol is exited.
+func (s *BaseZitiQlListener) ExitBoolSymbol(ctx *BoolSymbolContext) {}
 
 // EnterInStringArrayOp is called when production InStringArrayOp is entered.
 func (s *BaseZitiQlListener) EnterInStringArrayOp(ctx *InStringArrayOpContext) {}
@@ -207,3 +225,15 @@ func (s *BaseZitiQlListener) EnterSetFunction(ctx *SetFunctionContext) {}
 
 // ExitSetFunction is called when production SetFunction is exited.
 func (s *BaseZitiQlListener) ExitSetFunction(ctx *SetFunctionContext) {}
+
+// EnterSet_expr is called when production set_expr is entered.
+func (s *BaseZitiQlListener) EnterSet_expr(ctx *Set_exprContext) {}
+
+// ExitSet_expr is called when production set_expr is exited.
+func (s *BaseZitiQlListener) ExitSet_expr(ctx *Set_exprContext) {}
+
+// EnterSubQuery is called when production SubQuery is entered.
+func (s *BaseZitiQlListener) EnterSubQuery(ctx *SubQueryContext) {}
+
+// ExitSubQuery is called when production SubQuery is exited.
+func (s *BaseZitiQlListener) ExitSubQuery(ctx *SubQueryContext) {}
