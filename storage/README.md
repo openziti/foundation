@@ -12,3 +12,11 @@ This library contains a entity framework for bbolt, including CRUD (Create, Read
        * Code for managing bbolt indexes and foreign keys
        * bbolt utilities for getting/setting typed data from bbolt (see typed_bucket.go) 
        * Implementation of AST interfaces for reading symbols and getting symbol type information
+
+Note: The ANTLR4 Go implementation has a race condition, detected by go -race. 
+The issue is tracked here: https://github.com/antlr/antlr4/issues/2040 
+The issue was fixed as described here: https://github.com/google/cel-go/pull/177/files
+It's not clear that this fix is required, but it can't help. 
+The fix should be reapplied after regenerating source. The next time source is regenerated, see if we can automate this
+in the generate.sh script by including the patch.
+   
