@@ -313,8 +313,6 @@ var parserATN = []uint16{
 	429, 438, 445, 454, 461, 470, 477, 486, 493, 502, 509, 518, 525, 534, 541,
 	550, 557, 566, 573, 577, 581, 596, 600, 606, 612, 618,
 }
-var deserializer = antlr.NewATNDeserializer(nil)
-var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
 
 var literalNames = []string{
 	"", "','", "", "'('", "')'", "'['", "']'",
@@ -332,19 +330,20 @@ var ruleNames = []string{
 	"limit", "sortBy", "sortField", "bool_expr", "operation", "binary_lhs",
 	"set_function", "set_expr", "subquery_expr",
 }
-var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
-
-func init() {
-	for index, ds := range deserializedATN.DecisionToState {
-		decisionToDFA[index] = antlr.NewDFA(ds, index)
-	}
-}
 
 type ZitiQlParser struct {
 	*antlr.BaseParser
 }
 
 func NewZitiQlParser(input antlr.TokenStream) *ZitiQlParser {
+	var deserializer = antlr.NewATNDeserializer(nil)
+	var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
+
+	var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
+	for index, ds := range deserializedATN.DecisionToState {
+		decisionToDFA[index] = antlr.NewDFA(ds, index)
+	}
+
 	this := new(ZitiQlParser)
 
 	this.BaseParser = antlr.NewBaseParser(input)
