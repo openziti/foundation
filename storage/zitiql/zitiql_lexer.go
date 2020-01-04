@@ -277,9 +277,6 @@ var serializedLexerAtn = []uint16{
 	536, 544, 549, 557, 565, 570, 574, 2,
 }
 
-var lexerDeserializer = antlr.NewATNDeserializer(nil)
-var lexerAtn = lexerDeserializer.DeserializeFromUInt16(serializedLexerAtn)
-
 var lexerChannelNames = []string{
 	"DEFAULT_TOKEN_CHANNEL", "HIDDEN",
 }
@@ -319,15 +316,14 @@ type ZitiQlLexer struct {
 	// TODO: EOF string
 }
 
-var lexerDecisionToDFA = make([]*antlr.DFA, len(lexerAtn.DecisionToState))
+func NewZitiQlLexer(input antlr.CharStream) *ZitiQlLexer {
+	var lexerDeserializer = antlr.NewATNDeserializer(nil)
+	var lexerAtn = lexerDeserializer.DeserializeFromUInt16(serializedLexerAtn)
 
-func init() {
+	var lexerDecisionToDFA = make([]*antlr.DFA, len(lexerAtn.DecisionToState))
 	for index, ds := range lexerAtn.DecisionToState {
 		lexerDecisionToDFA[index] = antlr.NewDFA(ds, index)
 	}
-}
-
-func NewZitiQlLexer(input antlr.CharStream) *ZitiQlLexer {
 
 	l := new(ZitiQlLexer)
 

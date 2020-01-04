@@ -125,6 +125,7 @@ func (scanner *uniqueIndexScanner) Next() error {
 
 		scanner.current = cursor.Current()
 		if err := cursor.Next(); err != nil {
+			scanner.current = nil
 			return err
 		}
 		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) {

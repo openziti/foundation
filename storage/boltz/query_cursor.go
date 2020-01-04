@@ -97,7 +97,9 @@ func (rs *rowCursorImpl) OpenSetCursor(name string) (ast.SetCursor, error) {
 }
 
 func (rs *rowCursorImpl) OpenSetCursorForQuery(name string, query ast.Query) (ast.SetCursor, error) {
-	symbol := rs.getSymbol(name)
+	// Using the shared symbol returned by rs.getSymbol(name) results in a race condition. I'm not sure how, because
+	// everything seems to be either unshared or sequential. Further investigation warranted as time permits.
+	symbol := rs.entity.GetSymbol(name)
 	if symbol == nil {
 		return nil, errors.Errorf("unknown symbol %v", name)
 	}
