@@ -98,7 +98,6 @@ type SetFunction int
 const (
 	SetFunctionAllOf SetFunction = iota
 	SetFunctionAnyOf
-	SetFunctionNoneOf
 	SetFunctionCount
 	SetFunctionIsEmpty
 )
@@ -106,13 +105,13 @@ const (
 var SetFunctionNames = map[SetFunction]string{
 	SetFunctionAllOf:   "allOf",
 	SetFunctionAnyOf:   "anyOf",
-	SetFunctionNoneOf:  "noneOf",
 	SetFunctionCount:   "count",
 	SetFunctionIsEmpty: "isEmpty",
 }
 
 type SymbolTypes interface {
 	GetSymbolType(name string) (NodeType, bool)
+	GetSetSymbolTypes(name string) SymbolTypes
 	IsSet(name string) (bool, bool)
 }
 
@@ -126,12 +125,13 @@ type Symbols interface {
 	IsNil(name string) (bool, error)
 
 	OpenSetCursor(name string) (SetCursor, error)
+	OpenSetCursorForQuery(name string, query Query) (SetCursor, error)
 }
 
 type SetCursor interface {
-	Next()
+	Next() error
 	IsValid() bool
-	Close()
+	Current() []byte
 }
 
 type Node interface {

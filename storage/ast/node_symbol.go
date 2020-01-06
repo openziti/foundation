@@ -17,10 +17,12 @@
 package ast
 
 import (
-	"fmt"
-	"github.com/pkg/errors"
 	"strconv"
 	"time"
+
+	"github.com/netfoundry/ziti-foundation/util/errorz"
+
+	"github.com/pkg/errors"
 )
 
 func NewUntypedSymbolNode(symbol string) SymbolNode {
@@ -286,7 +288,9 @@ type SymbolValidator struct {
 	DefaultVisitor
 	inSetFunction bool
 	symbolTypes   SymbolTypes
-	err           error
+	errorz.ErrorHolderImpl
+	typeStack []SymbolTypes
+	onDeck    SymbolTypes
 }
 
 func (visitor *SymbolValidator) VisitSetFunctionNodeStart(node *SetFunctionNode) {
@@ -298,18 +302,41 @@ func (visitor *SymbolValidator) VisitSetFunctionNodeEnd(node *SetFunctionNode) {
 
 	isSet, found := visitor.symbolTypes.IsSet(node.symbol.Symbol())
 	if found && !isSet {
-		visitor.err = fmt.Errorf("symbol '%v' is not a set symbol but is used in set function %v", node.symbol.Symbol(), SetFunctionNames[node.setFunction])
+		visitor.SetError(errors.Errorf("symbol '%v' is not a set symbol but is used in set function %v",
+			node.symbol.Symbol(), SetFunctionNames[node.setFunction]))
 	}
 }
 
 func (visitor *SymbolValidator) VisitUntypedSymbolNode(node *UntypedSymbolNode) {
 	isSet, found := visitor.symbolTypes.IsSet(node.Symbol())
 	if !found {
-		visitor.err = fmt.Errorf("unknown symbol %v", node.Symbol())
+		visitor.SetError(errors.Errorf("unknown symbol %v", node.Symbol()))
 		return
 	}
 
 	if !visitor.inSetFunction && isSet {
-		visitor.err = fmt.Errorf("symbol '%v' is a set symbol but is used in non-set function context", node.Symbol())
+		visitor.SetError(errors.Errorf("symbol '%v' is a set symbol but is used in non-set function context", node.Symbol()))
+	}
+
+	if visitor.onDeck != nil {
+		visitor.typeStack = append([]SymbolTypes{visitor.symbolTypes}, visitor.typeStack...)
+		visitor.symbolTypes = visitor.onDeck
+		visitor.onDeck = nil
+	}
+}
+
+func (visitor *SymbolValidator) VisitUntypedSubQueryNodeStart(node *UntypedSubQueryNode) {
+	symbolType := visitor.symbolTypes.GetSetSymbolTypes(node.Symbol())
+	if symbolType == nil {
+		visitor.SetError(errors.Errorf("attempt to subquery on non-entity symbol %v", node.Symbol()))
+	} else {
+		visitor.onDeck = symbolType
+	}
+}
+
+func (visitor *SymbolValidator) VisitUntypedSubQueryNodeEnd(*UntypedSubQueryNode) {
+	if !visitor.HasError() {
+		visitor.symbolTypes = visitor.typeStack[0]
+		visitor.typeStack = visitor.typeStack[1:]
 	}
 }

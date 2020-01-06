@@ -18,18 +18,27 @@ package ast
 
 import (
 	"fmt"
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
 	"time"
+
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 type testSymbols struct {
 	values  map[string]interface{}
 	types   map[string]NodeType
 	cursors map[string]*testSymbolsSetCursor
+}
+
+func (symbols *testSymbols) GetSetSymbolTypes(name string) SymbolTypes {
+	return nil
+}
+
+func (symbols *testSymbols) OpenSetCursorForQuery(string, Query) (SetCursor, error) {
+	panic("not implemented")
 }
 
 func (symbols *testSymbols) IsSet(name string) (bool, bool) {
@@ -103,7 +112,7 @@ func (symbols *testSymbols) getValue(name string) (interface{}, error) {
 		if !cursor.IsValid() {
 			return nil, errors.Errorf("attempt to traverse set %v with invalid cursor", name)
 		}
-		return cursor.Current(), nil
+		return cursor.CurrentValue(), nil
 	}
 
 	value, found := symbols.values[name]
@@ -185,8 +194,9 @@ type testSymbolsSetCursor struct {
 	index   int
 }
 
-func (cursor *testSymbolsSetCursor) Next() {
+func (cursor *testSymbolsSetCursor) Next() error {
 	cursor.index++
+	return nil
 }
 
 func (cursor *testSymbolsSetCursor) IsValid() bool {
@@ -197,7 +207,11 @@ func (cursor *testSymbolsSetCursor) Close() {
 	delete(cursor.symbols.cursors, cursor.name)
 }
 
-func (cursor *testSymbolsSetCursor) Current() interface{} {
+func (cursor *testSymbolsSetCursor) Current() []byte {
+	return cursor.CurrentValue().([]byte)
+}
+
+func (cursor *testSymbolsSetCursor) CurrentValue() interface{} {
 	return cursor.slice.Index(cursor.index).Interface()
 }
 
@@ -232,6 +246,8 @@ type testDef struct {
 
 func TestBoolAndIsNullFilters(t *testing.T) {
 	tests := []testDef{
+		{"bool, result true", "flag", true},
+		{"not bool, result false", "not flag", false},
 		{"bool EQ, result true", "flag = true", true},
 		{"bool EQ, result false", "flag = false", false},
 		{"bool NEQ, result false", "flag != true", false},
@@ -494,7 +510,6 @@ func TestDateFilters(t *testing.T) {
 		{"date not between, result true", "d not between datetime(2032-09-03T15:36:45Z) and datetime(2032-09-03T15:36:47Z)", true},
 		{"date not between, result true", "d not between datetime(2032-09-03T15:36:55Z) and datetime(2032-09-03T15:36:58Z)", true},
 
-
 		{"and, result true", "a = 1 and b = 1", true},
 	}
 
@@ -569,10 +584,10 @@ func TestSetFunctions(t *testing.T) {
 		{"all of false (false for all)", "allOf(link.ids) < 100", false},
 		{"all of false (only firs true)", "allOf(link.ids) = 123", false},
 
-		{"none of false", "noneOf(link.ids) < 1000", false},
-		{"none of false (true for last)", "noneOf(link.ids) < 500", false},
-		{"none of true (true for all)", "noneOf(link.ids) < 100", false},
-		{"none of false (true for first)", "noneOf(link.ids) = 123", false},
+		{"none of of false", "not anyOf(link.ids) < 1000", false},
+		{"none of false (true for last)", "not anyOf(link.ids) < 500", false},
+		{"none of true (true for all)", "not anyOf(link.ids) < 100", true},
+		{"none of false (true for first)", "not anyOf(link.ids) = 123", false},
 
 		{"any of true in, true", "anyOf(link.ids) in [123, 456]", true},
 		{"any of true in, false", "anyOf(link.ids) in [321, 654]", false},
@@ -584,8 +599,11 @@ func TestSetFunctions(t *testing.T) {
 		{"count lunkIds = 0, true", "count(lunk.ids) = 0", true},
 		{"count lunkIds > 5, false", "count(lunk.ids) > 5", false},
 
-		{"isEmpty linkIds, false", "isEmpty(link.ids) = true", false},
-		{"isEmpty lunkIds, true", "isEmpty(lunk.ids) = true", true},
+		{"isEmpty linkIds, false", "isEmpty(link.ids)", false},
+		{"isEmpty lunkIds, true", "isEmpty(lunk.ids)", true},
+
+		{"not isEmpty linkIds, true", "not isEmpty(link.ids)", true},
+		{"not isEmpty lunkIds, false", "not isEmpty(lunk.ids)", false},
 	}
 
 	for _, tt := range tests {

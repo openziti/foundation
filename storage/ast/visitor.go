@@ -62,6 +62,8 @@ type Visitor interface {
 	VisitUntypedSymbolNode(node *UntypedSymbolNode)
 	VisitSetFunctionNodeStart(node *SetFunctionNode)
 	VisitSetFunctionNodeEnd(node *SetFunctionNode)
+	VisitUntypedNotExprStart(node *UntypedNotExprNode)
+	VisitUntypedNotExprEnd(node *UntypedNotExprNode)
 
 	// const nodes
 	VisitBoolConstNode(node *BoolConstNode)
@@ -95,8 +97,6 @@ type Visitor interface {
 	// sets
 	VisitAllOfSetExprNodeStart(node *AllOfSetExprNode)
 	VisitAllOfSetExprNodeEnd(node *AllOfSetExprNode)
-	VisitNoneOfSetExprNodeStart(node *NoneOfSetExprNode)
-	VisitNoneOfSetExprNodeEnd(node *NoneOfSetExprNode)
 	VisitAnyOfSetExprNodeStart(node *AnyOfSetExprNode)
 	VisitAnyOfSetExprNodeEnd(node *AnyOfSetExprNode)
 	VisitCountSetExprNodeStart(node *CountSetExprNode)
@@ -104,11 +104,19 @@ type Visitor interface {
 	VisitIsEmptySetExprNodeStart(node *IsEmptySetExprNode)
 	VisitIsEmptySetExprNodeEnd(node *IsEmptySetExprNode)
 
-	VisitQueryNode(node *QueryNodeImpl)
+	VisitUntypedQueryNodeStart(node *untypedQueryNode)
+	VisitUntypedQueryNodeEnd(node *untypedQueryNode)
+	VisitQueryNodeStart(node *queryNode)
+	VisitQueryNodeEnd(node *queryNode)
 	VisitSortByNode(node *SortByNode)
 	VisitSortFieldNode(node *SortFieldNode)
 	VisitLimitExprNode(node *LimitExprNode)
 	VisitSkipExprNode(node *SkipExprNode)
+
+	VisitUntypedSubQueryNodeStart(node *UntypedSubQueryNode)
+	VisitUntypedSubQueryNodeEnd(node *UntypedSubQueryNode)
+	VisitSubQueryNodeStart(node *subQueryNode)
+	VisitSubQueryNodeEnd(node *subQueryNode)
 
 	VisitSymbol(symbol string, nodeType NodeType)
 }
@@ -118,18 +126,29 @@ var _ Visitor = (*DefaultVisitor)(nil)
 type DefaultVisitor struct {
 }
 
-func (d DefaultVisitor) VisitQueryNode(_ *QueryNodeImpl)     {}
+func (d DefaultVisitor) VisitUntypedSubQueryNodeStart(*UntypedSubQueryNode) {}
+func (d DefaultVisitor) VisitUntypedSubQueryNodeEnd(*UntypedSubQueryNode)   {}
+func (d DefaultVisitor) VisitSubQueryNodeStart(*subQueryNode)               {}
+func (d DefaultVisitor) VisitSubQueryNodeEnd(*subQueryNode)                 {}
+
+func (d DefaultVisitor) VisitUntypedQueryNodeStart(_ *untypedQueryNode) {}
+func (d DefaultVisitor) VisitUntypedQueryNodeEnd(_ *untypedQueryNode)   {}
+func (d DefaultVisitor) VisitQueryNodeStart(_ *queryNode)               {}
+func (d DefaultVisitor) VisitQueryNodeEnd(_ *queryNode)                 {}
+
 func (d DefaultVisitor) VisitSortByNode(_ *SortByNode)       {}
 func (d DefaultVisitor) VisitSortFieldNode(_ *SortFieldNode) {}
 func (d DefaultVisitor) VisitLimitExprNode(_ *LimitExprNode) {}
 func (d DefaultVisitor) VisitSkipExprNode(_ *SkipExprNode)   {}
 
-func (d DefaultVisitor) VisitNotExprNodeStart(_ *NotExprNode) {}
-func (d DefaultVisitor) VisitNotExprNodeEnd(_ *NotExprNode)   {}
-func (d DefaultVisitor) VisitAndExprNodeStart(_ *AndExprNode) {}
-func (d DefaultVisitor) VisitAndExprNodeEnd(_ *AndExprNode)   {}
-func (d DefaultVisitor) VisitOrExprNodeStart(_ *OrExprNode)   {}
-func (d DefaultVisitor) VisitOrExprNodeEnd(_ *OrExprNode)     {}
+func (d DefaultVisitor) VisitUntypedNotExprStart(*UntypedNotExprNode) {}
+func (d DefaultVisitor) VisitUntypedNotExprEnd(*UntypedNotExprNode)   {}
+func (d DefaultVisitor) VisitNotExprNodeStart(_ *NotExprNode)         {}
+func (d DefaultVisitor) VisitNotExprNodeEnd(_ *NotExprNode)           {}
+func (d DefaultVisitor) VisitAndExprNodeStart(_ *AndExprNode)         {}
+func (d DefaultVisitor) VisitAndExprNodeEnd(_ *AndExprNode)           {}
+func (d DefaultVisitor) VisitOrExprNodeStart(_ *OrExprNode)           {}
+func (d DefaultVisitor) VisitOrExprNodeEnd(_ *OrExprNode)             {}
 
 func (d DefaultVisitor) VisitBinaryBoolExprNodeStart(_ *BinaryBoolExprNode)         {}
 func (d DefaultVisitor) VisitBinaryBoolExprNodeEnd(_ *BinaryBoolExprNode)           {}
@@ -198,8 +217,6 @@ func (d DefaultVisitor) VisitInt64ToFloat64NodeEnd(_ *Int64ToFloat64Node)   {}
 
 func (d DefaultVisitor) VisitAllOfSetExprNodeStart(_ *AllOfSetExprNode)     {}
 func (d DefaultVisitor) VisitAllOfSetExprNodeEnd(_ *AllOfSetExprNode)       {}
-func (d DefaultVisitor) VisitNoneOfSetExprNodeStart(_ *NoneOfSetExprNode)   {}
-func (d DefaultVisitor) VisitNoneOfSetExprNodeEnd(_ *NoneOfSetExprNode)     {}
 func (d DefaultVisitor) VisitAnyOfSetExprNodeStart(_ *AnyOfSetExprNode)     {}
 func (d DefaultVisitor) VisitAnyOfSetExprNodeEnd(_ *AnyOfSetExprNode)       {}
 func (d DefaultVisitor) VisitCountSetExprNodeStart(_ *CountSetExprNode)     {}

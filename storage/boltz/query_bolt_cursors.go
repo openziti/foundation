@@ -16,7 +16,10 @@
 
 package boltz
 
-import "go.etcd.io/bbolt"
+import (
+	"github.com/netfoundry/ziti-foundation/storage/ast"
+	"go.etcd.io/bbolt"
+)
 
 type BaseBoltCursor struct {
 	cursor *bbolt.Cursor
@@ -27,54 +30,49 @@ func (f *BaseBoltCursor) IsValid() bool {
 	return f.key != nil
 }
 
-func (f *BaseBoltCursor) Id() []byte {
+func (f *BaseBoltCursor) Current() []byte {
 	return f.key
+}
+
+func NewBoltCursor(cursor *bbolt.Cursor, forward bool) ast.SetCursor {
+	if forward {
+		return NewForwardBoltCursor(cursor)
+	}
+	return NewReverseBoltCursor(cursor)
+}
+
+func NewForwardBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
+	result := &ForwardBoltCursor{BaseBoltCursor{
+		cursor: cursor,
+		key:    nil,
+	}}
+	result.key, _ = result.cursor.First()
+	return result
 }
 
 type ForwardBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *ForwardBoltCursor) Init() {
-	f.key, _ = f.cursor.First()
+func (f *ForwardBoltCursor) Next() error {
+	f.key, _ = f.cursor.Next()
+	return nil
 }
 
-func (f *ForwardBoltCursor) Next() {
-	f.key, _ = f.cursor.Next()
+func NewReverseBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
+	result := &ReverseBoltCursor{BaseBoltCursor{
+		cursor: cursor,
+		key:    nil,
+	}}
+	result.key, _ = result.cursor.Last()
+	return result
 }
 
 type ReverseBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *ReverseBoltCursor) Init() {
-	f.key, _ = f.cursor.Last()
-}
-
-func (f *ReverseBoltCursor) Next() {
+func (f *ReverseBoltCursor) Next() error {
 	f.key, _ = f.cursor.Prev()
-}
-
-type ForwardIndexBoltCursor struct {
-	BaseBoltCursor
-}
-
-func (f *ForwardIndexBoltCursor) Init() {
-	f.key, _ = f.cursor.First()
-}
-
-func (f *ForwardIndexBoltCursor) Next() {
-	_, f.key = f.cursor.Next()
-}
-
-type ReverseIndexBoltCursor struct {
-	BaseBoltCursor
-}
-
-func (f *ReverseIndexBoltCursor) Init() {
-	f.key, _ = f.cursor.Last()
-}
-
-func (f *ReverseIndexBoltCursor) Next() {
-	_, f.key = f.cursor.Prev()
+	return nil
 }

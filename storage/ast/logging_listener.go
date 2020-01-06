@@ -17,9 +17,9 @@
 package ast
 
 import (
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
+	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
 	"runtime"
 	"strings"
 )
@@ -28,6 +28,8 @@ type LoggingListener struct {
 	PrintRuleLocation bool
 	PrintChildren     bool
 }
+
+var _ zitiql.ZitiQlListener = (*LoggingListener)(nil)
 
 func (l *LoggingListener) printRuleLocationWithSkip(s int) {
 	if l.PrintRuleLocation {
@@ -137,7 +139,7 @@ func (l LoggingListener) EnterGroup(c *zitiql.GroupContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterOrConjunction(c *zitiql.OrConjunctionContext) {
+func (l LoggingListener) EnterOrExpr(c *zitiql.OrExprContext) {
 	l.printDebug(c)
 }
 
@@ -145,7 +147,7 @@ func (l LoggingListener) EnterOperationOp(c *zitiql.OperationOpContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterAndConjunction(c *zitiql.AndConjunctionContext) {
+func (l LoggingListener) EnterAndExpr(c *zitiql.AndExprContext) {
 	l.printDebug(c)
 }
 
@@ -201,6 +203,10 @@ func (l LoggingListener) EnterBinaryEqualToBoolOp(c *zitiql.BinaryEqualToBoolOpC
 	l.printDebug(c)
 }
 
+func (l *LoggingListener) ExitBinaryEqualToBoolOp(c *zitiql.BinaryEqualToBoolOpContext) {
+	l.printDebug(c)
+}
+
 func (l LoggingListener) EnterBinaryEqualToNullOp(c *zitiql.BinaryEqualToNullOpContext) {
 	l.printDebug(c)
 }
@@ -237,7 +243,7 @@ func (l LoggingListener) ExitGroup(c *zitiql.GroupContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitOrConjunction(c *zitiql.OrConjunctionContext) {
+func (l LoggingListener) ExitOrExpr(c *zitiql.OrExprContext) {
 	l.printDebug(c)
 }
 
@@ -245,7 +251,7 @@ func (l LoggingListener) ExitOperationOp(c *zitiql.OperationOpContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitAndConjunction(c *zitiql.AndConjunctionContext) {
+func (l LoggingListener) ExitAndExpr(c *zitiql.AndExprContext) {
 	l.printDebug(c)
 }
 
@@ -298,10 +304,6 @@ func (l LoggingListener) ExitBinaryEqualToDatetimeOp(c *zitiql.BinaryEqualToDate
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitBinaryEqualToBoolOp(c *zitiql.BinaryEqualToBoolOpContext) {
-	l.printDebug(c)
-}
-
 func (l LoggingListener) ExitBinaryEqualToNullOp(c *zitiql.BinaryEqualToNullOpContext) {
 	l.printDebug(c)
 }
@@ -315,5 +317,45 @@ func (l *LoggingListener) EnterBoolConst(c *zitiql.BoolConstContext) {
 }
 
 func (l *LoggingListener) ExitBoolConst(c *zitiql.BoolConstContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterIsEmptyFunction(c *zitiql.IsEmptyFunctionContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterBoolSymbol(c *zitiql.BoolSymbolContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitIsEmptyFunction(c *zitiql.IsEmptyFunctionContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitBoolSymbol(c *zitiql.BoolSymbolContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterNotExpr(c *zitiql.NotExprContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitNotExpr(c *zitiql.NotExprContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterSet_expr(c *zitiql.Set_exprContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterSubQuery(c *zitiql.SubQueryContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitSet_expr(c *zitiql.Set_exprContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitSubQuery(c *zitiql.SubQueryContext) {
 	l.printDebug(c)
 }
