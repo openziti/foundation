@@ -225,10 +225,11 @@ func (symbol *entitySetSymbolRuntime) IsValid() bool {
 }
 
 func (symbol *entitySetSymbolRuntime) OpenCursor(tx *bbolt.Tx, rowId []byte) ast.SetCursor {
-	boltCursor := symbol.openBoltCursor(tx, rowId)
-	if boltCursor != nil {
-		symbol.cursor = boltCursor
-		symbol.value, _ = boltCursor.First()
+	symbol.cursor = symbol.openBoltCursor(tx, rowId)
+	if symbol.cursor != nil {
+		symbol.value, _ = symbol.cursor.First()
+	} else {
+		symbol.value = nil
 	}
 	return symbol
 }

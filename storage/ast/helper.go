@@ -22,8 +22,7 @@ import (
 )
 
 func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
-	logger := pfxlog.Logger()
-	logger.Debugf(`parsing filter: %v`, query)
+	pfxlog.Logger().Debugf(`parsing filter: %v`, query)
 	listener := NewListener()
 
 	if query == "" {
