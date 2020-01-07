@@ -70,6 +70,65 @@ func toFloat64Nodes(nodes ...Node) ([]Float64Node, bool) {
 	return result, true
 }
 
+type boolBinaryOp int
+
+const (
+	AndOp boolBinaryOp = iota
+	OrOp
+)
+
+type BooleanLogicExprNode struct {
+	left  Node
+	right Node
+	op    boolBinaryOp
+}
+
+func (node *BooleanLogicExprNode) Accept(visitor Visitor) {
+	visitor.VisitBooleanLogicExprNodeStart(node)
+	node.left.Accept(visitor)
+	node.right.Accept(visitor)
+	visitor.VisitBooleanLogicExprNodeEnd(node)
+}
+
+func (node *BooleanLogicExprNode) GetType() NodeType {
+	return NodeTypeBool
+}
+
+func (node *BooleanLogicExprNode) EvalBool(_ Symbols) (bool, error) {
+	return false, errors.Errorf("cannot evaluate transitory binary bool op node %v", node)
+}
+
+func (node *BooleanLogicExprNode) String() string {
+	opName := "AND"
+	if node.op == OrOp {
+		opName = "OR"
+	}
+	return fmt.Sprintf("%v %v %v", node.left, opName, node.right)
+}
+
+func (node *BooleanLogicExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
+	if err := transformTypes(s, &node.left, &node.right); err != nil {
+		return node, err
+	}
+	left, ok := node.left.(BoolNode)
+	if !ok {
+		return node, errors.Errorf("boolean logic expression LHS is of type %v, not bool", reflect.TypeOf(node.left))
+	}
+
+	right, ok := node.right.(BoolNode)
+	if !ok {
+		return node, errors.Errorf("boolean logic expression RHS is of type %v, not bool", reflect.TypeOf(node.right))
+	}
+
+	if node.op == AndOp {
+		return &AndExprNode{left, right}, nil
+	}
+	if node.op == OrOp {
+		return &OrExprNode{left, right}, nil
+	}
+	return node, errors.Errorf("unsupported boolean logic expression operation %v", node.op)
+}
+
 type BinaryExprNode struct {
 	left  Node
 	right Node

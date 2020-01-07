@@ -33,7 +33,7 @@ type testSymbols struct {
 	cursors map[string]*testSymbolsSetCursor
 }
 
-func (symbols *testSymbols) GetSetSymbolTypes(name string) SymbolTypes {
+func (symbols *testSymbols) GetSetSymbolTypes(string) SymbolTypes {
 	return nil
 }
 
@@ -604,6 +604,9 @@ func TestSetFunctions(t *testing.T) {
 
 		{"not isEmpty linkIds, true", "not isEmpty(link.ids)", true},
 		{"not isEmpty lunkIds, false", "not isEmpty(lunk.ids)", false},
+
+		{"and set ops, true", "not isEmpty(link.ids) and count(link.ids) = 3", true},
+		// TODO: FIX THIS CASE {"and set ops explicit equals, true", "isEmpty(link.ids) = false and count(link.ids) = 3", true},
 	}
 
 	for _, tt := range tests {

@@ -328,7 +328,6 @@ func (symbol *compositeEntitySetSymbol) OpenCursor(tx *bbolt.Tx, rowId []byte) a
 		symbol: symbol,
 		tx:     tx,
 		stack:  make([]queryPathElem, len(symbol.chain)),
-		valid:  true,
 	}
 	nextPathElem := symbol.chain[0].newQueryPath(0, stackCursor, rowId)
 	stackCursor.stack[0] = nextPathElem
@@ -354,7 +353,6 @@ func calculateNextCursorPosition(stackCursor *stackedCursor, stackElem queryPath
 		if key == nil { // end of this level of cursor
 			if stackElem.Index() == 0 { // end of total cursor
 				stackCursor.key = nil
-				stackCursor.valid = false
 				return
 			}
 
@@ -391,7 +389,6 @@ type stackedCursor struct {
 	tx     *bbolt.Tx
 	stack  []queryPathElem
 	key    []byte
-	valid  bool
 }
 
 func (cursor *stackedCursor) Current() []byte {
@@ -409,5 +406,5 @@ func (cursor *stackedCursor) Next() error {
 }
 
 func (cursor *stackedCursor) IsValid() bool {
-	return cursor.valid
+	return cursor.key != nil
 }

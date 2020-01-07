@@ -434,22 +434,22 @@ func (bl *ToBoltListener) ExitDatetime_array(c *zitiql.Datetime_arrayContext) {
 
 func (bl *ToBoltListener) ExitOrExpr(c *zitiql.OrExprContext) {
 	bl.printDebug(c)
-	right := bl.popBoolNode()
-	left := bl.popBoolNode()
+	right := bl.popNode()
+	left := bl.popNode()
 
 	if !bl.HasError() {
-		bl.pushStack(&OrExprNode{left: left, right: right})
+		bl.pushStack(&BooleanLogicExprNode{left: left, right: right, op: OrOp})
 	}
 }
 
 func (bl *ToBoltListener) ExitAndExpr(c *zitiql.AndExprContext) {
 	bl.printDebug(c)
 
-	right := bl.popBoolNode()
-	left := bl.popBoolNode()
+	right := bl.popNode()
+	left := bl.popNode()
 
 	if !bl.HasError() {
-		bl.pushStack(&AndExprNode{left: left, right: right})
+		bl.pushStack(&BooleanLogicExprNode{left: left, right: right, op: AndOp})
 	}
 }
 
