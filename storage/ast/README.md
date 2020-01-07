@@ -55,7 +55,6 @@ The grammer provides for a few set functions
 
 * anyOf
 * allOf
-* noneOf
 
 These can be used to wrap a symbol. Ex: when filtering services, `anyOf(appWans.identity) = <current-user-id>`. 
 This gets converted to `anyOf(appWans.identity = <current-user-id>)`. The elements of the set appWans.identity are inspected and if at least one matches the condition, it will return true. 
