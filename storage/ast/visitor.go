@@ -53,6 +53,8 @@ type Visitor interface {
 	VisitInStringArrayExprNodeEnd(node *InStringArrayExprNode)
 
 	// untyped transient nodes
+	VisitBooleanLogicExprNodeStart(node *BooleanLogicExprNode)
+	VisitBooleanLogicExprNodeEnd(node *BooleanLogicExprNode)
 	VisitBinaryExprNodeStart(node *BinaryExprNode)
 	VisitBinaryExprNodeEnd(node *BinaryExprNode)
 	VisitInArrayExprNodeStart(node *InArrayExprNode)
@@ -180,13 +182,15 @@ func (d DefaultVisitor) VisitInInt64ArrayExprNodeEnd(_ *InInt64ArrayExprNode)   
 func (d DefaultVisitor) VisitInStringArrayExprNodeStart(_ *InStringArrayExprNode)     {}
 func (d DefaultVisitor) VisitInStringArrayExprNodeEnd(_ *InStringArrayExprNode)       {}
 
-func (d DefaultVisitor) VisitBinaryExprNodeStart(_ *BinaryExprNode)   {}
-func (d DefaultVisitor) VisitBinaryExprNodeEnd(_ *BinaryExprNode)     {}
-func (d DefaultVisitor) VisitInArrayExprNodeStart(_ *InArrayExprNode) {}
-func (d DefaultVisitor) VisitInArrayExprNodeEnd(_ *InArrayExprNode)   {}
-func (d DefaultVisitor) VisitBetweenExprNodeStart(_ *BetweenExprNode) {}
-func (d DefaultVisitor) VisitBetweenExprNodeEnd(_ *BetweenExprNode)   {}
-func (d DefaultVisitor) VisitUntypedSymbolNode(_ *UntypedSymbolNode)  {}
+func (d DefaultVisitor) VisitBooleanLogicExprNodeStart(*BooleanLogicExprNode) {}
+func (d DefaultVisitor) VisitBooleanLogicExprNodeEnd(*BooleanLogicExprNode)   {}
+func (d DefaultVisitor) VisitBinaryExprNodeStart(*BinaryExprNode)             {}
+func (d DefaultVisitor) VisitBinaryExprNodeEnd(*BinaryExprNode)               {}
+func (d DefaultVisitor) VisitInArrayExprNodeStart(*InArrayExprNode)           {}
+func (d DefaultVisitor) VisitInArrayExprNodeEnd(*InArrayExprNode)             {}
+func (d DefaultVisitor) VisitBetweenExprNodeStart(*BetweenExprNode)           {}
+func (d DefaultVisitor) VisitBetweenExprNodeEnd(*BetweenExprNode)             {}
+func (d DefaultVisitor) VisitUntypedSymbolNode(*UntypedSymbolNode)            {}
 
 func (d DefaultVisitor) VisitSetFunctionNodeStart(_ *SetFunctionNode) {}
 func (d DefaultVisitor) VisitSetFunctionNodeEnd(_ *SetFunctionNode)   {}

@@ -134,7 +134,7 @@ func (store *BaseStore) createCompositeEntitySymbol(name string, first linkedEnt
 			chain:      chain,
 		}
 	}
-	if len(chain) == len(iterable) {
+	if len(chain) == len(iterable) || last.IsSet() {
 		return &compositeEntitySetSymbol{
 			name:       name,
 			symbolType: rest.GetType(),
