@@ -157,22 +157,6 @@ func (bl *ToBoltListener) popNode() Node {
 	return node
 }
 
-func (bl *ToBoltListener) popBoolNode() BoolNode {
-	result := bl.popNode()
-
-	if bl.HasError() {
-		return nil
-	}
-
-	filter, ok := result.(BoolNode)
-	if !ok {
-		bl.err = errors.Errorf("expected boolean expression, but got type %v", reflect.TypeOf(result))
-		return nil
-	}
-
-	return filter
-}
-
 func (bl *ToBoltListener) getQuery(symbols SymbolTypes) (Query, error) {
 	if bl.HasError() {
 		return nil, bl.err
@@ -335,22 +319,22 @@ func (bl *ToBoltListener) appendDateTimeNode(text string) {
 	bl.pushStack(&DatetimeConstNode{t})
 }
 
-func (bl *ToBoltListener) EnterString_array(c *zitiql.String_arrayContext) {
+func (bl *ToBoltListener) EnterStringArray(c *zitiql.StringArrayContext) {
 	bl.printDebug(c)
 	bl.enterGroup()
 }
 
-func (bl *ToBoltListener) EnterNumber_array(c *zitiql.Number_arrayContext) {
+func (bl *ToBoltListener) EnterNumberArray(c *zitiql.NumberArrayContext) {
 	bl.printDebug(c)
 	bl.enterGroup()
 }
 
-func (bl *ToBoltListener) EnterDatetime_array(c *zitiql.Datetime_arrayContext) {
+func (bl *ToBoltListener) EnterDatetimeArray(c *zitiql.DatetimeArrayContext) {
 	bl.printDebug(c)
 	bl.enterGroup()
 }
 
-func (bl *ToBoltListener) ExitString_array(c *zitiql.String_arrayContext) {
+func (bl *ToBoltListener) ExitStringArray(c *zitiql.StringArrayContext) {
 	bl.printDebug(c)
 	if bl.HasError() {
 		return
@@ -369,7 +353,7 @@ func (bl *ToBoltListener) ExitString_array(c *zitiql.String_arrayContext) {
 	bl.pushStack(arrayNode)
 }
 
-func (bl *ToBoltListener) ExitNumber_array(c *zitiql.Number_arrayContext) {
+func (bl *ToBoltListener) ExitNumberArray(c *zitiql.NumberArrayContext) {
 	bl.printDebug(c)
 	if bl.HasError() {
 		return
@@ -413,7 +397,7 @@ func (bl *ToBoltListener) ExitNumber_array(c *zitiql.Number_arrayContext) {
 	}
 }
 
-func (bl *ToBoltListener) ExitDatetime_array(c *zitiql.Datetime_arrayContext) {
+func (bl *ToBoltListener) ExitDatetimeArray(c *zitiql.DatetimeArrayContext) {
 	bl.printDebug(c)
 	if bl.HasError() {
 		return
@@ -579,7 +563,7 @@ func (bl *ToBoltListener) ExitBinaryOp() {
 	}
 }
 
-func (bl *ToBoltListener) ExitSetFunction(c *zitiql.SetFunctionContext) {
+func (bl *ToBoltListener) ExitSetFunctionExpr(c *zitiql.SetFunctionExprContext) {
 	bl.printDebug(c)
 	bl.pushSetFunction()
 }

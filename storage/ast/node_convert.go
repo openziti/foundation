@@ -527,12 +527,12 @@ func (node *SetFunctionNode) TypeTransform(s SymbolTypes) (Node, error) {
 		}
 		if node.setFunction == SetFunctionCount {
 			return &CountSetExprNode{
-				symbol: node.symbol,
+				symbol: symbol,
 			}, nil
 		}
 		if node.setFunction == SetFunctionIsEmpty {
 			return &IsEmptySetExprNode{
-				symbol: node.symbol,
+				symbol: symbol,
 				query:  query,
 			}, nil
 		}

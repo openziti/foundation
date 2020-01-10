@@ -105,13 +105,13 @@ RFC3339_DATE_TIME: FULL_DATE  T  FULL_TIME;
 fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
 
 // Empty lists not supported as some RDBMs don't allow empty lists
-string_array: LBRACKET WS* STRING (WS* ',' WS* STRING)* WS* RBRACKET;
-number_array: LBRACKET WS* NUMBER (WS* ',' WS* NUMBER)* WS* RBRACKET;
-datetime_array: LBRACKET WS* DATETIME (WS* ',' WS* DATETIME)* WS* RBRACKET;
+stringArray: LBRACKET WS* STRING (WS* ',' WS* STRING)* WS* RBRACKET;
+numberArray: LBRACKET WS* NUMBER (WS* ',' WS* NUMBER)* WS* RBRACKET;
+datetimeArray: LBRACKET WS* DATETIME (WS* ',' WS* DATETIME)* WS* RBRACKET;
 
 start: WS* query* WS* EOF #End;
 
-query: bool_expr (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt;
+query: boolExpr (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt;
 
 skip: SKIP_ROWS WS+ NUMBER #SkipExpr;
 
@@ -121,46 +121,46 @@ sortBy: SORT WS+ BY WS+ sortField (WS* ',' WS* sortField)* #SortByExpr;
 
 sortField: IDENTIFIER (WS+ (ASC | DESC))? #SortFieldExpr;
 
-bool_expr:
+boolExpr:
   operation #OperationOp
-  | LPAREN WS* bool_expr WS* RPAREN #Group
-  | bool_expr (WS+ AND WS+ bool_expr)+ #AndExpr
-  | bool_expr (WS+ OR WS+ bool_expr)+ #OrExpr
+  | LPAREN WS* boolExpr WS* RPAREN #Group
+  | boolExpr (WS+ AND WS+ boolExpr)+ #AndExpr
+  | boolExpr (WS+ OR WS+ boolExpr)+ #OrExpr
   | BOOL #BoolConst
-  | ISEMPTY LPAREN WS* set_expr WS* RPAREN #IsEmptyFunction
+  | ISEMPTY LPAREN WS* setExpr WS* RPAREN #IsEmptyFunction
   | IDENTIFIER #BoolSymbol
-  | NOT WS+ bool_expr #NotExpr
+  | NOT WS+ boolExpr #NotExpr
   ;
 
 operation:
-    binary_lhs WS+ IN WS+ string_array #InStringArrayOp
-  | binary_lhs WS+ IN WS+ number_array #InNumberArrayOp
-  | binary_lhs WS+ IN WS+ datetime_array #InDatetimeArrayOp
-  | binary_lhs WS+ BETWEEN WS+ NUMBER WS+ AND WS+ NUMBER # BetweenNumberOp
-  | binary_lhs WS+ BETWEEN WS+ DATETIME WS+ AND WS+ DATETIME # BetweenDateOp
-  | binary_lhs WS* LT WS* NUMBER # BinaryLessThanNumberOp
-  | binary_lhs WS* LT WS* DATETIME # BinaryLessThanDatetimeOp
-  | binary_lhs WS* GT WS* NUMBER # BinaryGreaterThanNumberOp
-  | binary_lhs WS* GT WS* DATETIME# BinaryGreaterThanDatetimeOp
-  | binary_lhs WS* EQ WS* STRING #BinaryEqualToStringOp
-  | binary_lhs WS* EQ WS* NUMBER #BinaryEqualToNumberOp
-  | binary_lhs WS* EQ WS* DATETIME #BinaryEqualToDatetimeOp
-  | binary_lhs WS* EQ WS* BOOL #BinaryEqualToBoolOp
-  | binary_lhs WS* EQ WS* NULL #BinaryEqualToNullOp
-  | binary_lhs WS* CONTAINS WS+ (STRING|NUMBER) #BinaryContainsOp
+    binaryLhs WS+ IN WS+ stringArray #InStringArrayOp
+  | binaryLhs WS+ IN WS+ numberArray #InNumberArrayOp
+  | binaryLhs WS+ IN WS+ datetimeArray #InDatetimeArrayOp
+  | binaryLhs WS+ BETWEEN WS+ NUMBER WS+ AND WS+ NUMBER # BetweenNumberOp
+  | binaryLhs WS+ BETWEEN WS+ DATETIME WS+ AND WS+ DATETIME # BetweenDateOp
+  | binaryLhs WS* LT WS* NUMBER # BinaryLessThanNumberOp
+  | binaryLhs WS* LT WS* DATETIME # BinaryLessThanDatetimeOp
+  | binaryLhs WS* GT WS* NUMBER # BinaryGreaterThanNumberOp
+  | binaryLhs WS* GT WS* DATETIME# BinaryGreaterThanDatetimeOp
+  | binaryLhs WS* EQ WS* STRING #BinaryEqualToStringOp
+  | binaryLhs WS* EQ WS* NUMBER #BinaryEqualToNumberOp
+  | binaryLhs WS* EQ WS* DATETIME #BinaryEqualToDatetimeOp
+  | binaryLhs WS* EQ WS* BOOL #BinaryEqualToBoolOp
+  | binaryLhs WS* EQ WS* NULL #BinaryEqualToNullOp
+  | binaryLhs WS* CONTAINS WS+ (STRING|NUMBER) #BinaryContainsOp
   ;
 
-binary_lhs: IDENTIFIER | set_function;
+binaryLhs: IDENTIFIER | setFunction;
 
-set_function:
-    ALL_OF LPAREN IDENTIFIER RPAREN #SetFunction
-  | ANY_OF LPAREN IDENTIFIER RPAREN #SetFunction
-  | COUNT LPAREN set_expr RPAREN #SetFunction
+setFunction:
+    ALL_OF LPAREN IDENTIFIER RPAREN #SetFunctionExpr
+  | ANY_OF LPAREN IDENTIFIER RPAREN #SetFunctionExpr
+  | COUNT LPAREN setExpr RPAREN #SetFunctionExpr
   ;
 
-set_expr:
+setExpr:
     IDENTIFIER
-  | subquery_expr
+  | subQueryExpr
   ;
 
-subquery_expr: FROM WS+ IDENTIFIER WS+ WHERE WS+ query #SubQuery;
+subQueryExpr: FROM WS+ IDENTIFIER WS+ WHERE WS+ query #SubQuery;

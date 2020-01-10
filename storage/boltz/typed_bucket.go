@@ -59,6 +59,7 @@ type MapFieldChecker map[string]struct{}
 func (m MapFieldChecker) IsUpdated(name string) bool {
 	_, found := m[name]
 	return found
+
 }
 
 func NewMappedFieldChecker(checker FieldChecker, mappings map[string]string) FieldChecker {
@@ -343,7 +344,7 @@ func (bucket *TypedBucket) GetBool(name string) *bool {
 
 func (bucket *TypedBucket) SetBool(name string, value bool, checker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, checker) {
-		buf := make([]byte, 2)
+		buf := make([]byte, 2) // 1 byte for type + 1 byte for value
 		buf[0] = byte(TypeBool)
 		if value {
 			buf[1] = 1
@@ -417,9 +418,19 @@ func (bucket *TypedBucket) GetFloat64(name string) *float64 {
 	return FieldToFloat64(fieldType, value)
 }
 
+func (bucket *TypedBucket) SetFloat64(name string, value float64, fieldChecker FieldChecker) *TypedBucket {
+	if bucket.ProceedWithSet(name, fieldChecker) {
+		buf := make([]byte, 9) // 1 byte for type + 8 bytes for float64
+		buf[0] = byte(TypeFloat64)
+		binary.LittleEndian.PutUint64(buf[1:], math.Float64bits(value))
+		bucket.Err = bucket.Put([]byte(name), buf)
+	}
+	return bucket
+}
+
 func (bucket *TypedBucket) SetInt64(name string, value int64, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
-		buf := make([]byte, 9)
+		buf := make([]byte, 9) // 1 byte for type + 8 bytes for int64
 		buf[0] = byte(TypeInt64)
 		binary.LittleEndian.PutUint64(buf[1:], uint64(value))
 		bucket.Err = bucket.Put([]byte(name), buf)
@@ -454,7 +465,7 @@ func (bucket *TypedBucket) GetInt32WithDefault(name string, defaultValue int32) 
 
 func (bucket *TypedBucket) SetInt32(name string, value int32, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
-		buf := make([]byte, 5)
+		buf := make([]byte, 5) // 1 byte for type + 4 bytes for int32
 		buf[0] = byte(TypeInt32)
 		binary.LittleEndian.PutUint32(buf[1:], uint32(value))
 		bucket.Err = bucket.Put([]byte(name), buf)
@@ -671,6 +682,10 @@ func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBu
 		bucket.SetInt64(name, val, nil)
 	case int:
 		bucket.SetInt64(name, int64(val), nil)
+	case float32:
+		bucket.SetFloat64(name, float64(val), nil)
+	case float64:
+		bucket.SetFloat64(name, val, nil)
 	case time.Time:
 		bucket.SetTime(name, val, nil)
 	case bool:
@@ -723,12 +738,4 @@ func clone(val []byte) []byte {
 	result := make([]byte, len(val))
 	copy(result, val)
 	return result
-}
-
-func GetPath(basePath []string, id string, path []string) []string {
-	fullPath := make([]string, len(basePath)+len(path)+1)
-	copy(fullPath, basePath)
-	fullPath[len(basePath)] = id
-	copy(fullPath[len(basePath)+1:], path)
-	return fullPath
 }

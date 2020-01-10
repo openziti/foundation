@@ -111,23 +111,23 @@ func (l *LoggingListener) ExitLimitExpr(c *zitiql.LimitExprContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterSetFunction(c *zitiql.SetFunctionContext) {
+func (l LoggingListener) EnterSetFunctionExpr(c *zitiql.SetFunctionExprContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterBinary_lhs(c *zitiql.Binary_lhsContext) {
+func (l LoggingListener) EnterBinaryLhs(c *zitiql.BinaryLhsContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterString_array(c *zitiql.String_arrayContext) {
+func (l LoggingListener) EnterStringArray(c *zitiql.StringArrayContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterNumber_array(c *zitiql.Number_arrayContext) {
+func (l LoggingListener) EnterNumberArray(c *zitiql.NumberArrayContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) EnterDatetime_array(c *zitiql.Datetime_arrayContext) {
+func (l LoggingListener) EnterDatetimeArray(c *zitiql.DatetimeArrayContext) {
 	l.printDebug(c)
 }
 
@@ -215,23 +215,23 @@ func (l LoggingListener) EnterBinaryContainsOp(c *zitiql.BinaryContainsOpContext
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitSetFunction(c *zitiql.SetFunctionContext) {
+func (l LoggingListener) ExitSetFunctionExpr(c *zitiql.SetFunctionExprContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitBinary_lhs(c *zitiql.Binary_lhsContext) {
+func (l LoggingListener) ExitBinaryLhs(c *zitiql.BinaryLhsContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitString_array(c *zitiql.String_arrayContext) {
+func (l LoggingListener) ExitStringArray(c *zitiql.StringArrayContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitNumber_array(c *zitiql.Number_arrayContext) {
+func (l LoggingListener) ExitNumberArray(c *zitiql.NumberArrayContext) {
 	l.printDebug(c)
 }
 
-func (l LoggingListener) ExitDatetime_array(c *zitiql.Datetime_arrayContext) {
+func (l LoggingListener) ExitDatetimeArray(c *zitiql.DatetimeArrayContext) {
 	l.printDebug(c)
 }
 
@@ -344,7 +344,7 @@ func (l *LoggingListener) ExitNotExpr(c *zitiql.NotExprContext) {
 	l.printDebug(c)
 }
 
-func (l *LoggingListener) EnterSet_expr(c *zitiql.Set_exprContext) {
+func (l *LoggingListener) EnterSetExpr(c *zitiql.SetExprContext) {
 	l.printDebug(c)
 }
 
@@ -352,7 +352,7 @@ func (l *LoggingListener) EnterSubQuery(c *zitiql.SubQueryContext) {
 	l.printDebug(c)
 }
 
-func (l *LoggingListener) ExitSet_expr(c *zitiql.Set_exprContext) {
+func (l *LoggingListener) ExitSetExpr(c *zitiql.SetExprContext) {
 	l.printDebug(c)
 }
 
