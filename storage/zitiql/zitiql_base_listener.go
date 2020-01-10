@@ -20,23 +20,23 @@ func (s *BaseZitiQlListener) EnterEveryRule(ctx antlr.ParserRuleContext) {}
 // ExitEveryRule is called when any rule is exited.
 func (s *BaseZitiQlListener) ExitEveryRule(ctx antlr.ParserRuleContext) {}
 
-// EnterString_array is called when production string_array is entered.
-func (s *BaseZitiQlListener) EnterString_array(ctx *String_arrayContext) {}
+// EnterStringArray is called when production stringArray is entered.
+func (s *BaseZitiQlListener) EnterStringArray(ctx *StringArrayContext) {}
 
-// ExitString_array is called when production string_array is exited.
-func (s *BaseZitiQlListener) ExitString_array(ctx *String_arrayContext) {}
+// ExitStringArray is called when production stringArray is exited.
+func (s *BaseZitiQlListener) ExitStringArray(ctx *StringArrayContext) {}
 
-// EnterNumber_array is called when production number_array is entered.
-func (s *BaseZitiQlListener) EnterNumber_array(ctx *Number_arrayContext) {}
+// EnterNumberArray is called when production numberArray is entered.
+func (s *BaseZitiQlListener) EnterNumberArray(ctx *NumberArrayContext) {}
 
-// ExitNumber_array is called when production number_array is exited.
-func (s *BaseZitiQlListener) ExitNumber_array(ctx *Number_arrayContext) {}
+// ExitNumberArray is called when production numberArray is exited.
+func (s *BaseZitiQlListener) ExitNumberArray(ctx *NumberArrayContext) {}
 
-// EnterDatetime_array is called when production datetime_array is entered.
-func (s *BaseZitiQlListener) EnterDatetime_array(ctx *Datetime_arrayContext) {}
+// EnterDatetimeArray is called when production datetimeArray is entered.
+func (s *BaseZitiQlListener) EnterDatetimeArray(ctx *DatetimeArrayContext) {}
 
-// ExitDatetime_array is called when production datetime_array is exited.
-func (s *BaseZitiQlListener) ExitDatetime_array(ctx *Datetime_arrayContext) {}
+// ExitDatetimeArray is called when production datetimeArray is exited.
+func (s *BaseZitiQlListener) ExitDatetimeArray(ctx *DatetimeArrayContext) {}
 
 // EnterEnd is called when production End is entered.
 func (s *BaseZitiQlListener) EnterEnd(ctx *EndContext) {}
@@ -214,23 +214,23 @@ func (s *BaseZitiQlListener) EnterBinaryContainsOp(ctx *BinaryContainsOpContext)
 // ExitBinaryContainsOp is called when production BinaryContainsOp is exited.
 func (s *BaseZitiQlListener) ExitBinaryContainsOp(ctx *BinaryContainsOpContext) {}
 
-// EnterBinary_lhs is called when production binary_lhs is entered.
-func (s *BaseZitiQlListener) EnterBinary_lhs(ctx *Binary_lhsContext) {}
+// EnterBinaryLhs is called when production binaryLhs is entered.
+func (s *BaseZitiQlListener) EnterBinaryLhs(ctx *BinaryLhsContext) {}
 
-// ExitBinary_lhs is called when production binary_lhs is exited.
-func (s *BaseZitiQlListener) ExitBinary_lhs(ctx *Binary_lhsContext) {}
+// ExitBinaryLhs is called when production binaryLhs is exited.
+func (s *BaseZitiQlListener) ExitBinaryLhs(ctx *BinaryLhsContext) {}
 
-// EnterSetFunction is called when production SetFunction is entered.
-func (s *BaseZitiQlListener) EnterSetFunction(ctx *SetFunctionContext) {}
+// EnterSetFunctionExpr is called when production SetFunctionExpr is entered.
+func (s *BaseZitiQlListener) EnterSetFunctionExpr(ctx *SetFunctionExprContext) {}
 
-// ExitSetFunction is called when production SetFunction is exited.
-func (s *BaseZitiQlListener) ExitSetFunction(ctx *SetFunctionContext) {}
+// ExitSetFunctionExpr is called when production SetFunctionExpr is exited.
+func (s *BaseZitiQlListener) ExitSetFunctionExpr(ctx *SetFunctionExprContext) {}
 
-// EnterSet_expr is called when production set_expr is entered.
-func (s *BaseZitiQlListener) EnterSet_expr(ctx *Set_exprContext) {}
+// EnterSetExpr is called when production setExpr is entered.
+func (s *BaseZitiQlListener) EnterSetExpr(ctx *SetExprContext) {}
 
-// ExitSet_expr is called when production set_expr is exited.
-func (s *BaseZitiQlListener) ExitSet_expr(ctx *Set_exprContext) {}
+// ExitSetExpr is called when production setExpr is exited.
+func (s *BaseZitiQlListener) ExitSetExpr(ctx *SetExprContext) {}
 
 // EnterSubQuery is called when production SubQuery is entered.
 func (s *BaseZitiQlListener) EnterSubQuery(ctx *SubQueryContext) {}

@@ -326,9 +326,9 @@ var symbolicNames = []string{
 }
 
 var ruleNames = []string{
-	"string_array", "number_array", "datetime_array", "start", "query", "skip",
-	"limit", "sortBy", "sortField", "bool_expr", "operation", "binary_lhs",
-	"set_function", "set_expr", "subquery_expr",
+	"stringArray", "numberArray", "datetimeArray", "start", "query", "skip",
+	"limit", "sortBy", "sortField", "boolExpr", "operation", "binaryLhs", "setFunction",
+	"setExpr", "subQueryExpr",
 }
 
 type ZitiQlParser struct {
@@ -399,108 +399,108 @@ const (
 
 // ZitiQlParser rules.
 const (
-	ZitiQlParserRULE_string_array   = 0
-	ZitiQlParserRULE_number_array   = 1
-	ZitiQlParserRULE_datetime_array = 2
-	ZitiQlParserRULE_start          = 3
-	ZitiQlParserRULE_query          = 4
-	ZitiQlParserRULE_skip           = 5
-	ZitiQlParserRULE_limit          = 6
-	ZitiQlParserRULE_sortBy         = 7
-	ZitiQlParserRULE_sortField      = 8
-	ZitiQlParserRULE_bool_expr      = 9
-	ZitiQlParserRULE_operation      = 10
-	ZitiQlParserRULE_binary_lhs     = 11
-	ZitiQlParserRULE_set_function   = 12
-	ZitiQlParserRULE_set_expr       = 13
-	ZitiQlParserRULE_subquery_expr  = 14
+	ZitiQlParserRULE_stringArray   = 0
+	ZitiQlParserRULE_numberArray   = 1
+	ZitiQlParserRULE_datetimeArray = 2
+	ZitiQlParserRULE_start         = 3
+	ZitiQlParserRULE_query         = 4
+	ZitiQlParserRULE_skip          = 5
+	ZitiQlParserRULE_limit         = 6
+	ZitiQlParserRULE_sortBy        = 7
+	ZitiQlParserRULE_sortField     = 8
+	ZitiQlParserRULE_boolExpr      = 9
+	ZitiQlParserRULE_operation     = 10
+	ZitiQlParserRULE_binaryLhs     = 11
+	ZitiQlParserRULE_setFunction   = 12
+	ZitiQlParserRULE_setExpr       = 13
+	ZitiQlParserRULE_subQueryExpr  = 14
 )
 
-// IString_arrayContext is an interface to support dynamic dispatch.
-type IString_arrayContext interface {
+// IStringArrayContext is an interface to support dynamic dispatch.
+type IStringArrayContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsString_arrayContext differentiates from other interfaces.
-	IsString_arrayContext()
+	// IsStringArrayContext differentiates from other interfaces.
+	IsStringArrayContext()
 }
 
-type String_arrayContext struct {
+type StringArrayContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptyString_arrayContext() *String_arrayContext {
-	var p = new(String_arrayContext)
+func NewEmptyStringArrayContext() *StringArrayContext {
+	var p = new(StringArrayContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_string_array
+	p.RuleIndex = ZitiQlParserRULE_stringArray
 	return p
 }
 
-func (*String_arrayContext) IsString_arrayContext() {}
+func (*StringArrayContext) IsStringArrayContext() {}
 
-func NewString_arrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *String_arrayContext {
-	var p = new(String_arrayContext)
+func NewStringArrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *StringArrayContext {
+	var p = new(StringArrayContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_string_array
+	p.RuleIndex = ZitiQlParserRULE_stringArray
 
 	return p
 }
 
-func (s *String_arrayContext) GetParser() antlr.Parser { return s.parser }
+func (s *StringArrayContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *String_arrayContext) LBRACKET() antlr.TerminalNode {
+func (s *StringArrayContext) LBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLBRACKET, 0)
 }
 
-func (s *String_arrayContext) AllSTRING() []antlr.TerminalNode {
+func (s *StringArrayContext) AllSTRING() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserSTRING)
 }
 
-func (s *String_arrayContext) STRING(i int) antlr.TerminalNode {
+func (s *StringArrayContext) STRING(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserSTRING, i)
 }
 
-func (s *String_arrayContext) RBRACKET() antlr.TerminalNode {
+func (s *StringArrayContext) RBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserRBRACKET, 0)
 }
 
-func (s *String_arrayContext) AllWS() []antlr.TerminalNode {
+func (s *StringArrayContext) AllWS() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserWS)
 }
 
-func (s *String_arrayContext) WS(i int) antlr.TerminalNode {
+func (s *StringArrayContext) WS(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserWS, i)
 }
 
-func (s *String_arrayContext) GetRuleContext() antlr.RuleContext {
+func (s *StringArrayContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *String_arrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *StringArrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *String_arrayContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *StringArrayContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterString_array(s)
+		listenerT.EnterStringArray(s)
 	}
 }
 
-func (s *String_arrayContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *StringArrayContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitString_array(s)
+		listenerT.ExitStringArray(s)
 	}
 }
 
-func (p *ZitiQlParser) String_array() (localctx IString_arrayContext) {
-	localctx = NewString_arrayContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 0, ZitiQlParserRULE_string_array)
+func (p *ZitiQlParser) StringArray() (localctx IStringArrayContext) {
+	localctx = NewStringArrayContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 0, ZitiQlParserRULE_stringArray)
 	var _la int
 
 	defer func() {
@@ -614,91 +614,91 @@ func (p *ZitiQlParser) String_array() (localctx IString_arrayContext) {
 	return localctx
 }
 
-// INumber_arrayContext is an interface to support dynamic dispatch.
-type INumber_arrayContext interface {
+// INumberArrayContext is an interface to support dynamic dispatch.
+type INumberArrayContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsNumber_arrayContext differentiates from other interfaces.
-	IsNumber_arrayContext()
+	// IsNumberArrayContext differentiates from other interfaces.
+	IsNumberArrayContext()
 }
 
-type Number_arrayContext struct {
+type NumberArrayContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptyNumber_arrayContext() *Number_arrayContext {
-	var p = new(Number_arrayContext)
+func NewEmptyNumberArrayContext() *NumberArrayContext {
+	var p = new(NumberArrayContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_number_array
+	p.RuleIndex = ZitiQlParserRULE_numberArray
 	return p
 }
 
-func (*Number_arrayContext) IsNumber_arrayContext() {}
+func (*NumberArrayContext) IsNumberArrayContext() {}
 
-func NewNumber_arrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Number_arrayContext {
-	var p = new(Number_arrayContext)
+func NewNumberArrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *NumberArrayContext {
+	var p = new(NumberArrayContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_number_array
+	p.RuleIndex = ZitiQlParserRULE_numberArray
 
 	return p
 }
 
-func (s *Number_arrayContext) GetParser() antlr.Parser { return s.parser }
+func (s *NumberArrayContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Number_arrayContext) LBRACKET() antlr.TerminalNode {
+func (s *NumberArrayContext) LBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLBRACKET, 0)
 }
 
-func (s *Number_arrayContext) AllNUMBER() []antlr.TerminalNode {
+func (s *NumberArrayContext) AllNUMBER() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserNUMBER)
 }
 
-func (s *Number_arrayContext) NUMBER(i int) antlr.TerminalNode {
+func (s *NumberArrayContext) NUMBER(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserNUMBER, i)
 }
 
-func (s *Number_arrayContext) RBRACKET() antlr.TerminalNode {
+func (s *NumberArrayContext) RBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserRBRACKET, 0)
 }
 
-func (s *Number_arrayContext) AllWS() []antlr.TerminalNode {
+func (s *NumberArrayContext) AllWS() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserWS)
 }
 
-func (s *Number_arrayContext) WS(i int) antlr.TerminalNode {
+func (s *NumberArrayContext) WS(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserWS, i)
 }
 
-func (s *Number_arrayContext) GetRuleContext() antlr.RuleContext {
+func (s *NumberArrayContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Number_arrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *NumberArrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *Number_arrayContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *NumberArrayContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterNumber_array(s)
+		listenerT.EnterNumberArray(s)
 	}
 }
 
-func (s *Number_arrayContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *NumberArrayContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitNumber_array(s)
+		listenerT.ExitNumberArray(s)
 	}
 }
 
-func (p *ZitiQlParser) Number_array() (localctx INumber_arrayContext) {
-	localctx = NewNumber_arrayContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 2, ZitiQlParserRULE_number_array)
+func (p *ZitiQlParser) NumberArray() (localctx INumberArrayContext) {
+	localctx = NewNumberArrayContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 2, ZitiQlParserRULE_numberArray)
 	var _la int
 
 	defer func() {
@@ -812,91 +812,91 @@ func (p *ZitiQlParser) Number_array() (localctx INumber_arrayContext) {
 	return localctx
 }
 
-// IDatetime_arrayContext is an interface to support dynamic dispatch.
-type IDatetime_arrayContext interface {
+// IDatetimeArrayContext is an interface to support dynamic dispatch.
+type IDatetimeArrayContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsDatetime_arrayContext differentiates from other interfaces.
-	IsDatetime_arrayContext()
+	// IsDatetimeArrayContext differentiates from other interfaces.
+	IsDatetimeArrayContext()
 }
 
-type Datetime_arrayContext struct {
+type DatetimeArrayContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptyDatetime_arrayContext() *Datetime_arrayContext {
-	var p = new(Datetime_arrayContext)
+func NewEmptyDatetimeArrayContext() *DatetimeArrayContext {
+	var p = new(DatetimeArrayContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_datetime_array
+	p.RuleIndex = ZitiQlParserRULE_datetimeArray
 	return p
 }
 
-func (*Datetime_arrayContext) IsDatetime_arrayContext() {}
+func (*DatetimeArrayContext) IsDatetimeArrayContext() {}
 
-func NewDatetime_arrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Datetime_arrayContext {
-	var p = new(Datetime_arrayContext)
+func NewDatetimeArrayContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *DatetimeArrayContext {
+	var p = new(DatetimeArrayContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_datetime_array
+	p.RuleIndex = ZitiQlParserRULE_datetimeArray
 
 	return p
 }
 
-func (s *Datetime_arrayContext) GetParser() antlr.Parser { return s.parser }
+func (s *DatetimeArrayContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Datetime_arrayContext) LBRACKET() antlr.TerminalNode {
+func (s *DatetimeArrayContext) LBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLBRACKET, 0)
 }
 
-func (s *Datetime_arrayContext) AllDATETIME() []antlr.TerminalNode {
+func (s *DatetimeArrayContext) AllDATETIME() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserDATETIME)
 }
 
-func (s *Datetime_arrayContext) DATETIME(i int) antlr.TerminalNode {
+func (s *DatetimeArrayContext) DATETIME(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserDATETIME, i)
 }
 
-func (s *Datetime_arrayContext) RBRACKET() antlr.TerminalNode {
+func (s *DatetimeArrayContext) RBRACKET() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserRBRACKET, 0)
 }
 
-func (s *Datetime_arrayContext) AllWS() []antlr.TerminalNode {
+func (s *DatetimeArrayContext) AllWS() []antlr.TerminalNode {
 	return s.GetTokens(ZitiQlParserWS)
 }
 
-func (s *Datetime_arrayContext) WS(i int) antlr.TerminalNode {
+func (s *DatetimeArrayContext) WS(i int) antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserWS, i)
 }
 
-func (s *Datetime_arrayContext) GetRuleContext() antlr.RuleContext {
+func (s *DatetimeArrayContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Datetime_arrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *DatetimeArrayContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *Datetime_arrayContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *DatetimeArrayContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterDatetime_array(s)
+		listenerT.EnterDatetimeArray(s)
 	}
 }
 
-func (s *Datetime_arrayContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *DatetimeArrayContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitDatetime_array(s)
+		listenerT.ExitDatetimeArray(s)
 	}
 }
 
-func (p *ZitiQlParser) Datetime_array() (localctx IDatetime_arrayContext) {
-	localctx = NewDatetime_arrayContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 4, ZitiQlParserRULE_datetime_array)
+func (p *ZitiQlParser) DatetimeArray() (localctx IDatetimeArrayContext) {
+	localctx = NewDatetimeArrayContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 4, ZitiQlParserRULE_datetimeArray)
 	var _la int
 
 	defer func() {
@@ -1270,14 +1270,14 @@ func (s *QueryStmtContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *QueryStmtContext) Bool_expr() IBool_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBool_exprContext)(nil)).Elem(), 0)
+func (s *QueryStmtContext) BoolExpr() IBoolExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBoolExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBool_exprContext)
+	return t.(IBoolExprContext)
 }
 
 func (s *QueryStmtContext) SortBy() ISortByContext {
@@ -1355,7 +1355,7 @@ func (p *ZitiQlParser) Query() (localctx IQueryContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(155)
-		p.bool_expr(0)
+		p.boolExpr(0)
 	}
 	p.SetState(162)
 	p.GetErrorHandler().Sync(p)
@@ -2132,66 +2132,66 @@ func (p *ZitiQlParser) SortField() (localctx ISortFieldContext) {
 	return localctx
 }
 
-// IBool_exprContext is an interface to support dynamic dispatch.
-type IBool_exprContext interface {
+// IBoolExprContext is an interface to support dynamic dispatch.
+type IBoolExprContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsBool_exprContext differentiates from other interfaces.
-	IsBool_exprContext()
+	// IsBoolExprContext differentiates from other interfaces.
+	IsBoolExprContext()
 }
 
-type Bool_exprContext struct {
+type BoolExprContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptyBool_exprContext() *Bool_exprContext {
-	var p = new(Bool_exprContext)
+func NewEmptyBoolExprContext() *BoolExprContext {
+	var p = new(BoolExprContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_bool_expr
+	p.RuleIndex = ZitiQlParserRULE_boolExpr
 	return p
 }
 
-func (*Bool_exprContext) IsBool_exprContext() {}
+func (*BoolExprContext) IsBoolExprContext() {}
 
-func NewBool_exprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Bool_exprContext {
-	var p = new(Bool_exprContext)
+func NewBoolExprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *BoolExprContext {
+	var p = new(BoolExprContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_bool_expr
+	p.RuleIndex = ZitiQlParserRULE_boolExpr
 
 	return p
 }
 
-func (s *Bool_exprContext) GetParser() antlr.Parser { return s.parser }
+func (s *BoolExprContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Bool_exprContext) CopyFrom(ctx *Bool_exprContext) {
+func (s *BoolExprContext) CopyFrom(ctx *BoolExprContext) {
 	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
 }
 
-func (s *Bool_exprContext) GetRuleContext() antlr.RuleContext {
+func (s *BoolExprContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Bool_exprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *BoolExprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
 type AndExprContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewAndExprContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *AndExprContext {
 	var p = new(AndExprContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2200,27 +2200,27 @@ func (s *AndExprContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *AndExprContext) AllBool_expr() []IBool_exprContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IBool_exprContext)(nil)).Elem())
-	var tst = make([]IBool_exprContext, len(ts))
+func (s *AndExprContext) AllBoolExpr() []IBoolExprContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IBoolExprContext)(nil)).Elem())
+	var tst = make([]IBoolExprContext, len(ts))
 
 	for i, t := range ts {
 		if t != nil {
-			tst[i] = t.(IBool_exprContext)
+			tst[i] = t.(IBoolExprContext)
 		}
 	}
 
 	return tst
 }
 
-func (s *AndExprContext) Bool_expr(i int) IBool_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBool_exprContext)(nil)).Elem(), i)
+func (s *AndExprContext) BoolExpr(i int) IBoolExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBoolExprContext)(nil)).Elem(), i)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBool_exprContext)
+	return t.(IBoolExprContext)
 }
 
 func (s *AndExprContext) AllAND() []antlr.TerminalNode {
@@ -2252,15 +2252,15 @@ func (s *AndExprContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type GroupContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewGroupContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *GroupContext {
 	var p = new(GroupContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2273,14 +2273,14 @@ func (s *GroupContext) LPAREN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLPAREN, 0)
 }
 
-func (s *GroupContext) Bool_expr() IBool_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBool_exprContext)(nil)).Elem(), 0)
+func (s *GroupContext) BoolExpr() IBoolExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBoolExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBool_exprContext)
+	return t.(IBoolExprContext)
 }
 
 func (s *GroupContext) RPAREN() antlr.TerminalNode {
@@ -2308,15 +2308,15 @@ func (s *GroupContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type BoolConstContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewBoolConstContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *BoolConstContext {
 	var p = new(BoolConstContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2342,15 +2342,15 @@ func (s *BoolConstContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type IsEmptyFunctionContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewIsEmptyFunctionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *IsEmptyFunctionContext {
 	var p = new(IsEmptyFunctionContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2367,14 +2367,14 @@ func (s *IsEmptyFunctionContext) LPAREN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLPAREN, 0)
 }
 
-func (s *IsEmptyFunctionContext) Set_expr() ISet_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISet_exprContext)(nil)).Elem(), 0)
+func (s *IsEmptyFunctionContext) SetExpr() ISetExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISetExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(ISet_exprContext)
+	return t.(ISetExprContext)
 }
 
 func (s *IsEmptyFunctionContext) RPAREN() antlr.TerminalNode {
@@ -2402,15 +2402,15 @@ func (s *IsEmptyFunctionContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type NotExprContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewNotExprContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *NotExprContext {
 	var p = new(NotExprContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2423,14 +2423,14 @@ func (s *NotExprContext) NOT() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserNOT, 0)
 }
 
-func (s *NotExprContext) Bool_expr() IBool_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBool_exprContext)(nil)).Elem(), 0)
+func (s *NotExprContext) BoolExpr() IBoolExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBoolExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBool_exprContext)
+	return t.(IBoolExprContext)
 }
 
 func (s *NotExprContext) AllWS() []antlr.TerminalNode {
@@ -2454,15 +2454,15 @@ func (s *NotExprContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type OperationOpContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewOperationOpContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OperationOpContext {
 	var p = new(OperationOpContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2494,15 +2494,15 @@ func (s *OperationOpContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type OrExprContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewOrExprContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *OrExprContext {
 	var p = new(OrExprContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2511,27 +2511,27 @@ func (s *OrExprContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *OrExprContext) AllBool_expr() []IBool_exprContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IBool_exprContext)(nil)).Elem())
-	var tst = make([]IBool_exprContext, len(ts))
+func (s *OrExprContext) AllBoolExpr() []IBoolExprContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IBoolExprContext)(nil)).Elem())
+	var tst = make([]IBoolExprContext, len(ts))
 
 	for i, t := range ts {
 		if t != nil {
-			tst[i] = t.(IBool_exprContext)
+			tst[i] = t.(IBoolExprContext)
 		}
 	}
 
 	return tst
 }
 
-func (s *OrExprContext) Bool_expr(i int) IBool_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBool_exprContext)(nil)).Elem(), i)
+func (s *OrExprContext) BoolExpr(i int) IBoolExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBoolExprContext)(nil)).Elem(), i)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBool_exprContext)
+	return t.(IBoolExprContext)
 }
 
 func (s *OrExprContext) AllOR() []antlr.TerminalNode {
@@ -2563,15 +2563,15 @@ func (s *OrExprContext) ExitRule(listener antlr.ParseTreeListener) {
 }
 
 type BoolSymbolContext struct {
-	*Bool_exprContext
+	*BoolExprContext
 }
 
 func NewBoolSymbolContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *BoolSymbolContext {
 	var p = new(BoolSymbolContext)
 
-	p.Bool_exprContext = NewEmptyBool_exprContext()
+	p.BoolExprContext = NewEmptyBoolExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Bool_exprContext))
+	p.CopyFrom(ctx.(*BoolExprContext))
 
 	return p
 }
@@ -2596,18 +2596,18 @@ func (s *BoolSymbolContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (p *ZitiQlParser) Bool_expr() (localctx IBool_exprContext) {
-	return p.bool_expr(0)
+func (p *ZitiQlParser) BoolExpr() (localctx IBoolExprContext) {
+	return p.boolExpr(0)
 }
 
-func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
+func (p *ZitiQlParser) boolExpr(_p int) (localctx IBoolExprContext) {
 	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
 	_parentState := p.GetState()
-	localctx = NewBool_exprContext(p, p.GetParserRuleContext(), _parentState)
-	var _prevctx IBool_exprContext = localctx
+	localctx = NewBoolExprContext(p, p.GetParserRuleContext(), _parentState)
+	var _prevctx IBoolExprContext = localctx
 	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
 	_startState := 18
-	p.EnterRecursionRule(localctx, 18, ZitiQlParserRULE_bool_expr, _p)
+	p.EnterRecursionRule(localctx, 18, ZitiQlParserRULE_boolExpr, _p)
 	var _la int
 
 	defer func() {
@@ -2666,7 +2666,7 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 		}
 		{
 			p.SetState(246)
-			p.bool_expr(0)
+			p.boolExpr(0)
 		}
 		p.SetState(250)
 		p.GetErrorHandler().Sync(p)
@@ -2724,7 +2724,7 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 		}
 		{
 			p.SetState(264)
-			p.Set_expr()
+			p.SetExpr()
 		}
 		p.SetState(268)
 		p.GetErrorHandler().Sync(p)
@@ -2778,7 +2778,7 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 		}
 		{
 			p.SetState(280)
-			p.bool_expr(1)
+			p.boolExpr(1)
 		}
 
 	}
@@ -2797,8 +2797,8 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 			p.GetErrorHandler().Sync(p)
 			switch p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 45, p.GetParserRuleContext()) {
 			case 1:
-				localctx = NewAndExprContext(p, NewBool_exprContext(p, _parentctx, _parentState))
-				p.PushNewRecursionContext(localctx, _startState, ZitiQlParserRULE_bool_expr)
+				localctx = NewAndExprContext(p, NewBoolExprContext(p, _parentctx, _parentState))
+				p.PushNewRecursionContext(localctx, _startState, ZitiQlParserRULE_boolExpr)
 				p.SetState(283)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 6)) {
@@ -2844,7 +2844,7 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 						}
 						{
 							p.SetState(295)
-							p.bool_expr(0)
+							p.boolExpr(0)
 						}
 
 					default:
@@ -2857,8 +2857,8 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 				}
 
 			case 2:
-				localctx = NewOrExprContext(p, NewBool_exprContext(p, _parentctx, _parentState))
-				p.PushNewRecursionContext(localctx, _startState, ZitiQlParserRULE_bool_expr)
+				localctx = NewOrExprContext(p, NewBoolExprContext(p, _parentctx, _parentState))
+				p.PushNewRecursionContext(localctx, _startState, ZitiQlParserRULE_boolExpr)
 				p.SetState(300)
 
 				if !(p.Precpred(p.GetParserRuleContext(), 5)) {
@@ -2904,7 +2904,7 @@ func (p *ZitiQlParser) bool_expr(_p int) (localctx IBool_exprContext) {
 						}
 						{
 							p.SetState(312)
-							p.bool_expr(0)
+							p.boolExpr(0)
 						}
 
 					default:
@@ -2995,14 +2995,14 @@ func (s *BinaryEqualToNullOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryEqualToNullOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryEqualToNullOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryEqualToNullOpContext) EQ() antlr.TerminalNode {
@@ -3051,14 +3051,14 @@ func (s *BinaryLessThanNumberOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryLessThanNumberOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryLessThanNumberOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryLessThanNumberOpContext) LT() antlr.TerminalNode {
@@ -3107,14 +3107,14 @@ func (s *BinaryGreaterThanDatetimeOpContext) GetRuleContext() antlr.RuleContext 
 	return s
 }
 
-func (s *BinaryGreaterThanDatetimeOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryGreaterThanDatetimeOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryGreaterThanDatetimeOpContext) GT() antlr.TerminalNode {
@@ -3163,28 +3163,28 @@ func (s *InNumberArrayOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *InNumberArrayOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *InNumberArrayOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *InNumberArrayOpContext) IN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIN, 0)
 }
 
-func (s *InNumberArrayOpContext) Number_array() INumber_arrayContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*INumber_arrayContext)(nil)).Elem(), 0)
+func (s *InNumberArrayOpContext) NumberArray() INumberArrayContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*INumberArrayContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(INumber_arrayContext)
+	return t.(INumberArrayContext)
 }
 
 func (s *InNumberArrayOpContext) AllWS() []antlr.TerminalNode {
@@ -3225,28 +3225,28 @@ func (s *InStringArrayOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *InStringArrayOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *InStringArrayOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *InStringArrayOpContext) IN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIN, 0)
 }
 
-func (s *InStringArrayOpContext) String_array() IString_arrayContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IString_arrayContext)(nil)).Elem(), 0)
+func (s *InStringArrayOpContext) StringArray() IStringArrayContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IStringArrayContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IString_arrayContext)
+	return t.(IStringArrayContext)
 }
 
 func (s *InStringArrayOpContext) AllWS() []antlr.TerminalNode {
@@ -3287,14 +3287,14 @@ func (s *BinaryLessThanDatetimeOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryLessThanDatetimeOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryLessThanDatetimeOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryLessThanDatetimeOpContext) LT() antlr.TerminalNode {
@@ -3343,14 +3343,14 @@ func (s *BinaryGreaterThanNumberOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryGreaterThanNumberOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryGreaterThanNumberOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryGreaterThanNumberOpContext) GT() antlr.TerminalNode {
@@ -3399,28 +3399,28 @@ func (s *InDatetimeArrayOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *InDatetimeArrayOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *InDatetimeArrayOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *InDatetimeArrayOpContext) IN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIN, 0)
 }
 
-func (s *InDatetimeArrayOpContext) Datetime_array() IDatetime_arrayContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IDatetime_arrayContext)(nil)).Elem(), 0)
+func (s *InDatetimeArrayOpContext) DatetimeArray() IDatetimeArrayContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IDatetimeArrayContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IDatetime_arrayContext)
+	return t.(IDatetimeArrayContext)
 }
 
 func (s *InDatetimeArrayOpContext) AllWS() []antlr.TerminalNode {
@@ -3461,14 +3461,14 @@ func (s *BetweenDateOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BetweenDateOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BetweenDateOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BetweenDateOpContext) BETWEEN() antlr.TerminalNode {
@@ -3525,14 +3525,14 @@ func (s *BinaryEqualToNumberOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryEqualToNumberOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryEqualToNumberOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryEqualToNumberOpContext) EQ() antlr.TerminalNode {
@@ -3581,14 +3581,14 @@ func (s *BinaryEqualToBoolOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryEqualToBoolOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryEqualToBoolOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryEqualToBoolOpContext) EQ() antlr.TerminalNode {
@@ -3637,14 +3637,14 @@ func (s *BinaryEqualToStringOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryEqualToStringOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryEqualToStringOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryEqualToStringOpContext) EQ() antlr.TerminalNode {
@@ -3693,14 +3693,14 @@ func (s *BetweenNumberOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BetweenNumberOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BetweenNumberOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BetweenNumberOpContext) BETWEEN() antlr.TerminalNode {
@@ -3757,14 +3757,14 @@ func (s *BinaryContainsOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryContainsOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryContainsOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryContainsOpContext) CONTAINS() antlr.TerminalNode {
@@ -3817,14 +3817,14 @@ func (s *BinaryEqualToDatetimeOpContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *BinaryEqualToDatetimeOpContext) Binary_lhs() IBinary_lhsContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinary_lhsContext)(nil)).Elem(), 0)
+func (s *BinaryEqualToDatetimeOpContext) BinaryLhs() IBinaryLhsContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IBinaryLhsContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IBinary_lhsContext)
+	return t.(IBinaryLhsContext)
 }
 
 func (s *BinaryEqualToDatetimeOpContext) EQ() antlr.TerminalNode {
@@ -3884,7 +3884,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(322)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(324)
 		p.GetErrorHandler().Sync(p)
@@ -3920,7 +3920,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		}
 		{
 			p.SetState(334)
-			p.String_array()
+			p.StringArray()
 		}
 
 	case 2:
@@ -3928,7 +3928,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(336)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(338)
 		p.GetErrorHandler().Sync(p)
@@ -3964,7 +3964,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		}
 		{
 			p.SetState(348)
-			p.Number_array()
+			p.NumberArray()
 		}
 
 	case 3:
@@ -3972,7 +3972,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 3)
 		{
 			p.SetState(350)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(352)
 		p.GetErrorHandler().Sync(p)
@@ -4008,7 +4008,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		}
 		{
 			p.SetState(362)
-			p.Datetime_array()
+			p.DatetimeArray()
 		}
 
 	case 4:
@@ -4016,7 +4016,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 4)
 		{
 			p.SetState(364)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(366)
 		p.GetErrorHandler().Sync(p)
@@ -4096,7 +4096,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 5)
 		{
 			p.SetState(390)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(392)
 		p.GetErrorHandler().Sync(p)
@@ -4176,7 +4176,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 6)
 		{
 			p.SetState(416)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(420)
 		p.GetErrorHandler().Sync(p)
@@ -4220,7 +4220,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 7)
 		{
 			p.SetState(432)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(436)
 		p.GetErrorHandler().Sync(p)
@@ -4264,7 +4264,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 8)
 		{
 			p.SetState(448)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(452)
 		p.GetErrorHandler().Sync(p)
@@ -4308,7 +4308,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 9)
 		{
 			p.SetState(464)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(468)
 		p.GetErrorHandler().Sync(p)
@@ -4352,7 +4352,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 10)
 		{
 			p.SetState(480)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(484)
 		p.GetErrorHandler().Sync(p)
@@ -4396,7 +4396,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 11)
 		{
 			p.SetState(496)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(500)
 		p.GetErrorHandler().Sync(p)
@@ -4440,7 +4440,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 12)
 		{
 			p.SetState(512)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(516)
 		p.GetErrorHandler().Sync(p)
@@ -4484,7 +4484,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 13)
 		{
 			p.SetState(528)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(532)
 		p.GetErrorHandler().Sync(p)
@@ -4528,7 +4528,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 14)
 		{
 			p.SetState(544)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(548)
 		p.GetErrorHandler().Sync(p)
@@ -4572,7 +4572,7 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 		p.EnterOuterAlt(localctx, 15)
 		{
 			p.SetState(560)
-			p.Binary_lhs()
+			p.BinaryLhs()
 		}
 		p.SetState(564)
 		p.GetErrorHandler().Sync(p)
@@ -4623,81 +4623,81 @@ func (p *ZitiQlParser) Operation() (localctx IOperationContext) {
 	return localctx
 }
 
-// IBinary_lhsContext is an interface to support dynamic dispatch.
-type IBinary_lhsContext interface {
+// IBinaryLhsContext is an interface to support dynamic dispatch.
+type IBinaryLhsContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsBinary_lhsContext differentiates from other interfaces.
-	IsBinary_lhsContext()
+	// IsBinaryLhsContext differentiates from other interfaces.
+	IsBinaryLhsContext()
 }
 
-type Binary_lhsContext struct {
+type BinaryLhsContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptyBinary_lhsContext() *Binary_lhsContext {
-	var p = new(Binary_lhsContext)
+func NewEmptyBinaryLhsContext() *BinaryLhsContext {
+	var p = new(BinaryLhsContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_binary_lhs
+	p.RuleIndex = ZitiQlParserRULE_binaryLhs
 	return p
 }
 
-func (*Binary_lhsContext) IsBinary_lhsContext() {}
+func (*BinaryLhsContext) IsBinaryLhsContext() {}
 
-func NewBinary_lhsContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Binary_lhsContext {
-	var p = new(Binary_lhsContext)
+func NewBinaryLhsContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *BinaryLhsContext {
+	var p = new(BinaryLhsContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_binary_lhs
+	p.RuleIndex = ZitiQlParserRULE_binaryLhs
 
 	return p
 }
 
-func (s *Binary_lhsContext) GetParser() antlr.Parser { return s.parser }
+func (s *BinaryLhsContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Binary_lhsContext) IDENTIFIER() antlr.TerminalNode {
+func (s *BinaryLhsContext) IDENTIFIER() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIDENTIFIER, 0)
 }
 
-func (s *Binary_lhsContext) Set_function() ISet_functionContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISet_functionContext)(nil)).Elem(), 0)
+func (s *BinaryLhsContext) SetFunction() ISetFunctionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISetFunctionContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(ISet_functionContext)
+	return t.(ISetFunctionContext)
 }
 
-func (s *Binary_lhsContext) GetRuleContext() antlr.RuleContext {
+func (s *BinaryLhsContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Binary_lhsContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *BinaryLhsContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *Binary_lhsContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *BinaryLhsContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterBinary_lhs(s)
+		listenerT.EnterBinaryLhs(s)
 	}
 }
 
-func (s *Binary_lhsContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *BinaryLhsContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitBinary_lhs(s)
+		listenerT.ExitBinaryLhs(s)
 	}
 }
 
-func (p *ZitiQlParser) Binary_lhs() (localctx IBinary_lhsContext) {
-	localctx = NewBinary_lhsContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 22, ZitiQlParserRULE_binary_lhs)
+func (p *ZitiQlParser) BinaryLhs() (localctx IBinaryLhsContext) {
+	localctx = NewBinaryLhsContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 22, ZitiQlParserRULE_binaryLhs)
 
 	defer func() {
 		p.ExitRule()
@@ -4730,7 +4730,7 @@ func (p *ZitiQlParser) Binary_lhs() (localctx IBinary_lhsContext) {
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(578)
-			p.Set_function()
+			p.SetFunction()
 		}
 
 	default:
@@ -4740,123 +4740,123 @@ func (p *ZitiQlParser) Binary_lhs() (localctx IBinary_lhsContext) {
 	return localctx
 }
 
-// ISet_functionContext is an interface to support dynamic dispatch.
-type ISet_functionContext interface {
+// ISetFunctionContext is an interface to support dynamic dispatch.
+type ISetFunctionContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsSet_functionContext differentiates from other interfaces.
-	IsSet_functionContext()
+	// IsSetFunctionContext differentiates from other interfaces.
+	IsSetFunctionContext()
 }
 
-type Set_functionContext struct {
+type SetFunctionContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptySet_functionContext() *Set_functionContext {
-	var p = new(Set_functionContext)
+func NewEmptySetFunctionContext() *SetFunctionContext {
+	var p = new(SetFunctionContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_set_function
+	p.RuleIndex = ZitiQlParserRULE_setFunction
 	return p
 }
 
-func (*Set_functionContext) IsSet_functionContext() {}
+func (*SetFunctionContext) IsSetFunctionContext() {}
 
-func NewSet_functionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Set_functionContext {
-	var p = new(Set_functionContext)
+func NewSetFunctionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *SetFunctionContext {
+	var p = new(SetFunctionContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_set_function
+	p.RuleIndex = ZitiQlParserRULE_setFunction
 
 	return p
 }
 
-func (s *Set_functionContext) GetParser() antlr.Parser { return s.parser }
+func (s *SetFunctionContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Set_functionContext) CopyFrom(ctx *Set_functionContext) {
+func (s *SetFunctionContext) CopyFrom(ctx *SetFunctionContext) {
 	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
-}
-
-func (s *Set_functionContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *Set_functionContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
-	return antlr.TreesStringTree(s, ruleNames, recog)
-}
-
-type SetFunctionContext struct {
-	*Set_functionContext
-}
-
-func NewSetFunctionContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *SetFunctionContext {
-	var p = new(SetFunctionContext)
-
-	p.Set_functionContext = NewEmptySet_functionContext()
-	p.parser = parser
-	p.CopyFrom(ctx.(*Set_functionContext))
-
-	return p
 }
 
 func (s *SetFunctionContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *SetFunctionContext) ALL_OF() antlr.TerminalNode {
+func (s *SetFunctionContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+type SetFunctionExprContext struct {
+	*SetFunctionContext
+}
+
+func NewSetFunctionExprContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *SetFunctionExprContext {
+	var p = new(SetFunctionExprContext)
+
+	p.SetFunctionContext = NewEmptySetFunctionContext()
+	p.parser = parser
+	p.CopyFrom(ctx.(*SetFunctionContext))
+
+	return p
+}
+
+func (s *SetFunctionExprContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *SetFunctionExprContext) ALL_OF() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserALL_OF, 0)
 }
 
-func (s *SetFunctionContext) LPAREN() antlr.TerminalNode {
+func (s *SetFunctionExprContext) LPAREN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserLPAREN, 0)
 }
 
-func (s *SetFunctionContext) IDENTIFIER() antlr.TerminalNode {
+func (s *SetFunctionExprContext) IDENTIFIER() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIDENTIFIER, 0)
 }
 
-func (s *SetFunctionContext) RPAREN() antlr.TerminalNode {
+func (s *SetFunctionExprContext) RPAREN() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserRPAREN, 0)
 }
 
-func (s *SetFunctionContext) ANY_OF() antlr.TerminalNode {
+func (s *SetFunctionExprContext) ANY_OF() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserANY_OF, 0)
 }
 
-func (s *SetFunctionContext) COUNT() antlr.TerminalNode {
+func (s *SetFunctionExprContext) COUNT() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserCOUNT, 0)
 }
 
-func (s *SetFunctionContext) Set_expr() ISet_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISet_exprContext)(nil)).Elem(), 0)
+func (s *SetFunctionExprContext) SetExpr() ISetExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISetExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(ISet_exprContext)
+	return t.(ISetExprContext)
 }
 
-func (s *SetFunctionContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *SetFunctionExprContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterSetFunction(s)
+		listenerT.EnterSetFunctionExpr(s)
 	}
 }
 
-func (s *SetFunctionContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *SetFunctionExprContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitSetFunction(s)
+		listenerT.ExitSetFunctionExpr(s)
 	}
 }
 
-func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
-	localctx = NewSet_functionContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 24, ZitiQlParserRULE_set_function)
+func (p *ZitiQlParser) SetFunction() (localctx ISetFunctionContext) {
+	localctx = NewSetFunctionContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 24, ZitiQlParserRULE_setFunction)
 
 	defer func() {
 		p.ExitRule()
@@ -4879,7 +4879,7 @@ func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
 
 	switch p.GetTokenStream().LA(1) {
 	case ZitiQlParserALL_OF:
-		localctx = NewSetFunctionContext(p, localctx)
+		localctx = NewSetFunctionExprContext(p, localctx)
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(581)
@@ -4899,7 +4899,7 @@ func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
 		}
 
 	case ZitiQlParserANY_OF:
-		localctx = NewSetFunctionContext(p, localctx)
+		localctx = NewSetFunctionExprContext(p, localctx)
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(585)
@@ -4919,7 +4919,7 @@ func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
 		}
 
 	case ZitiQlParserCOUNT:
-		localctx = NewSetFunctionContext(p, localctx)
+		localctx = NewSetFunctionExprContext(p, localctx)
 		p.EnterOuterAlt(localctx, 3)
 		{
 			p.SetState(589)
@@ -4931,7 +4931,7 @@ func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
 		}
 		{
 			p.SetState(591)
-			p.Set_expr()
+			p.SetExpr()
 		}
 		{
 			p.SetState(592)
@@ -4945,81 +4945,81 @@ func (p *ZitiQlParser) Set_function() (localctx ISet_functionContext) {
 	return localctx
 }
 
-// ISet_exprContext is an interface to support dynamic dispatch.
-type ISet_exprContext interface {
+// ISetExprContext is an interface to support dynamic dispatch.
+type ISetExprContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsSet_exprContext differentiates from other interfaces.
-	IsSet_exprContext()
+	// IsSetExprContext differentiates from other interfaces.
+	IsSetExprContext()
 }
 
-type Set_exprContext struct {
+type SetExprContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptySet_exprContext() *Set_exprContext {
-	var p = new(Set_exprContext)
+func NewEmptySetExprContext() *SetExprContext {
+	var p = new(SetExprContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_set_expr
+	p.RuleIndex = ZitiQlParserRULE_setExpr
 	return p
 }
 
-func (*Set_exprContext) IsSet_exprContext() {}
+func (*SetExprContext) IsSetExprContext() {}
 
-func NewSet_exprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Set_exprContext {
-	var p = new(Set_exprContext)
+func NewSetExprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *SetExprContext {
+	var p = new(SetExprContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_set_expr
+	p.RuleIndex = ZitiQlParserRULE_setExpr
 
 	return p
 }
 
-func (s *Set_exprContext) GetParser() antlr.Parser { return s.parser }
+func (s *SetExprContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Set_exprContext) IDENTIFIER() antlr.TerminalNode {
+func (s *SetExprContext) IDENTIFIER() antlr.TerminalNode {
 	return s.GetToken(ZitiQlParserIDENTIFIER, 0)
 }
 
-func (s *Set_exprContext) Subquery_expr() ISubquery_exprContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISubquery_exprContext)(nil)).Elem(), 0)
+func (s *SetExprContext) SubQueryExpr() ISubQueryExprContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ISubQueryExprContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(ISubquery_exprContext)
+	return t.(ISubQueryExprContext)
 }
 
-func (s *Set_exprContext) GetRuleContext() antlr.RuleContext {
+func (s *SetExprContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Set_exprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *SetExprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
-func (s *Set_exprContext) EnterRule(listener antlr.ParseTreeListener) {
+func (s *SetExprContext) EnterRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.EnterSet_expr(s)
+		listenerT.EnterSetExpr(s)
 	}
 }
 
-func (s *Set_exprContext) ExitRule(listener antlr.ParseTreeListener) {
+func (s *SetExprContext) ExitRule(listener antlr.ParseTreeListener) {
 	if listenerT, ok := listener.(ZitiQlListener); ok {
-		listenerT.ExitSet_expr(s)
+		listenerT.ExitSetExpr(s)
 	}
 }
 
-func (p *ZitiQlParser) Set_expr() (localctx ISet_exprContext) {
-	localctx = NewSet_exprContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 26, ZitiQlParserRULE_set_expr)
+func (p *ZitiQlParser) SetExpr() (localctx ISetExprContext) {
+	localctx = NewSetExprContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 26, ZitiQlParserRULE_setExpr)
 
 	defer func() {
 		p.ExitRule()
@@ -5052,7 +5052,7 @@ func (p *ZitiQlParser) Set_expr() (localctx ISet_exprContext) {
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(597)
-			p.Subquery_expr()
+			p.SubQueryExpr()
 		}
 
 	default:
@@ -5062,66 +5062,66 @@ func (p *ZitiQlParser) Set_expr() (localctx ISet_exprContext) {
 	return localctx
 }
 
-// ISubquery_exprContext is an interface to support dynamic dispatch.
-type ISubquery_exprContext interface {
+// ISubQueryExprContext is an interface to support dynamic dispatch.
+type ISubQueryExprContext interface {
 	antlr.ParserRuleContext
 
 	// GetParser returns the parser.
 	GetParser() antlr.Parser
 
-	// IsSubquery_exprContext differentiates from other interfaces.
-	IsSubquery_exprContext()
+	// IsSubQueryExprContext differentiates from other interfaces.
+	IsSubQueryExprContext()
 }
 
-type Subquery_exprContext struct {
+type SubQueryExprContext struct {
 	*antlr.BaseParserRuleContext
 	parser antlr.Parser
 }
 
-func NewEmptySubquery_exprContext() *Subquery_exprContext {
-	var p = new(Subquery_exprContext)
+func NewEmptySubQueryExprContext() *SubQueryExprContext {
+	var p = new(SubQueryExprContext)
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = ZitiQlParserRULE_subquery_expr
+	p.RuleIndex = ZitiQlParserRULE_subQueryExpr
 	return p
 }
 
-func (*Subquery_exprContext) IsSubquery_exprContext() {}
+func (*SubQueryExprContext) IsSubQueryExprContext() {}
 
-func NewSubquery_exprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *Subquery_exprContext {
-	var p = new(Subquery_exprContext)
+func NewSubQueryExprContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *SubQueryExprContext {
+	var p = new(SubQueryExprContext)
 
 	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
 
 	p.parser = parser
-	p.RuleIndex = ZitiQlParserRULE_subquery_expr
+	p.RuleIndex = ZitiQlParserRULE_subQueryExpr
 
 	return p
 }
 
-func (s *Subquery_exprContext) GetParser() antlr.Parser { return s.parser }
+func (s *SubQueryExprContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *Subquery_exprContext) CopyFrom(ctx *Subquery_exprContext) {
+func (s *SubQueryExprContext) CopyFrom(ctx *SubQueryExprContext) {
 	s.BaseParserRuleContext.CopyFrom(ctx.BaseParserRuleContext)
 }
 
-func (s *Subquery_exprContext) GetRuleContext() antlr.RuleContext {
+func (s *SubQueryExprContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
 
-func (s *Subquery_exprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+func (s *SubQueryExprContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
 	return antlr.TreesStringTree(s, ruleNames, recog)
 }
 
 type SubQueryContext struct {
-	*Subquery_exprContext
+	*SubQueryExprContext
 }
 
 func NewSubQueryContext(parser antlr.Parser, ctx antlr.ParserRuleContext) *SubQueryContext {
 	var p = new(SubQueryContext)
 
-	p.Subquery_exprContext = NewEmptySubquery_exprContext()
+	p.SubQueryExprContext = NewEmptySubQueryExprContext()
 	p.parser = parser
-	p.CopyFrom(ctx.(*Subquery_exprContext))
+	p.CopyFrom(ctx.(*SubQueryExprContext))
 
 	return p
 }
@@ -5172,9 +5172,9 @@ func (s *SubQueryContext) ExitRule(listener antlr.ParseTreeListener) {
 	}
 }
 
-func (p *ZitiQlParser) Subquery_expr() (localctx ISubquery_exprContext) {
-	localctx = NewSubquery_exprContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 28, ZitiQlParserRULE_subquery_expr)
+func (p *ZitiQlParser) SubQueryExpr() (localctx ISubQueryExprContext) {
+	localctx = NewSubQueryExprContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 28, ZitiQlParserRULE_subQueryExpr)
 	var _la int
 
 	defer func() {
@@ -5260,18 +5260,18 @@ func (p *ZitiQlParser) Subquery_expr() (localctx ISubquery_exprContext) {
 func (p *ZitiQlParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex int) bool {
 	switch ruleIndex {
 	case 9:
-		var t *Bool_exprContext = nil
+		var t *BoolExprContext = nil
 		if localctx != nil {
-			t = localctx.(*Bool_exprContext)
+			t = localctx.(*BoolExprContext)
 		}
-		return p.Bool_expr_Sempred(t, predIndex)
+		return p.BoolExpr_Sempred(t, predIndex)
 
 	default:
 		panic("No predicate with index: " + fmt.Sprint(ruleIndex))
 	}
 }
 
-func (p *ZitiQlParser) Bool_expr_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+func (p *ZitiQlParser) BoolExpr_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 0:
 		return p.Precpred(p.GetParserRuleContext(), 6)

@@ -58,10 +58,3 @@ type RuntimeEntitySetSymbol interface {
 	EntitySymbol
 	OpenCursor(tx *bbolt.Tx, rowId []byte) ast.SetCursor
 }
-
-type boltCursorFacade interface {
-	Init()
-	IsValid() bool
-	Next()
-	Id() []byte
-}

@@ -7,14 +7,14 @@ import "github.com/antlr/antlr4/runtime/Go/antlr"
 type ZitiQlListener interface {
 	antlr.ParseTreeListener
 
-	// EnterString_array is called when entering the string_array production.
-	EnterString_array(c *String_arrayContext)
+	// EnterStringArray is called when entering the stringArray production.
+	EnterStringArray(c *StringArrayContext)
 
-	// EnterNumber_array is called when entering the number_array production.
-	EnterNumber_array(c *Number_arrayContext)
+	// EnterNumberArray is called when entering the numberArray production.
+	EnterNumberArray(c *NumberArrayContext)
 
-	// EnterDatetime_array is called when entering the datetime_array production.
-	EnterDatetime_array(c *Datetime_arrayContext)
+	// EnterDatetimeArray is called when entering the datetimeArray production.
+	EnterDatetimeArray(c *DatetimeArrayContext)
 
 	// EnterEnd is called when entering the End production.
 	EnterEnd(c *EndContext)
@@ -103,26 +103,26 @@ type ZitiQlListener interface {
 	// EnterBinaryContainsOp is called when entering the BinaryContainsOp production.
 	EnterBinaryContainsOp(c *BinaryContainsOpContext)
 
-	// EnterBinary_lhs is called when entering the binary_lhs production.
-	EnterBinary_lhs(c *Binary_lhsContext)
+	// EnterBinaryLhs is called when entering the binaryLhs production.
+	EnterBinaryLhs(c *BinaryLhsContext)
 
-	// EnterSetFunction is called when entering the SetFunction production.
-	EnterSetFunction(c *SetFunctionContext)
+	// EnterSetFunctionExpr is called when entering the SetFunctionExpr production.
+	EnterSetFunctionExpr(c *SetFunctionExprContext)
 
-	// EnterSet_expr is called when entering the set_expr production.
-	EnterSet_expr(c *Set_exprContext)
+	// EnterSetExpr is called when entering the setExpr production.
+	EnterSetExpr(c *SetExprContext)
 
 	// EnterSubQuery is called when entering the SubQuery production.
 	EnterSubQuery(c *SubQueryContext)
 
-	// ExitString_array is called when exiting the string_array production.
-	ExitString_array(c *String_arrayContext)
+	// ExitStringArray is called when exiting the stringArray production.
+	ExitStringArray(c *StringArrayContext)
 
-	// ExitNumber_array is called when exiting the number_array production.
-	ExitNumber_array(c *Number_arrayContext)
+	// ExitNumberArray is called when exiting the numberArray production.
+	ExitNumberArray(c *NumberArrayContext)
 
-	// ExitDatetime_array is called when exiting the datetime_array production.
-	ExitDatetime_array(c *Datetime_arrayContext)
+	// ExitDatetimeArray is called when exiting the datetimeArray production.
+	ExitDatetimeArray(c *DatetimeArrayContext)
 
 	// ExitEnd is called when exiting the End production.
 	ExitEnd(c *EndContext)
@@ -211,14 +211,14 @@ type ZitiQlListener interface {
 	// ExitBinaryContainsOp is called when exiting the BinaryContainsOp production.
 	ExitBinaryContainsOp(c *BinaryContainsOpContext)
 
-	// ExitBinary_lhs is called when exiting the binary_lhs production.
-	ExitBinary_lhs(c *Binary_lhsContext)
+	// ExitBinaryLhs is called when exiting the binaryLhs production.
+	ExitBinaryLhs(c *BinaryLhsContext)
 
-	// ExitSetFunction is called when exiting the SetFunction production.
-	ExitSetFunction(c *SetFunctionContext)
+	// ExitSetFunctionExpr is called when exiting the SetFunctionExpr production.
+	ExitSetFunctionExpr(c *SetFunctionExprContext)
 
-	// ExitSet_expr is called when exiting the set_expr production.
-	ExitSet_expr(c *Set_exprContext)
+	// ExitSetExpr is called when exiting the setExpr production.
+	ExitSetExpr(c *SetExprContext)
 
 	// ExitSubQuery is called when exiting the SubQuery production.
 	ExitSubQuery(c *SubQueryContext)

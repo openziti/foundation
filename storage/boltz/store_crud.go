@@ -90,7 +90,7 @@ func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity Ba
 	if len(ids) == 0 {
 		return false, nil
 	}
-	return store.BaseLoadOneById(tx, string(ids[0]), entity)
+	return store.BaseLoadOneById(tx, ids[0], entity)
 }
 
 func (store *BaseStore) Create(ctx MutateContext, entity BaseEntity) error {
@@ -346,7 +346,7 @@ func (store *BaseStore) DeleteWhere(ctx MutateContext, query string) error {
 		return err
 	}
 	for _, id := range ids {
-		if err := store.impl.DeleteById(ctx, string(id)); err != nil {
+		if err := store.impl.DeleteById(ctx, id); err != nil {
 			return err
 		}
 	}

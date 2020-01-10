@@ -75,21 +75,21 @@ IDENTIFIER
 RFC3339_DATE_TIME
 
 rule names:
-string_array
-number_array
-datetime_array
+stringArray
+numberArray
+datetimeArray
 start
 query
 skip
 limit
 sortBy
 sortField
-bool_expr
+boolExpr
 operation
-binary_lhs
-set_function
-set_expr
-subquery_expr
+binaryLhs
+setFunction
+setExpr
+subQueryExpr
 
 
 atn:
