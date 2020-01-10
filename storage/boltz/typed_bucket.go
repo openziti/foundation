@@ -59,6 +59,7 @@ type MapFieldChecker map[string]struct{}
 func (m MapFieldChecker) IsUpdated(name string) bool {
 	_, found := m[name]
 	return found
+
 }
 
 func NewMappedFieldChecker(checker FieldChecker, mappings map[string]string) FieldChecker {
@@ -417,6 +418,16 @@ func (bucket *TypedBucket) GetFloat64(name string) *float64 {
 	return FieldToFloat64(fieldType, value)
 }
 
+func (bucket *TypedBucket) SetFloat64(name string, value float64, fieldChecker FieldChecker) *TypedBucket {
+	if bucket.ProceedWithSet(name, fieldChecker) {
+		buf := make([]byte, 9)
+		buf[0] = byte(TypeFloat64)
+		binary.LittleEndian.PutUint64(buf[1:], math.Float64bits(value))
+		bucket.Err = bucket.Put([]byte(name), buf)
+	}
+	return bucket
+}
+
 func (bucket *TypedBucket) SetInt64(name string, value int64, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
 		buf := make([]byte, 9)
@@ -671,6 +682,10 @@ func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBu
 		bucket.SetInt64(name, val, nil)
 	case int:
 		bucket.SetInt64(name, int64(val), nil)
+	case float32:
+		bucket.SetFloat64(name, float64(val), nil)
+	case float64:
+		bucket.SetFloat64(name, val, nil)
 	case time.Time:
 		bucket.SetTime(name, val, nil)
 	case bool:

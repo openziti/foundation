@@ -72,13 +72,18 @@ func (store *BaseStore) GetSymbol(name string) EntitySymbol {
 
 	// if it's a composite symbol, create a symbol on the fly to represent the name
 	if index := strings.IndexRune(name, '.'); index > 0 {
-		parts := strings.SplitN(name, ".", 2)
+		parts := strings.Split(name, ".")
 		// If it's a map symbol, create that now and return it
 		if mapSymbol := store.mapSymbols[parts[0]]; mapSymbol != nil {
 			var prefix []string
 			prefix = append(prefix, mapSymbol.prefix...)
 			prefix = append(prefix, mapSymbol.key)
-			return store.newEntitySymbol(name, mapSymbol.symbolType, parts[1], nil, prefix...)
+			if len(parts) > 2 {
+				middle := parts[1:len(parts) - 1]
+				prefix = append(prefix, middle...)
+			}
+			key := parts[len(parts) - 1]
+			return store.newEntitySymbol(name, mapSymbol.symbolType, key, nil, prefix...)
 		}
 
 		if result := store.GetSymbol(parts[0]); result != nil {
