@@ -105,3 +105,19 @@ func PermutationWith(base, v []string, f func([]string)) {
 		PermutationWith(result, v[i+1:], f)
 	}
 }
+
+func SetToSlice(values map[string]struct{}) []string {
+	var result []string
+	for val := range values {
+		result = append(result, val)
+	}
+	return result
+}
+
+func SliceToSet(values []string) map[string]struct{} {
+	result := map[string]struct{}{}
+	for _, val := range values {
+		result[val] = struct{}{}
+	}
+	return result
+}
