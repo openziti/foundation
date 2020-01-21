@@ -132,6 +132,10 @@ func (ctx *PersistContext) WithFieldOverrides(overrides map[string]string) {
 	}
 }
 
+func (ctx *PersistContext) GetAndSetString(field string, value string) (*string, bool) {
+	return ctx.Bucket.GetAndSetString(field, value, ctx.FieldChecker)
+}
+
 func (ctx *PersistContext) SetString(field string, value string) {
 	ctx.Bucket.SetString(field, value, ctx.FieldChecker)
 }
@@ -160,7 +164,7 @@ func (ctx *PersistContext) SetStringList(field string, value []string) {
 	ctx.Bucket.SetStringList(field, value, ctx.FieldChecker)
 }
 
-func (ctx *PersistContext) GetAndSetStringList(field string, value []string) []string {
+func (ctx *PersistContext) GetAndSetStringList(field string, value []string) ([]string, bool) {
 	return ctx.Bucket.GetAndSetStringList(field, value, ctx.FieldChecker)
 }
 

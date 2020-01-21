@@ -52,6 +52,7 @@ type EntitySetSymbol interface {
 	EntitySymbol
 	GetRuntimeSymbol() RuntimeEntitySetSymbol
 	EvalStringList(tx *bbolt.Tx, key []byte) []string
+	Map(tx *bbolt.Tx, key []byte, f func(string) (updatedValue *string, changeValue bool, continueIteration bool)) error
 }
 
 type RuntimeEntitySetSymbol interface {
