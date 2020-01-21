@@ -296,6 +296,18 @@ func (bucket *TypedBucket) GetStringOrError(name string) string {
 	return *value
 }
 
+func (bucket *TypedBucket) GetAndSetString(name string, value string, fieldChecker FieldChecker) (*string, bool) {
+	if bucket.ProceedWithSet(name, fieldChecker) {
+		oldValue := bucket.GetString(name)
+		bucket.setTyped(TypeString, name, []byte(value))
+		if oldValue == nil {
+			return nil, true
+		}
+		return oldValue, *oldValue != value
+	}
+	return nil, false
+}
+
 func (bucket *TypedBucket) SetString(name string, value string, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
 		bucket.setTyped(TypeString, name, []byte(value))
@@ -567,23 +579,24 @@ func (bucket *TypedBucket) IsStringListEmpty(name string) bool {
 	return false
 }
 
-func (bucket *TypedBucket) GetAndSetStringList(name string, value []string, fieldChecker FieldChecker) []string {
+func (bucket *TypedBucket) GetAndSetStringList(name string, value []string, fieldChecker FieldChecker) ([]string, bool) {
 	result := bucket.GetStringList(name)
 	if bucket.ProceedWithSet(name, fieldChecker) {
 		listBucket, err := bucket.EmptyBucket(name)
 		if err != nil {
 			bucket.Err = err
-			return result
+			return result, true
 		}
 
 		for _, key := range value {
 			if listBucket.SetListEntry(TypeString, []byte(key)).Err != nil {
 				bucket.Err = listBucket.Err
-				return result
+				return result, true
 			}
 		}
+		return result, true
 	}
-	return result
+	return result, false
 }
 
 func (bucket *TypedBucket) SetStringList(name string, value []string, fieldChecker FieldChecker) *TypedBucket {

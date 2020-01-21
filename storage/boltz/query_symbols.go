@@ -162,6 +162,39 @@ func (symbol *entitySetSymbolImpl) EvalStringList(tx *bbolt.Tx, key []byte) []st
 	return bucket.GetStringList(symbol.key)
 }
 
+func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(string) (*string, bool, bool)) error {
+	bucket := symbol.getBucketF(symbol.store.GetEntityBucket(tx, key))
+	if bucket == nil {
+		return nil
+	}
+	listBucket := bucket.GetBucket(symbol.key)
+	if listBucket == nil {
+		return nil
+	}
+
+	var newValues []string
+	cursor := listBucket.Cursor()
+	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+		_, val := getTypeAndValue(key)
+		newVal, change, cont := f(string(val))
+		if change {
+			if err := cursor.Delete(); err != nil {
+				return err
+			}
+			if newVal != nil {
+				newValues = append(newValues, *newVal)
+			}
+		}
+		if !cont {
+			break
+		}
+	}
+	for _, val := range newValues {
+		listBucket.SetListEntry(TypeString, []byte(val))
+	}
+	return listBucket.Err
+}
+
 func (symbol *entitySetSymbolImpl) newQueryPath(index int, cursor *stackedCursor, key []byte) queryPathElem {
 	boltCursor := symbol.openBoltCursor(cursor.tx, key)
 	var next []byte
