@@ -283,6 +283,14 @@ func (test *crudTest) testUniqueIndex(_ *testing.T) {
 	})
 	test.NoError(err)
 
+	employee6 := newEmployee("Joe Hill")
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		ctx := NewMutateContext(tx)
+		return test.empStore.Create(ctx, employee6)
+	})
+	test.EqualError(err, "duplicate value 'Joe Hill' in unique index on employees store")
+
 	err = test.db.View(func(tx *bbolt.Tx) error {
 		test.Equal([]byte(employee1.Id), test.empStore.indexName.Read(tx, []byte("Joe Hill")))
 		test.Equal([]byte(employee2.Id), test.empStore.indexName.Read(tx, []byte("Jane Mountain")))

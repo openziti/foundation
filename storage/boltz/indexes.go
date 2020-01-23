@@ -230,7 +230,12 @@ func (index *uniqueIndex) processAfterUpdate(ctx *IndexingContext) {
 		}
 
 		if len(newValue) > 0 {
-			ctx.errHolder.SetError(indexBucket.PutValue(newValue, ctx.rowId).Err)
+			if indexBucket.Get(newValue) != nil {
+				ctx.errHolder.SetError(errors.Errorf("duplicate value '%v' in unique index on %v store",
+					string(newValue), index.symbol.GetStore().GetEntityType()))
+			} else {
+				ctx.errHolder.SetError(indexBucket.PutValue(newValue, ctx.rowId).Err)
+			}
 		} else if !index.nullable {
 			ctx.errHolder.SetError(errors.Errorf("index on %v.%v does not allow null or empty values",
 				index.symbol.GetStore().GetEntityType(), index.symbol.GetName()))
