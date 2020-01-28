@@ -23,7 +23,7 @@ func getPkcs11Lib() (string) {
 
 	if len(libFromEnv) > 0 {
 		return libFromEnv
-	} 	else {
+	} else {
 		return "/usr/lib/softhsm/libsofthsm2.so"
 	}
 }
