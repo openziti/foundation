@@ -16,9 +16,9 @@
 
 package pkcs11
 
-import (
-	_ "net/url"
-)
+import "os"
 
-const pkcs11Lib = "V:/dev/tools/softhsm2/lib/softhsm2-x64.dll"
+func getPkcs11Lib() (string) {
+	return os.Getenv(softHsmEnvVar)
+}
 const initScript = "init-test-data.bat"

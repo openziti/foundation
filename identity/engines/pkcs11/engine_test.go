@@ -31,13 +31,14 @@ import (
 )
 
 const pin = "2171"
+const softHsmEnvVar ="SOFTHSM2_LIB"
 
 func init() {
 	_ = os.Setenv("SOFTHSM2_CONF", "softhsm2.conf")
 }
 
 func genTestData(pin string) {
-	exec.Command(initScript, pkcs11Lib, pin)
+	exec.Command(initScript, getPkcs11Lib(), pin)
 }
 
 type ecdsaSig struct {
@@ -45,6 +46,7 @@ type ecdsaSig struct {
 }
 
 func Test_softhsm2_keys(t *testing.T) {
+	pkcs11Lib := getPkcs11Lib()
 
 	if _, err := os.Stat(pkcs11Lib); err != nil {
 		t.Logf("skipping %s: driver not found", t.Name())

@@ -16,9 +16,17 @@
 
 package pkcs11
 
-import (
-	_ "net/url"
-)
+import "os"
 
-const pkcs11Lib = "/usr/lib/softhsm/libsofthsm2.so"
+func getPkcs11Lib() (string) {
+	libFromEnv := os.Getenv(softHsmEnvVar)
+
+	if len(libFromEnv) > 0 {
+		log.Infof("LIB FROM ENV")
+		return libFromEnv
+	} 	else {
+		log.Infof("returning /usr/lib/softhsm/libsofthsm2.so")
+		return "/usr/lib/softhsm/libsofthsm2.so"
+	}
+}
 const initScript = "init-test-data.sh"
