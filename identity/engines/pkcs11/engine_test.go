@@ -26,7 +26,7 @@ import (
 	"net/url"
 	_ "net/url"
 	"os"
-	"syscall"
+	"os/exec"
 	"testing"
 )
 
@@ -37,7 +37,7 @@ func init() {
 }
 
 func genTestData(pin string) {
-	_ = syscall.Exec(initScript, []string{pkcs11Lib, pin}, nil)
+	exec.Command(initScript, pkcs11Lib, pin)
 }
 
 type ecdsaSig struct {

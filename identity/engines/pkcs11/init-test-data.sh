@@ -15,10 +15,16 @@
 #	limitations under the License.
 
 conf=softhsm2.conf
+
 lib=$1
 pin=$2
 
 [ -e ${conf} ] || exit 1
+
+echo TEST DATA: LIB:$lib PIN:$pin
+
+sleep 40
+
 
 
 tokendir=$(awk '/^directories.tokendir/{print $3;}' ${conf})
