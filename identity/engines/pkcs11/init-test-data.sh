@@ -15,8 +15,8 @@
 #	limitations under the License.
 
 conf=softhsm2.conf
-lib=/usr/lib/softhsm/libsofthsm2.so
-pin=2171
+lib=$1
+pin=$2
 
 [ -e ${conf} ] || exit 1
 
