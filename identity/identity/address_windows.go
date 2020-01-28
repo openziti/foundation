@@ -17,34 +17,50 @@
 package identity
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 )
 
 func parseAddr(addr string) (*url.URL, error) {
-	if !isFile(addr) {
-		if strings.HasPrefix(addr, "pem:") {
+	if isFile(addr) {
+		addr = strings.TrimPrefix(addr, "file:")
+		return &url.URL{
+			Scheme: "file",
+			Path:   strings.TrimPrefix(addr, "//"),
+		}, nil
+	}
+
+	if isPem(addr) {
+		addr = strings.TrimPrefix(addr, "pem:")
+		return &url.URL{
+			Scheme: "pem",
+			Opaque: strings.TrimPrefix(addr, "//"),
+		}, nil
+	}
+
+	if isEngine(addr) {
+		u := strings.SplitN(addr, ":", 2)
+		if len(u) > 1 {
+			pathAndArgs := strings.SplitN(u[1], "?", 2)
 			return &url.URL{
-				Scheme:     "pem",
-				Opaque:     strings.TrimPrefix(addr, "pem:"),
+				Scheme:   u[0],
+				Path:     strings.TrimPrefix(pathAndArgs[0], "//"),
+				RawQuery: pathAndArgs[1],
 			}, nil
 		}
-
-		return nil, errors.New("non-file address supplied, but not supported [%s]")
 	}
 
-	if strings.HasPrefix(addr, "file://") {
-		addr = strings.Replace(addr, "file://", "", 1)
-	}
-	return &url.URL{
-		Scheme: "file",
-		Path:   addr,
-	}, nil
+	return nil, fmt.Errorf("failed to parse address [%s]", addr)
 }
 
+// addr is determined to be a file if:
+// - begins with "file:"
+// - satisfies filepath.IsAbs()
+// - does not contain a ":" (at least we know addr is not a "pem:" or "<engine>:" )
 func isFile(addr string) bool {
-	return !(isPem(addr) || isEngine(addr))
+	return strings.HasPrefix(addr, "file:") || filepath.IsAbs(addr) || !strings.Contains(addr, ":")
 }
 
 func isPem(addr string) bool {
@@ -52,5 +68,5 @@ func isPem(addr string) bool {
 }
 
 func isEngine(addr string) bool {
-	return strings.HasPrefix(addr, "engine:")
+	return strings.Contains(addr, ":") && !isFile(addr)
 }
