@@ -142,10 +142,10 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 			return nil, fmt.Errorf("driver not specified for PKCS#11 engine, see docs")
 		}
 
-		//driver = "lib" + key.Opaque + ".so"
 		driver = key.Opaque
 	}
 
+	log.Infof("using driver: %v", driver)
 	ctx, err := getContext(driver)
 	if err != nil {
 		return nil, err
