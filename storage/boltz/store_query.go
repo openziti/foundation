@@ -93,7 +93,6 @@ func (store *BaseStore) GetSymbol(name string) EntitySymbol {
 			}
 			subSymbolName := strings.Join(parts[1:], ".")
 			rest := linkedEntitySymbol.getLinkedType().GetSymbol(subSymbolName)
-			//rest := linkedEntitySymbol.getLinkedType().GetSymbol(parts[1])
 			if rest == nil {
 				return nil
 			}
