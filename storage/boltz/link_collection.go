@@ -17,8 +17,6 @@
 package boltz
 
 import (
-	"encoding/binary"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 	"sort"
@@ -184,54 +182,8 @@ type LinkedSetSymbol struct {
 	EntitySymbol
 }
 
-func (symbol *LinkedSetSymbol) ToKey(linkIds []string) ([]byte, error) {
-	var compoundKey []byte
-	for _, linkId := range linkIds {
-		if len(linkId) > MaxLinkedSetKeySize {
-			return nil, errors.Errorf("On encode, linked key component %v exceeds max size of %v", linkId, MaxLinkedSetKeySize)
-		}
-		sizeBuf := make([]byte, binary.MaxVarintLen64)
-		binary.PutUvarint(sizeBuf, uint64(len(linkId)))
-		compoundKey = append(compoundKey, sizeBuf...)
-		compoundKey = append(compoundKey, []byte(linkId)...)
-	}
-	return compoundKey, nil
-}
-
-func (symbol *LinkedSetSymbol) firstKeyPart(val string) []byte {
-	compoundKey := []byte(val)
-	keyLen, read := binary.Uvarint(compoundKey)
-	if read < 1 {
-		pfxlog.Logger().Warnf("incorrectly encoded compound key? %+v", compoundKey)
-		return nil
-	}
-	compoundKey = compoundKey[read:]
-	return compoundKey[:keyLen]
-}
-
-func (symbol *LinkedSetSymbol) FromKey(compoundKey []byte) ([]string, error) {
-	var result []string
-	for len(compoundKey) > 0 {
-		keyLen, read := binary.Uvarint(compoundKey)
-		if read < 1 {
-			return nil, errors.Errorf("incorrectly encoded compound key? %+v", compoundKey)
-		}
-		if keyLen > MaxLinkedSetKeySize {
-			return nil, errors.Errorf("On decoded, linked key component exceeds max size of %v", MaxLinkedSetKeySize)
-		}
-		compoundKey = compoundKey[read:]
-		if len(compoundKey) < int(keyLen) {
-			return nil, errors.Errorf("incorrectly encoded compound key? Not enough bytes left to decode. Should be %v bytes", keyLen)
-		}
-		next := compoundKey[:keyLen]
-		result = append(result, string(next))
-		compoundKey = compoundKey[keyLen:]
-	}
-	return result, nil
-}
-
 func (symbol *LinkedSetSymbol) AddCompoundLink(tx *bbolt.Tx, id string, linkIds []string) error {
-	key, err := symbol.ToKey(linkIds)
+	key, err := EncodeStringSlice(linkIds)
 	if err != nil {
 		return err
 	}
@@ -239,7 +191,7 @@ func (symbol *LinkedSetSymbol) AddCompoundLink(tx *bbolt.Tx, id string, linkIds 
 }
 
 func (symbol *LinkedSetSymbol) RemoveCompoundLink(tx *bbolt.Tx, id string, linkIds []string) error {
-	key, err := symbol.ToKey(linkIds)
+	key, err := EncodeStringSlice(linkIds)
 	if err != nil {
 		return err
 	}
