@@ -164,8 +164,12 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 			log.Warnf("slot not specified, using first slot reported by the driver (%d)", slotId)
 		}
 	} else {
-		id, _ := strconv.Atoi(slot)
-		slotId = uint(id)
+		n, err := strconv.ParseInt(slot, 0, 64)
+		if err != nil {
+			log.Errorf("slot with value [%v] could not be parsed.", slot)
+		}
+		slotId = uint(n)
+		log.Debugf("using slot id: %d", slotId)
 	}
 
 	session, err := ctx.OpenSession(slotId, pkcs11.CKF_SERIAL_SESSION | pkcs11.CKF_RW_SESSION)
