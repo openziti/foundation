@@ -162,7 +162,7 @@ func (symbol *entitySetSymbolImpl) EvalStringList(tx *bbolt.Tx, key []byte) []st
 	return bucket.GetStringList(symbol.key)
 }
 
-func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(string) (*string, bool, bool)) error {
+func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(ctx *MapContext)) error {
 	bucket := symbol.getBucketF(symbol.store.GetEntityBucket(tx, key))
 	if bucket == nil {
 		return nil
@@ -172,25 +172,29 @@ func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(string) 
 		return nil
 	}
 
-	var newValues []string
+	var newValues []*FieldTypeAndValue
 	cursor := listBucket.Cursor()
+	ctx := &MapContext{}
 	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
-		_, val := getTypeAndValue(key)
-		newVal, change, cont := f(string(val))
-		if change {
+		ctx.next(getTypeAndValue(key))
+		f(ctx)
+		if ctx.HasError() {
+			return ctx.GetError()
+		}
+		if ctx.replace {
 			if err := cursor.Delete(); err != nil {
 				return err
 			}
-			if newVal != nil {
-				newValues = append(newValues, *newVal)
+			if ctx.newVal != nil {
+				newValues = append(newValues, &FieldTypeAndValue{FieldType: ctx.newType, Value: ctx.newVal})
 			}
 		}
-		if !cont {
+		if ctx.stop {
 			break
 		}
 	}
 	for _, val := range newValues {
-		listBucket.SetListEntry(TypeString, []byte(val))
+		listBucket.SetListEntry(val.FieldType, val.Value)
 	}
 	return listBucket.Err
 }
@@ -338,6 +342,14 @@ type compositeEntitySetSymbol struct {
 	chain       []iterableEntitySymbol
 	cursor      *stackedCursor
 	cursorLastF func(tx *bbolt.Tx, key []byte) (FieldType, []byte)
+}
+
+func (symbol *compositeEntitySetSymbol) getChain() []EntitySymbol {
+	var result []EntitySymbol
+	for _, chainSymbol := range symbol.chain {
+		result = append(result, chainSymbol)
+	}
+	return result
 }
 
 func (symbol *compositeEntitySetSymbol) GetStore() ListStore {

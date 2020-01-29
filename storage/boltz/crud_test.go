@@ -33,7 +33,7 @@ import (
 
 const (
 	fieldName           = "name"
-	fieldManagerId      = "managerId"
+	fieldManager        = "manager"
 	fieldDirectReports  = "directReports"
 	fieldRoleAttributes = "roleAttributes"
 
@@ -63,13 +63,13 @@ func (entity *Employee) SetId(id string) {
 
 func (entity *Employee) LoadValues(_ CrudStore, bucket *TypedBucket) {
 	entity.Name = bucket.GetStringOrError(fieldName)
-	entity.ManagerId = bucket.GetString(fieldManagerId)
+	entity.ManagerId = bucket.GetString(fieldManager)
 	entity.RoleAttributes = bucket.GetStringList(fieldRoleAttributes)
 }
 
 func (entity *Employee) SetValues(ctx *PersistContext) {
 	ctx.SetString(fieldName, entity.Name)
-	ctx.SetStringP(fieldManagerId, entity.ManagerId)
+	ctx.SetStringP(fieldManager, entity.ManagerId)
 	ctx.SetStringList(fieldRoleAttributes, entity.RoleAttributes)
 }
 
@@ -110,9 +110,9 @@ func (store *employeeStoreImpl) initializeLocal() {
 	rolesSymbol := store.AddSetSymbol(fieldRoleAttributes, ast.NodeTypeString)
 	store.indexRoles = store.AddSetIndex(rolesSymbol)
 
-	managerIdSymbol := store.AddFkSymbol(fieldManagerId, store)
+	managerSymbol := store.AddFkSymbol(fieldManager, store)
 	directReportsSymbol := store.AddFkSetSymbol(fieldDirectReports, store)
-	store.AddNullableFkIndex(managerIdSymbol, directReportsSymbol)
+	store.AddNullableFkIndex(managerSymbol, directReportsSymbol)
 
 	store.symbolLocations = store.AddFkSetSymbol(entityTypeLocation, store.stores.location)
 }
@@ -250,6 +250,7 @@ func TestCrud(t *testing.T) {
 	t.Run("set indexes", test.testSetIndex)
 	t.Run("fk indexes", test.testFkIndex)
 	t.Run("link collections", test.testLinkCollection)
+	t.Run("composite symbol", test.testCompositeSymbol)
 }
 
 func (test *crudTest) testUniqueIndex(_ *testing.T) {
@@ -541,7 +542,7 @@ func (test *crudTest) testFkIndex(_ *testing.T) {
 		return test.empStore.DeleteById(ctx, employee2.Id)
 	})
 	empIdList := test.sortedIdList(employee1, employee3, employee4)
-	test.EqualError(err, fmt.Sprintf("cannot delete employees with id %v is referenced by employees with id %v, field managerId",
+	test.EqualError(err, fmt.Sprintf("cannot delete employees with id %v is referenced by employees with id %v, field manager",
 		employee2.Id, empIdList[0]))
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
@@ -621,6 +622,150 @@ func (test *crudTest) testLinkCollection(_ *testing.T) {
 		test.Equal(keys, currentIds)
 	}
 
+	test.NoError(err)
+}
+
+func (test *crudTest) testCompositeSymbol(_ *testing.T) {
+	var employees []*Employee
+
+	for i := 0; i < 10; i++ {
+		employees = append(employees, &Employee{
+			Id:   uuid.New().String(),
+			Name: uuid.New().String(),
+		})
+		fmt.Printf("employee %v: %v\n", i, employees[i].Id)
+	}
+
+	var locations []*Location
+
+	for i := 0; i < 10; i++ {
+		locations = append(locations, &Location{Id: uuid.New().String()})
+	}
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		ctx := NewMutateContext(tx)
+		for _, e := range employees {
+			if err := test.empStore.Create(ctx, e); err != nil {
+				return err
+			}
+		}
+
+		for _, e := range locations {
+			if err := test.locStore.Create(ctx, e); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	for idx, e := range employees {
+		err = test.db.Update(func(tx *bbolt.Tx) error {
+			if err := test.empStore.locationsCollection.AddLinks(tx, e.Id, locations[idx].Id); err != nil {
+				return err
+			}
+			ctx := NewMutateContext(tx)
+			if idx != 0 {
+				e.ManagerId = &employees[idx-1].Id
+				return test.empStore.Update(ctx, e, nil)
+			}
+			return nil
+		})
+		test.NoError(err)
+	}
+
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		query := fmt.Sprintf(`manager = "%v"`, employees[0].Id)
+		ids, _, err := test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[1].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(locations) = "%v"`, locations[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[0].Id, ids[0])
+
+		query = fmt.Sprintf(`manager.manager = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[2].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(manager.locations) = "%v"`, locations[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[1].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(locations.employees) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[0].Id, ids[0])
+
+		query = fmt.Sprintf(`manager.manager.manager = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[3].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(manager.manager.locations) = "%v"`, locations[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[2].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(manager.locations.employees) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[1].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(locations.employees.manager) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[1].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(locations.employees.locations) = "%v"`, locations[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[0].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(manager.directReports.manager) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[1].Id, ids[0])
+
+		query = fmt.Sprintf(`manager.manager.manager.manager = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[4].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(manager.manager.directReports.manager) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[2].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(directReports.manager.directReports.manager) = "%v"`, employees[0].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[0].Id, ids[0])
+
+		query = fmt.Sprintf(`anyOf(directReports.directReports.directReports.directReports) = "%v"`, employees[4].Id)
+		ids, _, err = test.empStore.QueryIds(tx, query)
+		test.NoError(err)
+		test.Equal(1, len(ids))
+		test.Equal(employees[0].Id, ids[0])
+
+		return nil
+	})
 	test.NoError(err)
 }
 

@@ -79,10 +79,10 @@ func (store *BaseStore) GetSymbol(name string) EntitySymbol {
 			prefix = append(prefix, mapSymbol.prefix...)
 			prefix = append(prefix, mapSymbol.key)
 			if len(parts) > 2 {
-				middle := parts[1:len(parts) - 1]
+				middle := parts[1 : len(parts)-1]
 				prefix = append(prefix, middle...)
 			}
-			key := parts[len(parts) - 1]
+			key := parts[len(parts)-1]
 			return store.newEntitySymbol(name, mapSymbol.symbolType, key, nil, prefix...)
 		}
 
@@ -91,7 +91,9 @@ func (store *BaseStore) GetSymbol(name string) EntitySymbol {
 			if !ok || linkedEntitySymbol.getLinkedType() == nil {
 				return nil // Can only have composite symbols if it's linked
 			}
-			rest := linkedEntitySymbol.getLinkedType().GetSymbol(parts[1])
+			subSymbolName := strings.Join(parts[1:], ".")
+			rest := linkedEntitySymbol.getLinkedType().GetSymbol(subSymbolName)
+			//rest := linkedEntitySymbol.getLinkedType().GetSymbol(parts[1])
 			if rest == nil {
 				return nil
 			}
@@ -287,9 +289,9 @@ func (sortField *sortFieldImpl) IsAscending() bool {
 }
 
 func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, error) {
-	if len(sort) == 0 {
-		sort = []ast.SortField{&sortFieldImpl{name: "id", isAsc: true}}
-	}
+	// always have id as last sort element. this way if other sorts come out equal, we still
+	// can order on something, instead of having duplicates which causes rows to get discarded
+	sort = append(sort, &sortFieldImpl{name: "id", isAsc: true})
 
 	var symbolsComparators []symbolComparator
 	for _, sortField := range sort {

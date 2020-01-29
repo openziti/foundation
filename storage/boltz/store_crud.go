@@ -31,7 +31,7 @@ func (store *BaseStore) GetParentStore() CrudStore {
 func (store *BaseStore) AddLinkCollection(local EntitySymbol, remote EntitySymbol) LinkCollection {
 	result := &linkCollectionImpl{
 		field:      local,
-		otherField: remote,
+		otherField: &LinkedSetSymbol{EntitySymbol: remote},
 	}
 	store.links[local.GetName()] = result
 	return result

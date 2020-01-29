@@ -377,9 +377,28 @@ func (test *boltQueryTests) testBusinessEquals(*testing.T) {
 }
 
 func (test *boltQueryTests) testSortPage(*testing.T) {
-	//paging := &predicate.Paging{Offset: 0, Limit: 10}
-	//sorts := []predicate.SortField{{Field: "lastName", Direction: predicate.DESC}, {Field: "firstName", Direction: predicate.ASC}}
-	ids, count := test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName limit 10`)
+	ids, count := test.query(`firstName in ["Alice", "Bob"] SORT BY lastName desc`)
+	test.Equal(20, len(ids))
+	test.Equal(int64(20), count)
+
+	for i, id := range ids {
+		fmt.Printf("%v: %v\n", i, id)
+	}
+
+	people := test.toPersonList(ids)
+	test.Equal(20, len(people))
+	for idx, person := range people {
+		if idx == 0 {
+			continue
+		}
+		if people[idx-1].lastName == person.lastName {
+			test.True(people[idx-1].id < person.id)
+		} else {
+			test.True(people[idx-1].lastName > person.lastName)
+		}
+	}
+
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
 
@@ -387,7 +406,7 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 		fmt.Printf("%v: %v\n", i, id)
 	}
 
-	people := test.toPersonList(ids)
+	people = test.toPersonList(ids)
 	test.Equal(10, len(people))
 	test.Equal("Wilson", people[0].lastName)
 	test.Equal("Alice", people[0].firstName)
