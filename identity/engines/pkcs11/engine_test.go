@@ -26,16 +26,19 @@ import (
 	"net/url"
 	_ "net/url"
 	"os"
-	"syscall"
+	"os/exec"
 	"testing"
 )
+
+const pin = "2171"
+const softHsmEnvVar ="SOFTHSM2_LIB"
 
 func init() {
 	_ = os.Setenv("SOFTHSM2_CONF", "softhsm2.conf")
 }
 
-func genTestData() {
-	_ = syscall.Exec("init-test-data.sh", nil, nil)
+func genTestData(pin string) {
+	exec.Command(initScript, getPkcs11Lib(), pin)
 }
 
 type ecdsaSig struct {
@@ -43,13 +46,14 @@ type ecdsaSig struct {
 }
 
 func Test_softhsm2_keys(t *testing.T) {
+	pkcs11Lib := getPkcs11Lib()
 
-	if _, err := os.Stat("/usr/lib/softhsm/libsofthsm2.so"); err != nil {
+	if _, err := os.Stat(pkcs11Lib); err != nil {
 		t.Logf("skipping %s: driver not found", t.Name())
 		t.SkipNow()
 	}
 
-	genTestData()
+	genTestData(pin)
 
 	keys := map[string]string {
 		"prime256v1": "02",
@@ -59,7 +63,7 @@ func Test_softhsm2_keys(t *testing.T) {
 	for n, id := range keys {
 		t.Logf("testing key %s", n)
 
-		k, err := url.Parse("pkcs11:/usr/lib/softhsm/libsofthsm2.so?pin=2171&id=" + id)
+		k, err := url.Parse("pkcs11:" + pkcs11Lib + "?pin=" + pin + "&id=" + id)
 		if err != nil {
 			t.Error(err)
 		}

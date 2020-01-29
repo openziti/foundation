@@ -142,9 +142,10 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 			return nil, fmt.Errorf("driver not specified for PKCS#11 engine, see docs")
 		}
 
-		driver = "lib" + key.Opaque + ".so"
+		driver = key.Opaque
 	}
 
+	log.Infof("using driver: %v", driver)
 	ctx, err := getContext(driver)
 	if err != nil {
 		return nil, err
@@ -158,6 +159,7 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 		if slots, err := ctx.GetSlotList(true); err != nil {
 			return nil, err
 		} else {
+
 			slotId = slots[0]
 			log.Warnf("slot not specified, using first slot reported by the driver (%d)", slotId)
 		}
