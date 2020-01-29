@@ -207,7 +207,7 @@ func (bucket *TypedBucket) EmptyBucket(name string) (*TypedBucket, error) {
 	return newTypedBucket(bucket, child), nil
 }
 
-func getTypeAndValue(bytes []byte) (FieldType, []byte) {
+func GetTypeAndValue(bytes []byte) (FieldType, []byte) {
 	if len(bytes) == 0 {
 		return TypeNil, nil
 	}
@@ -221,7 +221,7 @@ func getTypeAndValue(bytes []byte) (FieldType, []byte) {
 
 func (bucket *TypedBucket) getTyped(name string) (FieldType, []byte) {
 	bytes := bucket.Get([]byte(name))
-	return getTypeAndValue(bytes)
+	return GetTypeAndValue(bytes)
 }
 
 func PrependFieldType(fieldType FieldType, value []byte) []byte {
@@ -561,7 +561,7 @@ func (bucket *TypedBucket) ReadStringList() []string {
 	var result []string
 	cursor := bucket.Cursor()
 	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
-		_, val := getTypeAndValue(key)
+		_, val := GetTypeAndValue(key)
 		result = append(result, string(val))
 	}
 	return result

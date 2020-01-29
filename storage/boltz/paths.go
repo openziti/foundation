@@ -72,7 +72,7 @@ func (visitor loggingTraverseVisitor) VisitBucket(path string, key []byte, bucke
 }
 
 func (visitor loggingTraverseVisitor) VisitKeyValue(path string, key, value []byte) bool {
-	fieldType, fieldValue := getTypeAndValue(value)
+	fieldType, fieldValue := GetTypeAndValue(value)
 	strVal := FieldToString(fieldType, fieldValue)
 	if strVal == nil {
 		fmt.Printf("%v/%v = nil\n", path, string(key))

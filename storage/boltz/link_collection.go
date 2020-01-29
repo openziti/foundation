@@ -89,7 +89,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
 		for row, _ := cursor.First(); row != nil; row, _ = cursor.Next() {
-			_, val := getTypeAndValue(row)
+			_, val := GetTypeAndValue(row)
 			rowHandled := false
 			for len(keys) > 0 {
 				cursorCurrent := string(val)
@@ -137,7 +137,7 @@ func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) err
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
 		for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
-			_, key := getTypeAndValue(val)
+			_, key := GetTypeAndValue(val)
 			if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
 				return err
 			}

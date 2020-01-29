@@ -72,7 +72,7 @@ func (symbol *entitySymbol) Eval(tx *bbolt.Tx, rowId []byte) (FieldType, []byte)
 		return TypeNil, nil
 	}
 	val := entityBucket.Get([]byte(symbol.key))
-	return getTypeAndValue(val)
+	return GetTypeAndValue(val)
 }
 
 func (symbol *entitySymbol) getLinkedType() ListStore {
@@ -176,7 +176,7 @@ func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(ctx *Map
 	cursor := listBucket.Cursor()
 	ctx := &MapContext{}
 	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
-		ctx.next(getTypeAndValue(key))
+		ctx.next(GetTypeAndValue(key))
 		f(ctx)
 		if ctx.HasError() {
 			return ctx.GetError()
@@ -246,7 +246,7 @@ type entitySetSymbolRuntime struct {
 }
 
 func (symbol *entitySetSymbolRuntime) Current() []byte {
-	_, value := getTypeAndValue(symbol.value)
+	_, value := GetTypeAndValue(symbol.value)
 	return value
 }
 
@@ -275,7 +275,7 @@ func (symbol *entitySetSymbolRuntime) Eval(_ *bbolt.Tx, _ []byte) (FieldType, []
 	if symbol.value == nil {
 		return TypeNil, nil
 	}
-	return getTypeAndValue(symbol.value)
+	return GetTypeAndValue(symbol.value)
 }
 
 type iterableEntitySymbol interface {
@@ -417,7 +417,7 @@ func calculateNextCursorPosition(stackCursor *stackedCursor, stackElem queryPath
 		// Hop up the stack
 		index := stackElem.Index() + 1
 		nextLink := stackCursor.symbol.chain[index]
-		_, rowKey := getTypeAndValue(nextKey)
+		_, rowKey := GetTypeAndValue(nextKey)
 		stackElem = nextLink.newQueryPath(index, stackCursor, rowKey)
 		stackCursor.stack[index] = stackElem
 		key = stackElem.Next()
@@ -437,7 +437,7 @@ type stackedCursor struct {
 }
 
 func (cursor *stackedCursor) Current() []byte {
-	_, value := getTypeAndValue(cursor.key)
+	_, value := GetTypeAndValue(cursor.key)
 	return value
 }
 

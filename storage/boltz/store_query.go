@@ -147,7 +147,7 @@ func (store *BaseStore) createCompositeEntitySymbol(name string, first linkedEnt
 			chain:      iterable,
 			cursor:     nil,
 			cursorLastF: func(tx *bbolt.Tx, key []byte) (fieldType FieldType, bytes []byte) {
-				return getTypeAndValue(key)
+				return GetTypeAndValue(key)
 			},
 		}
 	}
@@ -208,6 +208,10 @@ func (store *BaseStore) AddMapSymbol(name string, nodeType ast.NodeType, key str
 		symbolType: nodeType,
 		prefix:     prefix,
 	}
+}
+
+func (store *BaseStore) NewEntitySymbol(name string, nodeType ast.NodeType) EntitySymbol {
+	return store.newEntitySymbol(name, nodeType, name, nil)
 }
 
 func (store *BaseStore) newEntitySymbol(name string, nodeType ast.NodeType, key string, linkedType ListStore, prefix ...string) *entitySymbol {

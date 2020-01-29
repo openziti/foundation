@@ -277,7 +277,7 @@ func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 	}
 	cursor := indexBucket.Cursor()
 	for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
-		_, value := getTypeAndValue(val)
+		_, value := GetTypeAndValue(val)
 		f(value)
 	}
 }
