@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"github.com/netfoundry/ziti-foundation/storage/ast"
+	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"go.etcd.io/bbolt"
 )
 
@@ -48,11 +49,58 @@ type EntitySymbol interface {
 	Eval(tx *bbolt.Tx, rowId []byte) (FieldType, []byte)
 }
 
+type MapContext struct {
+	fieldType FieldType
+	val       []byte
+	newType   FieldType
+	newVal    []byte
+	replace   bool
+	stop      bool
+	errorz.ErrorHolderImpl
+}
+
+func (ctx *MapContext) next(fieldType FieldType, val []byte) {
+	ctx.fieldType = fieldType
+	ctx.val = val
+	ctx.newVal = nil
+	ctx.replace = false
+}
+
+func (ctx *MapContext) Type() FieldType {
+	return ctx.fieldType
+}
+
+func (ctx *MapContext) Value() []byte {
+	return ctx.val
+}
+
+func (ctx *MapContext) ValueS() string {
+	return string(ctx.val)
+}
+
+func (ctx *MapContext) Delete() {
+	ctx.replace = true
+}
+
+func (ctx *MapContext) Replace(fieldType FieldType, val []byte) {
+	ctx.fieldType = fieldType
+	ctx.newVal = val
+	ctx.replace = true
+}
+
+func (ctx *MapContext) ReplaceS(val string) {
+	ctx.Replace(TypeString, []byte(val))
+}
+
+func (ctx *MapContext) Stop() {
+	ctx.stop = true
+}
+
 type EntitySetSymbol interface {
 	EntitySymbol
 	GetRuntimeSymbol() RuntimeEntitySetSymbol
 	EvalStringList(tx *bbolt.Tx, key []byte) []string
-	Map(tx *bbolt.Tx, key []byte, f func(string) (updatedValue *string, changeValue bool, continueIteration bool)) error
+	Map(tx *bbolt.Tx, key []byte, f func(ctx *MapContext)) error
 }
 
 type RuntimeEntitySetSymbol interface {

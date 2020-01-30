@@ -66,6 +66,7 @@ type ListStore interface {
 	AddMapSymbol(name string, nodeType ast.NodeType, key string, path ...string)
 	AddSetSymbol(name string, nodeType ast.NodeType) EntitySetSymbol
 	AddFkSetSymbol(name string, linkedType ListStore) EntitySetSymbol
+	NewEntitySymbol(name string, nodeType ast.NodeType) EntitySymbol
 
 	NewRowComparator(sort []ast.SortField) (RowComparator, error)
 	GetPublicSymbols() []string

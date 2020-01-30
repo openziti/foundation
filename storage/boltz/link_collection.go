@@ -34,7 +34,7 @@ type LinkCollection interface {
 
 type linkCollectionImpl struct {
 	field      EntitySymbol
-	otherField EntitySymbol
+	otherField *LinkedSetSymbol
 }
 
 func (collection *linkCollectionImpl) GetFieldSymbol() EntitySymbol {
@@ -56,8 +56,9 @@ func (collection *linkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id string) *T
 func (collection *linkCollectionImpl) AddLinks(tx *bbolt.Tx, id string, keys ...string) error {
 	fieldBucket := collection.getFieldBucket(tx, id)
 	if !fieldBucket.HasError() {
+		byteId := []byte(id)
 		for _, key := range keys {
-			if err := collection.link(tx, fieldBucket, id, key); err != nil {
+			if err := collection.link(tx, fieldBucket, byteId, []byte(key)); err != nil {
 				return err
 			}
 		}
@@ -68,8 +69,9 @@ func (collection *linkCollectionImpl) AddLinks(tx *bbolt.Tx, id string, keys ...
 func (collection *linkCollectionImpl) RemoveLinks(tx *bbolt.Tx, id string, keys ...string) error {
 	fieldBucket := collection.getFieldBucket(tx, id)
 	if !fieldBucket.HasError() {
+		byteId := []byte(id)
 		for _, key := range keys {
-			if err := collection.unlink(tx, fieldBucket, id, key); err != nil {
+			if err := collection.unlink(tx, fieldBucket, byteId, []byte(key)); err != nil {
 				return err
 			}
 		}
@@ -87,7 +89,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
 		for row, _ := cursor.First(); row != nil; row, _ = cursor.Next() {
-			_, val := getTypeAndValue(row)
+			_, val := GetTypeAndValue(row)
 			rowHandled := false
 			for len(keys) > 0 {
 				cursorCurrent := string(val)
@@ -135,7 +137,7 @@ func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) err
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
 		for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
-			_, key := getTypeAndValue(val)
+			_, key := GetTypeAndValue(val)
 			if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
 				return err
 			}
@@ -153,46 +155,72 @@ func (collection *linkCollectionImpl) GetLinks(tx *bbolt.Tx, id string) []string
 	return nil
 }
 
-func (collection *linkCollectionImpl) link(tx *bbolt.Tx, fieldBucket *TypedBucket, id string, associatedId string) error {
-	if fieldBucket.SetListEntry(TypeString, []byte(associatedId)).Err != nil {
+func (collection *linkCollectionImpl) link(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) error {
+	if fieldBucket.SetListEntry(TypeString, associatedId).Err != nil {
 		return fieldBucket.Err
 	}
-	return collection.linkOther(tx, []byte(id), []byte(associatedId))
+	return collection.otherField.AddLink(tx, associatedId, id)
 }
 
-func (collection *linkCollectionImpl) linkOther(tx *bbolt.Tx, id []byte, associatedId []byte) error {
-	otherBaseBucket := collection.otherField.GetStore().GetEntityBucket(tx, associatedId)
-	if otherBaseBucket == nil {
-		return errors.Errorf("can't link to unknown %v with id %v", collection.otherField.GetStore().GetEntityType(), string(associatedId))
-	}
-	otherFieldBucket := otherBaseBucket.GetOrCreatePath(collection.otherField.GetPath()...)
-	return otherFieldBucket.SetListEntry(TypeString, id).Err
-}
-
-func (collection *linkCollectionImpl) unlink(tx *bbolt.Tx, fieldBucket *TypedBucket, id string, associatedId string) error {
-	if fieldBucket.DeleteListEntry(TypeString, []byte(associatedId)).Err != nil {
+func (collection *linkCollectionImpl) unlink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) error {
+	if fieldBucket.DeleteListEntry(TypeString, associatedId).Err != nil {
 		return fieldBucket.Err
 	}
-	return collection.unlinkOther(tx, []byte(id), []byte(associatedId))
+	return collection.otherField.RemoveLink(tx, associatedId, id)
 }
 
 func (collection *linkCollectionImpl) unlinkCursor(tx *bbolt.Tx, cursor *bbolt.Cursor, id []byte, associatedId []byte) error {
 	if err := cursor.Delete(); err != nil {
 		return err
 	}
-	return collection.unlinkOther(tx, id, associatedId)
+	return collection.otherField.RemoveLink(tx, associatedId, id)
 }
 
-func (collection *linkCollectionImpl) unlinkOther(tx *bbolt.Tx, id []byte, associatedId []byte) error {
-	otherBaseBucket := collection.otherField.GetStore().GetEntityBucket(tx, associatedId)
-	if otherBaseBucket == nil {
+const MaxLinkedSetKeySize = 4096
+
+type LinkedSetSymbol struct {
+	EntitySymbol
+}
+
+func (symbol *LinkedSetSymbol) AddCompoundLink(tx *bbolt.Tx, id string, linkIds []string) error {
+	key, err := EncodeStringSlice(linkIds)
+	if err != nil {
+		return err
+	}
+	return symbol.AddLink(tx, []byte(id), key)
+}
+
+func (symbol *LinkedSetSymbol) RemoveCompoundLink(tx *bbolt.Tx, id string, linkIds []string) error {
+	key, err := EncodeStringSlice(linkIds)
+	if err != nil {
+		return err
+	}
+	return symbol.RemoveLink(tx, []byte(id), key)
+}
+
+func (symbol *LinkedSetSymbol) AddLinkS(tx *bbolt.Tx, id string, link string) error {
+	return symbol.AddLink(tx, []byte(id), []byte(link))
+}
+
+func (symbol *LinkedSetSymbol) AddLink(tx *bbolt.Tx, id []byte, link []byte) error {
+	entityBucket := symbol.GetStore().GetEntityBucket(tx, id)
+	if entityBucket == nil {
+		return errors.Errorf("can't link to unknown %v with id %v", symbol.GetStore().GetEntityType(), string(id))
+	}
+	fieldBucket := entityBucket.GetOrCreatePath(symbol.GetPath()...)
+	return fieldBucket.SetListEntry(TypeString, link).Err
+}
+
+func (symbol *LinkedSetSymbol) RemoveLink(tx *bbolt.Tx, id []byte, link []byte) error {
+	entityBucket := symbol.GetStore().GetEntityBucket(tx, id)
+	if entityBucket == nil {
 		// attempt to unlink something that doesn't exist. nothing to do on fk side
 		return nil
 	}
-	otherFieldBucket := otherBaseBucket.GetPath(collection.otherField.GetPath()...)
-	if otherFieldBucket == nil {
+	fieldBucket := entityBucket.GetPath(symbol.GetPath()...)
+	if fieldBucket == nil {
 		// attempt to unlink something that's not linked. nothing to do on fk side
 		return nil
 	}
-	return otherFieldBucket.DeleteListEntry(TypeString, id).Err
+	return fieldBucket.DeleteListEntry(TypeString, link).Err
 }
