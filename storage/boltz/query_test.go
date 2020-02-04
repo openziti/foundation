@@ -102,7 +102,6 @@ func (test *boltTest) createTestSchema() {
 			placeMap[place] = id
 			placeBucket := placesBucket.GetOrCreatePath(id)
 			placeBucket.SetString("name", place, nil)
-			// fmt.Printf("created place %v with id %v\n", place, id)
 
 			var placeBusinesses []string
 			placeBusinesses = append(placeBusinesses, businesses[businessIndex%len(businesses)])
@@ -111,7 +110,6 @@ func (test *boltTest) createTestSchema() {
 			businessIndex++
 
 			placeBucket.SetStringList("businesses", placeBusinesses, nil)
-			// fmt.Printf("Place %v has businesses: %+v\n", place, placeBusinesses)
 		}
 
 		placeIndex := 0
@@ -159,7 +157,6 @@ func (test *boltTest) createTestSchema() {
 			placeIndex++
 
 			serviceBucket.SetStringList("places", personPlaceIds, nil)
-			// fmt.Printf("created person %v %v with places %+v\n", firstName, lastName, personPlaceNames)
 		}
 		return bucket.Err
 	})
@@ -237,7 +234,7 @@ func (test *boltTest) query(queryString string) ([]string, int64) {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		fmt.Printf("err: %+v\n", err)
 	}
 	test.NoError(err)
 
