@@ -7,5 +7,5 @@ import:
   - source: netfoundry/ziti-ci-golang:go-defaults.yml@initial
   - source: netfoundry/ziti-ci-golang:git-setup.yml@initial
   - source: netfoundry/ziti-ci-golang:versioning.yml@initial
-    if: branch = versioning-and-tagging
+    if: branch != master
 
