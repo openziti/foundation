@@ -102,7 +102,6 @@ func (test *boltTest) createTestSchema() {
 			placeMap[place] = id
 			placeBucket := placesBucket.GetOrCreatePath(id)
 			placeBucket.SetString("name", place, nil)
-			fmt.Printf("created place %v with id %v\n", place, id)
 
 			var placeBusinesses []string
 			placeBusinesses = append(placeBusinesses, businesses[businessIndex%len(businesses)])
@@ -111,7 +110,6 @@ func (test *boltTest) createTestSchema() {
 			businessIndex++
 
 			placeBucket.SetStringList("businesses", placeBusinesses, nil)
-			fmt.Printf("Place %v has businesses: %+v\n", place, placeBusinesses)
 		}
 
 		placeIndex := 0
@@ -159,7 +157,6 @@ func (test *boltTest) createTestSchema() {
 			placeIndex++
 
 			serviceBucket.SetStringList("places", personPlaceIds, nil)
-			fmt.Printf("created person %v %v with places %+v\n", firstName, lastName, personPlaceNames)
 		}
 		return bucket.Err
 	})
@@ -237,7 +234,7 @@ func (test *boltTest) query(queryString string) ([]string, int64) {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		fmt.Printf("err: %+v\n", err)
 	}
 	test.NoError(err)
 
@@ -276,10 +273,6 @@ func (test *boltQueryTests) testFirstName(*testing.T) {
 	test.Equal(10, len(ids))
 	test.Equal(int64(10), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people := test.toPersonList(ids)
 
 	test.Equal(10, len(people))
@@ -290,7 +283,6 @@ func (test *boltQueryTests) testFirstName(*testing.T) {
 		test.True(stringz.Contains(lastNames, person.lastName))
 		test.False(stringz.Contains(foundNames, person.lastName))
 		foundNames = append(foundNames, person.lastName)
-		fmt.Println(person.String())
 	}
 }
 
@@ -298,10 +290,6 @@ func (test *boltQueryTests) testNumbers(*testing.T) {
 	ids, count := test.query(`anyOf(numbers) in [5, 15, 17, 27]`)
 	test.Equal(3, len(ids))
 	test.Equal(int64(3), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people := test.toPersonList(ids)
 
@@ -312,10 +300,6 @@ func (test *boltQueryTests) testPlaceName(*testing.T) {
 	ids, count := test.query(`anyOf(places.name) = "Alphaville"`)
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people := test.toPersonList(ids)
 	test.Equal(40, len(people))
@@ -341,12 +325,7 @@ func (test *boltQueryTests) testPlaceIdsIn(*testing.T) {
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people := test.toPersonList(ids)
-
 	test.Equal(40, len(people))
 }
 
@@ -354,10 +333,6 @@ func (test *boltQueryTests) testPlaceNamesIn(*testing.T) {
 	ids, count := test.query(`anyOf(places.name) in ["Alphaville", "Betaville"]`)
 	test.Equal(60, len(ids))
 	test.Equal(int64(60), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people := test.toPersonList(ids)
 	test.Equal(60, len(people))
@@ -368,10 +343,6 @@ func (test *boltQueryTests) testBusinessEquals(*testing.T) {
 	test.Equal(60, len(ids))
 	test.Equal(int64(60), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people := test.toPersonList(ids)
 	test.Equal(60, len(people))
 }
@@ -380,10 +351,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	ids, count := test.query(`firstName in ["Alice", "Bob"] SORT BY lastName desc`)
 	test.Equal(20, len(ids))
 	test.Equal(int64(20), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people := test.toPersonList(ids)
 	test.Equal(20, len(people))
@@ -401,10 +368,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people = test.toPersonList(ids)
 	test.Equal(10, len(people))
@@ -432,10 +395,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 10 limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people = test.toPersonList(ids)
 	test.Equal(10, len(people))
@@ -466,10 +425,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people = test.toPersonList(ids)
 	test.Equal(10, len(people))
 	test.Equal("Jones", people[0].lastName)
@@ -498,10 +453,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 30 limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people = test.toPersonList(ids)
 	test.Equal(10, len(people))
@@ -532,10 +483,6 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal(0, len(ids))
 	test.Equal(int64(40), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people = test.toPersonList(ids)
 	test.Equal(0, len(people))
 }
@@ -545,15 +492,10 @@ func (test *boltQueryTests) testMapQueries(*testing.T) {
 	test.Equal(10, len(ids))
 	test.Equal(int64(10), count)
 
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
-
 	people := test.toPersonList(ids)
 	test.Equal(10, len(people))
 
 	for _, person := range people {
-		fmt.Printf("%v\n", person.tags)
 		age := person.tags["age"].(int32)
 		test.True(age >= 90)
 	}
@@ -563,10 +505,6 @@ func (test *boltQueryTests) testSubQueries(*testing.T) {
 	ids, count := test.query(`not isEmpty(from places where name = "Alphaville" and anyOf(businesses) = "Big Boxes Store")`)
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
-
-	for i, id := range ids {
-		fmt.Printf("%v: %v\n", i, id)
-	}
 
 	people := test.toPersonList(ids)
 	test.Equal(40, len(people))
