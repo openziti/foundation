@@ -8,3 +8,4 @@ import:
   - source: netfoundry/ziti-ci-golang:git-setup.yml@v1
   - source: netfoundry/ziti-ci-golang:versioning.yml@v1
     if: branch = master
+
