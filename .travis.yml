@@ -1,7 +1,7 @@
 version: ~> 1.0
 
 before_install:
-  - sudo apt-get install -y libsofthsm2
+  - sudo apt-get install -y libsofthsm2 libsofthsm2-dev
   - openssl aes-256-cbc -K $encrypted_d400382c4902_key -iv $encrypted_d400382c4902_iv -in github_deploy_key.enc -out github_deploy_key -d
 
 import:
