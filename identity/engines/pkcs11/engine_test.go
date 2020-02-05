@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/asn1"
+	"github.com/stretchr/testify/assert"
 	"math/big"
 	"net/url"
 	_ "net/url"
@@ -37,8 +38,12 @@ func init() {
 	_ = os.Setenv("SOFTHSM2_CONF", "softhsm2.conf")
 }
 
-func genTestData(pin string) {
-	exec.Command(initScript, getPkcs11Lib(), pin)
+func genTestData(pin string) error {
+	err := exec.Command(initScript, getPkcs11Lib(), pin).Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type ecdsaSig struct {
@@ -53,7 +58,7 @@ func Test_softhsm2_keys(t *testing.T) {
 		t.SkipNow()
 	}
 
-	genTestData(pin)
+	assert.NoError(t, genTestData(pin))
 
 	keys := map[string]string {
 		"prime256v1": "02",

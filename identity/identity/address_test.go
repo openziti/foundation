@@ -83,6 +83,6 @@ func TestParseAddrEngine(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, engine, p.Scheme)
-	assert.Equal(t, "some-driver", p.Path)
+	assert.Equal(t, "some-driver", p.Host)
 	assert.Equal(t, "0", p.Query().Get("slot"))
 }
