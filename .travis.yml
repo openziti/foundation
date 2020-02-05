@@ -8,6 +8,3 @@ import:
   - source: netfoundry/ziti-ci-golang:git-setup.yml@v1
   - source: netfoundry/ziti-ci-golang:versioning.yml@v1
     if: branch = master
-
-env: 
-  global: VERSION_FILE=./common/version/VERSION
