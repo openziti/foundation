@@ -23,6 +23,7 @@ import (
 type TokenId struct {
 	Id    Identity
 	Token string
+	Data  map[uint32][]byte
 }
 
 func (i *TokenId) ClientTLSConfig() *tls.Config {
@@ -41,7 +42,7 @@ func (i *TokenId) ServerTLSConfig() *tls.Config {
 
 func NewIdentity(id Identity) *TokenId {
 	token := id.Cert().Leaf.Subject.CommonName
-	return &TokenId{id, token}
+	return &TokenId{Id: id, Token: token}
 }
 
 func (i *TokenId) ShallowCloneWithNewToken(token string) *TokenId {
