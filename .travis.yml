@@ -8,4 +8,5 @@ import:
   - source: netfoundry/ziti-ci-golang:git-setup.yml@initial
   - source: netfoundry/ziti-ci-golang:versioning.yml@initial
 
-env: VERSION_FILE=./common/version/VERSION
+env: 
+  global: VERSION_FILE=./common/version/VERSION
