@@ -79,7 +79,6 @@ func (symbols *testSymbols) IsNil(name string) (bool, error) {
 func (symbols *testSymbols) GetSymbolType(name string) (NodeType, bool) {
 	value, found := symbols.values[name]
 	if found {
-		fmt.Printf("symbol %v has go type %v\n", name, reflect.TypeOf(value))
 		switch value.(type) {
 		case int64:
 			return NodeTypeInt64, true
@@ -318,11 +317,11 @@ func TestIntFilters(t *testing.T) {
 		{"int not in, result false", "a not in [4, 2, 1.0, 4, 5]", false},
 		{"int not in, result false", "a not in [4.3, 2.1, 1.0, 4.2, 5.9]", false},
 
-		{"int64 contains, result true", `nci  contains 234'`, true},
-		{"int64 contains, result false", `nci  contains 321'`, false},
-		{"int64 not contains, result false", `nci not contains 234'`, false},
-		{"int64 not contains, result true", `nci not contains 321'`, true},
-		{"int64 not contains, result true", `nci not contains 321.123'`, true},
+		{"int64 contains, result true", `nci  contains 234`, true},
+		{"int64 contains, result false", `nci  contains 321`, false},
+		{"int64 not contains, result false", `nci not contains 234`, false},
+		{"int64 not contains, result true", `nci not contains 321`, true},
+		{"int64 not contains, result true", `nci not contains 321.123`, true},
 	}
 
 	for _, tt := range tests {
@@ -398,12 +397,12 @@ func TestFloatFilters(t *testing.T) {
 		{"float not between, result false", "c not between 2.5 and 2.6", false},
 		{"float not between, result true", "c not between 0 and 2.5", true},
 
-		{"float64 contains, result true", `ncf  contains 234'`, true},
-		{"float64 contains, result true", `ncf  contains 9.12'`, true},
-		{"float64 contains, result false", `ncf  contains 321'`, false},
-		{"float64 not contains, result false", `ncf not contains 234'`, false},
-		{"float64 not contains, result false", `ncf not contains 89.12'`, false},
-		{"float64 not contains, result true", `ncf not contains 321'`, true},
+		{"float64 contains, result true", `ncf  contains 234`, true},
+		{"float64 contains, result true", `ncf  contains 9.12`, true},
+		{"float64 contains, result false", `ncf  contains 321`, false},
+		{"float64 not contains, result false", `ncf not contains 234`, false},
+		{"float64 not contains, result false", `ncf not contains 89.12`, false},
+		{"float64 not contains, result true", `ncf not contains 321`, true},
 	}
 
 	for _, tt := range tests {
@@ -675,9 +674,9 @@ func TestSortingPaging(t *testing.T) {
 
 func runSortPageTest(t *testing.T, tt sortPageTestDef) {
 	listener := NewListener()
-	listener.PrintRuleLocation = true
+	listener.PrintRuleLocation = false
 	listener.PrintChildren = false
-	listener.PrintStackOps = true
+	listener.PrintStackOps = false
 
 	req := require.New(t)
 	parseErrors := zitiql.Parse(tt.expr, listener)
@@ -698,8 +697,6 @@ func runSortPageTest(t *testing.T, tt sortPageTestDef) {
 		return
 	}
 
-	fmt.Printf("%v = %v\n", query, result)
-
 	if tt.result != result {
 		t.Errorf("expected filter result %v, got %v", tt.result, result)
 	}
@@ -715,9 +712,9 @@ func runSortPageTest(t *testing.T, tt sortPageTestDef) {
 
 func runFilterTest(t *testing.T, tt testDef) {
 	listener := NewListener()
-	listener.PrintRuleLocation = true
+	listener.PrintRuleLocation = false
 	listener.PrintChildren = false
-	listener.PrintStackOps = true
+	listener.PrintStackOps = false
 
 	req := require.New(t)
 	parseErrors := zitiql.Parse(tt.expr, listener)
@@ -737,8 +734,6 @@ func runFilterTest(t *testing.T, tt testDef) {
 		t.Error(err)
 		return
 	}
-
-	fmt.Printf("%v = %v\n", filter, result)
 
 	if tt.result != result {
 		t.Errorf("expected filter result %v, got %v", tt.result, result)

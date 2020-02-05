@@ -633,7 +633,6 @@ func (test *crudTest) testCompositeSymbol(_ *testing.T) {
 			Id:   uuid.New().String(),
 			Name: uuid.New().String(),
 		})
-		fmt.Printf("employee %v: %v\n", i, employees[i].Id)
 	}
 
 	var locations []*Location
