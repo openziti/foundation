@@ -77,12 +77,12 @@ func TestParseAddrEngine(t *testing.T) {
 	engine := certtools.ListEngines()[0]
 
 	engineBody := "some-driver?slot=0"
-	engineAddr := engine + ":" + engineBody
+	engineAddr := engine + "://" + engineBody
 
 	p, err := parseAddr(engineAddr)
 
 	assert.NoError(t, err)
 	assert.Equal(t, engine, p.Scheme)
-	assert.Equal(t, "some-driver", p.Opaque)
+	assert.Equal(t, "some-driver", p.Path)
 	assert.Equal(t, "0", p.Query().Get("slot"))
 }
