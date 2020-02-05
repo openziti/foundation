@@ -27,4 +27,4 @@ func getPkcs11Lib() (string) {
 		return "/usr/lib/softhsm/libsofthsm2.so"
 	}
 }
-const initScript = "init-test-data.sh"
+const initScript = "./init-test-data.sh"
