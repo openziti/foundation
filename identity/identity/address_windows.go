@@ -46,7 +46,7 @@ func parseAddr(addr string) (*url.URL, error) {
 			pathAndArgs := strings.SplitN(u[1], "?", 2)
 			return &url.URL{
 				Scheme:   u[0],
-				Path:     strings.TrimPrefix(pathAndArgs[0], "//"),
+				Host:     strings.TrimPrefix(pathAndArgs[0], "//"),
 				RawQuery: pathAndArgs[1],
 			}, nil
 		}
