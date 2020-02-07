@@ -35,13 +35,13 @@ import (
 
 const EngineId = "pkcs11"
 
- //
- // engine supporting generic PKCS#11 HSM driver
- // possible key URLs:
- // - `pkcs11:/usr/lib/softhsm/libsofthsm2.so?slot=0&id=2171` - full driver path
- // - `pkcs11:softhsm2?slot=0&id=2171` - driver id, driver will be loaded according to following rules:
- //                       driver id converted to OS specific library file name (on *nix `lib${driver}.so`)
- //                       then loaded according to dynamic loader configuration (on *nix according to http://man7.org/linux/man-pages/man3/dlopen.3.html)
+//
+// engine supporting generic PKCS#11 HSM driver
+// possible key URLs:
+// - `pkcs11:/usr/lib/softhsm/libsofthsm2.so?slot=0&id=2171` - full driver path
+// - `pkcs11:softhsm2?slot=0&id=2171` - driver id, driver will be loaded according to following rules:
+//                       driver id converted to OS specific library file name (on *nix `lib${driver}.so`)
+//                       then loaded according to dynamic loader configuration (on *nix according to http://man7.org/linux/man-pages/man3/dlopen.3.html)
 var Engine = &engine{}
 
 type engine struct {
@@ -52,10 +52,10 @@ var contexts = map[string]*pkcs11.Ctx{}
 var log = pfxlog.ContextLogger(EngineId)
 
 type p11Signer struct {
-	c *pkcs11.Ctx
-	s pkcs11.SessionHandle
-	h pkcs11.ObjectHandle
-	m *pkcs11.Mechanism
+	c     *pkcs11.Ctx
+	s     pkcs11.SessionHandle
+	h     pkcs11.ObjectHandle
+	m     *pkcs11.Mechanism
 	label string
 
 	pub crypto.PublicKey
@@ -75,25 +75,52 @@ func (k *p11Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) 
 }
 
 // copied from golang/crypto/rsa/rsa.go
-var hashPrefixes = map[crypto.Hash][]byte{
-	crypto.MD5:       {0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10},
-	crypto.SHA1:      {0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14},
-	crypto.SHA224:    {0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04, 0x05, 0x00, 0x04, 0x1c},
-	crypto.SHA256:    {0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20},
-	crypto.SHA384:    {0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30},
-	crypto.SHA512:    {0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40},
-	crypto.MD5SHA1:   {}, // A special TLS case which doesn't use an ASN1 prefix.
-	crypto.RIPEMD160: {0x30, 0x20, 0x30, 0x08, 0x06, 0x06, 0x28, 0xcf, 0x06, 0x03, 0x00, 0x31, 0x04, 0x14},
+var hashInfo = map[crypto.Hash]struct {
+	oid  []byte
+	mgf  uint
+	hash uint
+}{
+	crypto.MD5:       {[]byte{0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, 0x05, 0x00, 0x04, 0x10}, 0, pkcs11.CKM_MD5},
+	crypto.SHA1:      {[]byte{0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14}, pkcs11.CKG_MGF1_SHA1, pkcs11.CKM_SHA_1},
+	crypto.SHA224:    {[]byte{0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04, 0x05, 0x00, 0x04, 0x1c}, pkcs11.CKG_MGF1_SHA224, pkcs11.CKM_SHA224},
+	crypto.SHA256:    {[]byte{0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20}, pkcs11.CKG_MGF1_SHA256, pkcs11.CKM_SHA256},
+	crypto.SHA384:    {[]byte{0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, 0x05, 0x00, 0x04, 0x30}, pkcs11.CKG_MGF1_SHA384, pkcs11.CKM_SHA384},
+	crypto.SHA512:    {[]byte{0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, 0x05, 0x00, 0x04, 0x40}, pkcs11.CKG_MGF1_SHA512, pkcs11.CKM_SHA512},
+	crypto.MD5SHA1:   {[]byte{}, 0, 0}, // A special TLS case which doesn't use an ASN1 prefix.
+	crypto.RIPEMD160: {[]byte{0x30, 0x20, 0x30, 0x08, 0x06, 0x06, 0x28, 0xcf, 0x06, 0x03, 0x00, 0x31, 0x04, 0x14}, 0, pkcs11.CKM_RIPEMD160},
 }
 
 func (k *p11Signer) signRSA(digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	switch opts.(type) {
 	case *rsa.PSSOptions:
-		return nil, fmt.Errorf("TODO")
+		hash := opts.HashFunc()
+
+		hashInfo, ok := hashInfo[hash]
+		if !ok {
+			return nil, fmt.Errorf("unknown hash function to match for a message digest function [%d]", hash)
+		}
+
+		pssOptions := opts.(*rsa.PSSOptions)
+		switch pssOptions.SaltLength {
+		case rsa.PSSSaltLengthAuto:
+			pub := k.Public().(*rsa.PublicKey)
+			pssOptions.SaltLength = (pub.N.BitLen()+7)/8 - 2 - hash.Size()
+		case rsa.PSSSaltLengthEqualsHash:
+			pssOptions.SaltLength = hash.Size()
+		}
+
+		params := pkcs11.NewPSSParams(hashInfo.hash, hashInfo.mgf, uint(pssOptions.SaltLength))
+		mech := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_PSS, params)}
+
+		if err := k.c.SignInit(k.s, mech, k.h); err == nil {
+			return k.c.Sign(k.s, digest)
+		} else {
+			return nil, err
+		}
 	default: /* PKCS1-v1_5 */
 		hash := opts.HashFunc()
-		oid := hashPrefixes[hash]
-		input := append(oid, digest...)
+		hashInfo := hashInfo[hash]
+		input := append(hashInfo.oid, digest...)
 		mech := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}
 		if err := k.c.SignInit(k.s, mech, k.h); err == nil {
 			return k.c.Sign(k.s, input)
@@ -105,7 +132,7 @@ func (k *p11Signer) signRSA(digest []byte, opts crypto.SignerOpts) ([]byte, erro
 
 func (k *p11Signer) signECDSA(digest []byte) ([]byte, error) {
 
-	mech := []*pkcs11.Mechanism{k.m}
+	mech := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}
 	if err := k.c.SignInit(k.s, mech, k.h); err != nil {
 		return nil, err
 	}
@@ -138,11 +165,11 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 
 	driver := key.Path
 	if driver == "" {
-		if key.Opaque == "" {
+		if key.Host == "" {
 			return nil, fmt.Errorf("driver not specified for PKCS#11 engine, see docs")
 		}
 
-		driver = key.Opaque
+		driver = key.Host
 	}
 
 	log.Infof("using driver: %v", driver)
@@ -159,7 +186,6 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 		if slots, err := ctx.GetSlotList(true); err != nil {
 			return nil, err
 		} else {
-
 			slotId = slots[0]
 			log.Warnf("slot not specified, using first slot reported by the driver (%d)", slotId)
 		}
@@ -172,7 +198,7 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 		log.Debugf("using slot id: %d", slotId)
 	}
 
-	session, err := ctx.OpenSession(slotId, pkcs11.CKF_SERIAL_SESSION | pkcs11.CKF_RW_SESSION)
+	session, err := ctx.OpenSession(slotId, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +309,7 @@ func getECDSAmechanism(ctx *pkcs11.Ctx, slot uint, pubKey *ecdsa.PublicKey) (*pk
 	}
 
 	for _, m := range prefered {
-		mech := []*pkcs11.Mechanism {
+		mech := []*pkcs11.Mechanism{
 			pkcs11.NewMechanism(m, nil),
 		}
 
@@ -298,9 +324,8 @@ func getECDSAmechanism(ctx *pkcs11.Ctx, slot uint, pubKey *ecdsa.PublicKey) (*pk
 	return nil, fmt.Errorf("token does not support ECDSA sign mechanisms")
 }
 
-
 func loadECDSApub(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, ph pkcs11.ObjectHandle) (*ecdsa.PublicKey, error) {
-	templ := []*pkcs11.Attribute {
+	templ := []*pkcs11.Attribute{
 		{Type: pkcs11.CKA_EC_PARAMS},
 		{Type: pkcs11.CKA_EC_POINT},
 	}
@@ -325,18 +350,18 @@ func loadECDSApub(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, ph pkcs11.Objec
 			// We weren't expecting extra data
 			return nil, fmt.Errorf("unexpected data found when parsing elliptic curve point")
 		}
-		x,y := elliptic.Unmarshal(curve, pointBytes)
+		x, y := elliptic.Unmarshal(curve, pointBytes)
 
 		return &ecdsa.PublicKey{
 			Curve: curve,
-			X: x,
-			Y: y,
+			X:     x,
+			Y:     y,
 		}, nil
 	}
 }
 
 func loadRSApub(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, ph pkcs11.ObjectHandle) (crypto.PublicKey, error) {
-	templ := []*pkcs11.Attribute {
+	templ := []*pkcs11.Attribute{
 		{Type: pkcs11.CKA_MODULUS},
 		{Type: pkcs11.CKA_PUBLIC_EXPONENT},
 	}
@@ -352,7 +377,7 @@ func loadRSApub(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, ph pkcs11.ObjectH
 
 		exp := new(big.Int)
 		exp.SetBytes(attrs[1].Value)
-		if exp.BitLen() > 32 || exp.Sign() < 1{
+		if exp.BitLen() > 32 || exp.Sign() < 1 {
 			return nil, fmt.Errorf("unxpected RSA exponent value")
 		}
 		result.E = int(exp.Uint64())
@@ -402,7 +427,7 @@ func getObjectUintAttr(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, obj pkcs11
 }
 
 func getObjectAttribute(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, obj pkcs11.ObjectHandle, attr_id uint) ([]byte, error) {
-	templ := []*pkcs11.Attribute {
+	templ := []*pkcs11.Attribute{
 		{Type: attr_id},
 	}
 	attrs, err := ctx.GetAttributeValue(session, obj, templ)
