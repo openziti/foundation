@@ -132,7 +132,7 @@ func (k *p11Signer) signRSA(digest []byte, opts crypto.SignerOpts) ([]byte, erro
 
 func (k *p11Signer) signECDSA(digest []byte) ([]byte, error) {
 
-	mech := []*pkcs11.Mechanism{k.m}
+	mech := []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}
 	if err := k.c.SignInit(k.s, mech, k.h); err != nil {
 		return nil, err
 	}
