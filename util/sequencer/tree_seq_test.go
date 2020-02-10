@@ -41,7 +41,6 @@ func Test_treeSeq(t *testing.T) {
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, v := range r.Perm(127) {
 			v = v + 1
-			println("putting ", v)
 			if err := seq.Put(v); err != nil {
 				t.Error("put", err)
 			}
@@ -55,7 +54,6 @@ func Test_treeSeq(t *testing.T) {
 		if v == nil {
 			break
 		}
-		println("GetNext() returned ", v.(int))
 		if c != v.(int) {
 			t.Errorf("sequence is not in order, expected=%d, received=%d", c, v.(int))
 		}
@@ -76,7 +74,6 @@ func Test_treeSeqSync(t *testing.T) {
 
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, v := range r.Perm(127) {
-			println("putting ", v)
 			go func(i int) {
 				i = i + 1
 				if err := seq.Put(i); err != nil {
@@ -96,7 +93,6 @@ func Test_treeSeqSync(t *testing.T) {
 		if v == nil {
 			break
 		}
-		println(v.(int))
 		if c != v.(int) {
 			t.Errorf("sequence is not in order, expected=%d, received=%d", c, v.(int))
 		}
@@ -131,7 +127,6 @@ func Test_treeSeqPreloaded(t *testing.T) {
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, v := range r.Perm(BufferThreshold - 1) {
 			v = v + 1
-			println("putting ", v)
 			if err := seq.Put(v); err != nil {
 				t.Error("put", err)
 			}
@@ -146,7 +141,6 @@ func Test_treeSeqPreloaded(t *testing.T) {
 		if v == nil {
 			break
 		}
-		println("GetNext() returned ", v.(int))
 		if c != v.(int) {
 			t.Errorf("sequence is not in order, expected=%d, received=%d", c, v.(int))
 		}
@@ -165,7 +159,7 @@ func newMultiWriterBtreeSeq(seqF func(interface{}) uint32) *multiWriterBtreeSeq 
 			nextSeq:       1,
 			maxOutOfOrder: math.MaxUint32,
 		},
-		writeCh:              make(chan *multiWriterSeqEntry),
+		writeCh: make(chan *multiWriterSeqEntry),
 	}
 
 	go func() {

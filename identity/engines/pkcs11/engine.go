@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 Netfoundry, Inc.
+	Copyright 2019 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -165,13 +165,14 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 
 	driver := key.Path
 	if driver == "" {
-		if key.Opaque == "" {
+		if key.Host == "" {
 			return nil, fmt.Errorf("driver not specified for PKCS#11 engine, see docs")
 		}
 
-		driver = "lib" + key.Opaque + ".so"
+		driver = key.Host
 	}
 
+	log.Infof("using driver: %v", driver)
 	ctx, err := getContext(driver)
 	if err != nil {
 		return nil, err
@@ -189,8 +190,12 @@ func (*engine) LoadKey(key *url.URL) (crypto.PrivateKey, error) {
 			log.Warnf("slot not specified, using first slot reported by the driver (%d)", slotId)
 		}
 	} else {
-		id, _ := strconv.Atoi(slot)
-		slotId = uint(id)
+		n, err := strconv.ParseInt(slot, 0, 64)
+		if err != nil {
+			log.Errorf("slot with value [%v] could not be parsed.", slot)
+		}
+		slotId = uint(n)
+		log.Debugf("using slot id: %d", slotId)
 	}
 
 	session, err := ctx.OpenSession(slotId, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)

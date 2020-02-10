@@ -22,7 +22,6 @@ import (
 )
 
 func Test_getRetryVersionFor(t *testing.T) {
-
 	twoAndOne := []uint32{2, 1}
 
 	tests := []struct {

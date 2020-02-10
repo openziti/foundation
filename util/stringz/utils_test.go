@@ -7,6 +7,8 @@ import (
 
 func TestPermutations(t *testing.T) {
 	Permutations([]string{"a", "b", "c", "d"}, func(val []string) {
-		fmt.Printf("%v\n", val)
+		if len(val) > 100000 {
+			fmt.Printf("%v\n", val)
+		}
 	})
 }
