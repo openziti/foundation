@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
-	github.com/blang/semver v3.5.1+incompatible
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
