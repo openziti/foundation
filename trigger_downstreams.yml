@@ -1,0 +1,3 @@
+after_script:
+  - ziti-ci trigger-travis-build netfoundry/ziti-sdk-golang update-dependency
+  - ziti-ci trigger-travis-build netfoundry/ziti-fabric update-dependency
