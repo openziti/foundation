@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 )
 
 func NewStringArrayNode(values []string) *StringArrayNode {
@@ -34,7 +35,17 @@ type StringArrayNode struct {
 }
 
 func (node *StringArrayNode) String() string {
-	return fmt.Sprintf("%v", node.values)
+	builder := &strings.Builder{}
+	builder.WriteString("[")
+	if len(node.values) > 0 {
+		builder.WriteString(node.values[0].String())
+		for _, child := range node.values[1:] {
+			builder.WriteString(", ")
+			builder.WriteString(child.String())
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
 }
 
 func (*StringArrayNode) GetType() NodeType {
@@ -59,7 +70,17 @@ type Float64ArrayNode struct {
 }
 
 func (node *Float64ArrayNode) String() string {
-	return fmt.Sprintf("%v", node.values)
+	builder := &strings.Builder{}
+	builder.WriteString("[")
+	if len(node.values) > 0 {
+		builder.WriteString(node.values[0].String())
+		for _, child := range node.values[1:] {
+			builder.WriteString(", ")
+			builder.WriteString(child.String())
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
 }
 
 func (node *Float64ArrayNode) GetType() NodeType {
@@ -88,7 +109,17 @@ type Int64ArrayNode struct {
 }
 
 func (node *Int64ArrayNode) String() string {
-	return fmt.Sprintf("%v", node.values)
+	builder := &strings.Builder{}
+	builder.WriteString("[")
+	if len(node.values) > 0 {
+		builder.WriteString(node.values[0].String())
+		for _, child := range node.values[1:] {
+			builder.WriteString(", ")
+			builder.WriteString(child.String())
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
 }
 
 func (node *Int64ArrayNode) GetType() NodeType {
@@ -125,7 +156,17 @@ type DatetimeArrayNode struct {
 }
 
 func (node *DatetimeArrayNode) String() string {
-	return fmt.Sprintf("%v", node.values)
+	builder := &strings.Builder{}
+	builder.WriteString("[")
+	if len(node.values) > 0 {
+		builder.WriteString(node.values[0].String())
+		for _, child := range node.values[1:] {
+			builder.WriteString(", ")
+			builder.WriteString(child.String())
+		}
+	}
+	builder.WriteString("]")
+	return builder.String()
 }
 
 func (node *DatetimeArrayNode) GetType() NodeType {

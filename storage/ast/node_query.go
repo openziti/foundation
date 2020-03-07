@@ -106,8 +106,21 @@ func (node *queryNode) GetPredicate() BoolNode {
 	return node.Predicate
 }
 
+func (node *queryNode) SetPredicate(predicate BoolNode) {
+	node.Predicate = predicate
+}
+
 func (node *queryNode) GetSortFields() []SortField {
 	return node.SortBy.getSortFields()
+}
+
+func (node *queryNode) AdoptSortFields(query Query) error {
+	qn, ok := query.(*queryNode)
+	if !ok {
+		return errors.Errorf("unhanded query type: %v. expecting queryNode", reflect.TypeOf(query))
+	}
+	node.SortBy = qn.SortBy
+	return nil
 }
 
 func (node *queryNode) GetSkip() *int64 {
@@ -125,7 +138,17 @@ func (node *queryNode) GetLimit() *int64 {
 }
 
 func (node *queryNode) String() string {
-	return node.Predicate.String() + " " + node.SortBy.String() + " " + node.Limit.String()
+	builder := strings.Builder{}
+	builder.WriteString(node.Predicate.String())
+	if node.SortBy != nil && len(node.SortBy.SortFields) > 0 {
+		builder.WriteString(" ")
+		builder.WriteString(node.SortBy.String())
+	}
+	if node.Limit != nil {
+		builder.WriteString(" ")
+		builder.WriteString(node.Limit.String())
+	}
+	return builder.String()
 }
 
 func (node *queryNode) GetType() NodeType {

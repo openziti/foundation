@@ -186,6 +186,7 @@ type AsStringArrayable interface {
 }
 
 type SortField interface {
+	fmt.Stringer
 	Symbol() string
 	IsAscending() bool
 }
@@ -193,9 +194,15 @@ type SortField interface {
 type Query interface {
 	BoolNode
 
-	// GetSortFields returns the fiels on which to sort. Returning nil or empty means the default sort order
+	GetPredicate() BoolNode
+
+	SetPredicate(BoolNode)
+
+	// GetSortFields returns the fields on which to sort. Returning nil or empty means the default sort order
 	// will be used, usually by id ascending
 	GetSortFields() []SortField
+
+	AdoptSortFields(query Query) error
 
 	// GetSkip returns the number of rows to skip. nil, or a values less than one will mean no rows skipped
 	GetSkip() *int64

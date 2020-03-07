@@ -98,7 +98,7 @@ type employeeStoreImpl struct {
 	locationsCollection LinkCollection
 }
 
-func (store *employeeStoreImpl) NewStoreEntity() BaseEntity {
+func (store *employeeStoreImpl) NewStoreEntity() Entity {
 	return &Employee{}
 }
 
@@ -169,7 +169,7 @@ type locationStoreImpl struct {
 	employeesCollection LinkCollection
 }
 
-func (store *locationStoreImpl) NewStoreEntity() BaseEntity {
+func (store *locationStoreImpl) NewStoreEntity() Entity {
 	return &Location{}
 }
 

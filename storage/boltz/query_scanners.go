@@ -35,11 +35,7 @@ func (s *scanner) setPaging(query ast.Query) {
 	}
 	s.targetOffset = *query.GetSkip()
 
-	if query.GetLimit() == nil {
-		query.SetLimit(math.MaxInt64)
-	}
-
-	if *query.GetLimit() < 0 {
+	if query.GetLimit() == nil || *query.GetLimit() < 0 {
 		query.SetLimit(math.MaxInt64)
 	}
 

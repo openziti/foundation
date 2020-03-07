@@ -17,6 +17,7 @@
 package boltz
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/michaelquigley/pfxlog"
@@ -264,6 +265,13 @@ func (store *BaseStore) addSetSymbol(name string, nodeType ast.NodeType, listSto
 	return result
 }
 
+func (store *BaseStore) AddExtEntitySymbols() {
+	store.AddIdSymbol(FieldId, ast.NodeTypeString)
+	store.AddSymbol(FieldCreatedAt, ast.NodeTypeDatetime)
+	store.AddSymbol(FieldUpdatedAt, ast.NodeTypeDatetime)
+	store.AddMapSymbol(FieldTags, ast.NodeTypeAnyType, FieldTags)
+}
+
 func (store *BaseStore) NewScanner(sort []ast.SortField) Scanner {
 	if len(sort) > SortMax {
 		sort = sort[:SortMax]
@@ -289,6 +297,13 @@ func (sortField *sortFieldImpl) Symbol() string {
 
 func (sortField *sortFieldImpl) IsAscending() bool {
 	return sortField.isAsc
+}
+
+func (sortField *sortFieldImpl) String() string {
+	if sortField.isAsc {
+		return sortField.name
+	}
+	return fmt.Sprintf("%v DESC", sortField.name)
 }
 
 func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, error) {

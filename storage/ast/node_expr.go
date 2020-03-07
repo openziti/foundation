@@ -53,6 +53,13 @@ func (node *NotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, transformBools(s, &node.expr)
 }
 
+func NewAndExprNode(left, right BoolNode) *AndExprNode {
+	return &AndExprNode{
+		left:  left,
+		right: right,
+	}
+}
+
 // AndExprNode implements logical AND on two wrapped boolean expressions
 type AndExprNode struct {
 	left  BoolNode

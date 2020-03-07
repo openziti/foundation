@@ -142,7 +142,7 @@ func (node *StringConstNode) EvalString(_ Symbols) (*string, error) {
 }
 
 func (node *StringConstNode) String() string {
-	return node.value
+	return fmt.Sprintf(`"%v"`, node.value)
 }
 
 // NullNode wraps a null constant expression
