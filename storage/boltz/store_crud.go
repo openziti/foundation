@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity En
 
 func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	if entity == nil {
-		return errors.Errorf("cannot create %v from nil value", store.GetEntityType())
+		return errors.Errorf("cannot create %v from nil value", store.GetSingularEntityType())
 	}
 
 	if entity.GetEntityType() != store.GetEntityType() {
@@ -104,11 +104,11 @@ func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	}
 
 	if entity.GetId() == "" {
-		return errors.Errorf("cannot create %v with blank id", store.GetEntityType())
+		return errors.Errorf("cannot create %v with blank id", store.GetSingularEntityType())
 	}
 
 	if store.IsEntityPresent(ctx.Tx(), entity.GetId()) {
-		return errors.Errorf("an entity of type %v already exists with id %v", store.GetEntityType(), entity.GetId())
+		return errors.Errorf("an entity of type %v already exists with id %v", store.GetSingularEntityType(), entity.GetId())
 	}
 
 	bucket := store.GetOrCreateEntityBucket(ctx.Tx(), []byte(entity.GetId()))
@@ -128,7 +128,7 @@ func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 
 func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldChecker) error {
 	if entity == nil {
-		return errors.Errorf("cannot update %v from nil value", store.GetEntityType())
+		return errors.Errorf("cannot update %v from nil value", store.GetSingularEntityType())
 	}
 
 	if entity.GetEntityType() != store.GetEntityType() {
@@ -137,7 +137,7 @@ func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldCh
 	}
 
 	if entity.GetId() == "" {
-		return errors.Errorf("cannot update %v with blank id", store.GetEntityType())
+		return errors.Errorf("cannot update %v with blank id", store.GetSingularEntityType())
 	}
 
 	bucket := store.GetEntityBucket(ctx.Tx(), []byte(entity.GetId()))
