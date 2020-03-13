@@ -153,9 +153,9 @@ operation:
 binaryLhs: IDENTIFIER | setFunction;
 
 setFunction:
-    ALL_OF LPAREN IDENTIFIER RPAREN #SetFunctionExpr
-  | ANY_OF LPAREN IDENTIFIER RPAREN #SetFunctionExpr
-  | COUNT LPAREN setExpr RPAREN #SetFunctionExpr
+    ALL_OF LPAREN WS* IDENTIFIER WS* RPAREN #SetFunctionExpr
+  | ANY_OF LPAREN WS* IDENTIFIER WS* RPAREN #SetFunctionExpr
+  | COUNT LPAREN WS* setExpr WS* RPAREN #SetFunctionExpr
   ;
 
 setExpr:

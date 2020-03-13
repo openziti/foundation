@@ -83,6 +83,9 @@ type ListStore interface {
 	// QueryIds compiles the query and runs it against the store
 	QueryIds(tx *bbolt.Tx, query string) ([]string, int64, error)
 
+	// QueryIdsf compiles the query with the given params and runs it against the store
+	QueryIdsf(tx *bbolt.Tx, query string, args ...interface{}) ([]string, int64, error)
+
 	// QueryIdsC executes a compile query against the store
 	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
 }

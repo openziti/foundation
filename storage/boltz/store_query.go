@@ -343,6 +343,10 @@ func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, e
 	return &rowComparatorImpl{symbols: symbolsComparators}, nil
 }
 
+func (store *BaseStore) QueryIdsf(tx *bbolt.Tx, queryString string, args ...interface{}) ([]string, int64, error) {
+	return store.QueryIds(tx, fmt.Sprintf(queryString, args...))
+}
+
 func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([]string, int64, error) {
 	query, err := ast.Parse(store, queryString)
 	if err != nil {
