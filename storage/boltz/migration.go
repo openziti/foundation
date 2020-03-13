@@ -47,14 +47,14 @@ func (m *migrationManager) Migrate(component string, migrator Migrator) error {
 			version = int(*versionP)
 		}
 		ctx := NewMutateContext(tx)
-		newVersion := version + 1
-		for version != newVersion {
+		done := false
+		for !done {
 			step := &MigrationStep{
 				Component:      component,
 				Ctx:            ctx,
 				CurrentVersion: version,
 			}
-			newVersion = migrator(step)
+			newVersion := migrator(step)
 			if step.HasError() {
 				return step.GetError()
 			}
@@ -64,10 +64,11 @@ func (m *migrationManager) Migrate(component string, migrator Migrator) error {
 					return versionsBucket.GetError()
 				}
 				pfxlog.Logger().Infof("Migrated %v datastore from %v to %v", component, version, newVersion)
+				version = newVersion
 			} else {
+				done = true
 				pfxlog.Logger().Infof("%v datastore is up to date at version %v", component, version)
 			}
-			version = newVersion
 		}
 		return nil
 	})
