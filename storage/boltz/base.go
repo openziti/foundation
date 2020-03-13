@@ -264,9 +264,9 @@ func (entity *ExtEntityFields) SetTags(tags map[string]interface{}) {
 }
 
 func (entity *ExtEntityFields) LoadBaseValues(bucket *TypedBucket) {
-	entity.CreatedAt = bucket.GetTimeOrError("createdAt")
-	entity.UpdatedAt = bucket.GetTimeOrError("updatedAt")
-	entity.Tags = bucket.GetMap("tags")
+	entity.CreatedAt = bucket.GetTimeOrError(FieldCreatedAt)
+	entity.UpdatedAt = bucket.GetTimeOrError(FieldUpdatedAt)
+	entity.Tags = bucket.GetMap(FieldTags)
 }
 
 func (entity *ExtEntityFields) SetBaseValues(ctx *PersistContext) {

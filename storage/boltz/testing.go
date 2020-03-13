@@ -204,7 +204,7 @@ func (ctx *BaseTestContext) ValidateUpdated(entity ExtEntity) {
 		ctx.Equal(entity.GetId(), loaded.GetId())
 		ctx.Equal(entity.GetEntityType(), loaded.GetEntityType())
 		ctx.Equal(entity.GetCreatedAt(), loaded.GetCreatedAt())
-		ctx.True(loaded.GetCreatedAt().Before(loaded.GetUpdatedAt()))
+		ctx.True(loaded.GetCreatedAt().Before(loaded.GetUpdatedAt()), "%v should be before %v", loaded.GetCreatedAt(), loaded.GetUpdatedAt())
 		ctx.True(loaded.GetUpdatedAt().Equal(now) || loaded.GetUpdatedAt().Before(now))
 
 		return nil
