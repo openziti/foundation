@@ -47,7 +47,7 @@ type Db interface {
 	RootBucket(tx *bbolt.Tx) (*bbolt.Bucket, error)
 
 	// Snapshot makes a copy of the bolt file
-	Snapshot() error
+	Snapshot(tx *bbolt.Tx) error
 }
 
 type ListStore interface {

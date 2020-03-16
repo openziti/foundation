@@ -17,7 +17,7 @@ type MigrationStep struct {
 type Migrator func(step *MigrationStep) int
 
 type MigrationManager interface {
-	Migrate(component string, migrator Migrator) error
+	Migrate(component string, targetVersion int, migrator Migrator) error
 }
 
 func NewMigratorManager(db Db) MigrationManager {
@@ -31,10 +31,7 @@ type migrationManager struct {
 	db Db
 }
 
-func (m *migrationManager) Migrate(component string, migrator Migrator) error {
-	if err := m.db.Snapshot(); err != nil {
-		return fmt.Errorf("failed to create bolt db snapshot: %w", err)
-	}
+func (m *migrationManager) Migrate(component string, targetVersion int, migrator Migrator) error {
 	return m.db.Update(func(tx *bbolt.Tx) error {
 		rootBucket, err := m.db.RootBucket(tx)
 		if err != nil {
@@ -50,9 +47,15 @@ func (m *migrationManager) Migrate(component string, migrator Migrator) error {
 		if versionP != nil {
 			version = int(*versionP)
 		}
+
+		if version != targetVersion {
+			if err := m.db.Snapshot(tx); err != nil {
+				return fmt.Errorf("failed to create bolt db snapshot: %w", err)
+			}
+		}
+
 		ctx := NewMutateContext(tx)
-		done := false
-		for !done {
+		for version != targetVersion {
 			step := &MigrationStep{
 				Component:      component,
 				Ctx:            ctx,
@@ -69,11 +72,9 @@ func (m *migrationManager) Migrate(component string, migrator Migrator) error {
 				}
 				pfxlog.Logger().Infof("Migrated %v datastore from %v to %v", component, version, newVersion)
 				version = newVersion
-			} else {
-				done = true
-				pfxlog.Logger().Infof("%v datastore is up to date at version %v", component, version)
 			}
 		}
+		pfxlog.Logger().Infof("%v datastore is up to date at version %v", component, version)
 		return nil
 	})
 }
