@@ -45,6 +45,9 @@ type Db interface {
 	Update(fn func(tx *bbolt.Tx) error) error
 	View(fn func(tx *bbolt.Tx) error) error
 	RootBucket(tx *bbolt.Tx) (*bbolt.Bucket, error)
+
+	// Snapshot makes a copy of the bolt file
+	Snapshot() error
 }
 
 type ListStore interface {

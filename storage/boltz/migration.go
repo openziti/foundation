@@ -1,6 +1,7 @@
 package boltz
 
 import (
+	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"go.etcd.io/bbolt"
@@ -31,6 +32,9 @@ type migrationManager struct {
 }
 
 func (m *migrationManager) Migrate(component string, migrator Migrator) error {
+	if err := m.db.Snapshot(); err != nil {
+		return fmt.Errorf("failed to create bolt db snapshot: %w", err)
+	}
 	return m.db.Update(func(tx *bbolt.Tx) error {
 		rootBucket, err := m.db.RootBucket(tx)
 		if err != nil {
