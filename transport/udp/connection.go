@@ -36,6 +36,8 @@ type connection struct {
 	copyBuf []byte
 }
 
+// Read is most likely here because calling `Read` on a UDP socket, without a large enough buffer, will lead to partial
+// datagram loss.
 func (c *connection) Read(p []byte) (int, error) {
 	var err error
 
