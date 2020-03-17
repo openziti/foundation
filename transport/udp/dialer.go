@@ -17,13 +17,24 @@
 package udp
 
 import (
+	"fmt"
 	"github.com/netfoundry/ziti-foundation/transport"
 	"net"
 )
 
 // Dial attempts to dial a UDP endpoint and create a connection to it
 func Dial(destination, name string) (transport.Connection, error) {
-	socket, err := net.Dial("udp", destination)
+	localAddress, err := net.ResolveUDPAddr("udp", ":0")
+	if err != nil {
+		return nil, fmt.Errorf("error resolving local address (%w)", err)
+	}
+
+	destinationAddress, err := net.ResolveUDPAddr("udp", destination)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving destination address (%w)", err)
+	}
+
+	socket, err := net.DialUDP("udp", localAddress, destinationAddress)
 	if err != nil {
 		return nil, err
 	}

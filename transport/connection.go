@@ -52,6 +52,7 @@ type Connection interface {
 	Detail() *ConnectionDetail
 	PeerCertificates() []*x509.Certificate
 	Reader() io.Reader
+	ReadPeer(p []byte) (int, Address, error)
 	Writer() io.Writer
 	Conn() net.Conn
 	SetReadTimeout(t time.Duration) error

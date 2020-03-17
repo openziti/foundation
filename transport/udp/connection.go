@@ -31,7 +31,7 @@ const (
 
 type connection struct {
 	detail  *transport.ConnectionDetail
-	socket  net.Conn
+	socket  *net.UDPConn
 	fullBuf []byte
 	copyBuf []byte
 }
@@ -68,6 +68,15 @@ func (c *connection) PeerCertificates() []*x509.Certificate {
 
 func (c *connection) Reader() io.Reader {
 	return c
+}
+
+func (c *connection) ReadPeer(p []byte) (int, transport.Address, error) {
+	n, peer, err := c.socket.ReadFromUDP(p)
+	var addr transport.Address
+	if peer != nil {
+		addr = &address{hostname: peer.IP.String(), port: uint16(peer.Port)}
+	}
+	return n, addr, err
 }
 
 func (c *connection) Writer() io.Writer {
