@@ -83,6 +83,9 @@ type ListStore interface {
 
 	FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string
 
+	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
+	GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor
+
 	// QueryIds compiles the query and runs it against the store
 	QueryIds(tx *bbolt.Tx, query string) ([]string, int64, error)
 
@@ -117,9 +120,6 @@ type CrudStore interface {
 	BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity Entity) (bool, error)
 	BaseLoadOneChildById(tx *bbolt.Tx, id string, childId string, entity Entity) (bool, error)
 	NewStoreEntity() Entity
-
-	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
-	GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor
 
 	AddDeleteHandler(handler EntityChangeHandler)
 	events.EventEmmiter
