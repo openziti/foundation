@@ -91,6 +91,8 @@ type ListStore interface {
 
 	// QueryIdsC executes a compile query against the store
 	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
+
+	QueryWithCursorC(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error)
 }
 
 type CrudStore interface {
@@ -117,6 +119,7 @@ type CrudStore interface {
 	NewStoreEntity() Entity
 
 	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
+	GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor
 
 	AddDeleteHandler(handler EntityChangeHandler)
 	events.EventEmmiter

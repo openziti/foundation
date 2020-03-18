@@ -359,3 +359,8 @@ func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int6
 	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.Scan(tx, query)
 }
+
+func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+	scanner := store.NewScanner(query.GetSortFields())
+	return scanner.ScanCursor(tx, cursor, query)
+}

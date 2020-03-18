@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"github.com/google/uuid"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/netfoundry/ziti-foundation/util/stringz"
 	"github.com/pkg/errors"
@@ -278,6 +279,20 @@ func (store *BaseStore) GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field 
 		return nil
 	}
 	return bucket.GetStringList(field)
+}
+
+func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor {
+	bucket := store.GetEntityBucket(tx, []byte(id))
+	if bucket == nil {
+		return nil
+	}
+	listBucket := bucket.GetBucket(field)
+	if listBucket == nil {
+		return nil
+	}
+
+	cursor := listBucket.Cursor()
+	return NewTypedForwardBoltCursor(cursor)
 }
 
 func (store *BaseStore) IsChildStore() bool {
