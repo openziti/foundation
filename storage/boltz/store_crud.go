@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"github.com/google/uuid"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/netfoundry/ziti-foundation/util/stringz"
 	"github.com/pkg/errors"
@@ -41,7 +42,7 @@ func (store *BaseStore) GetLinkCollection(name string) LinkCollection {
 	return store.links[name]
 }
 
-func (store *BaseStore) BaseLoadOneById(tx *bbolt.Tx, id string, entity BaseEntity) (bool, error) {
+func (store *BaseStore) BaseLoadOneById(tx *bbolt.Tx, id string, entity Entity) (bool, error) {
 	if entity == nil {
 		return false, errors.Errorf("cannot load into nil %v", store.GetEntityType())
 	}
@@ -59,7 +60,7 @@ func (store *BaseStore) BaseLoadOneById(tx *bbolt.Tx, id string, entity BaseEnti
 	return true, nil
 }
 
-func (store *BaseStore) BaseLoadOneChildById(tx *bbolt.Tx, id string, childId string, entity BaseEntity) (bool, error) {
+func (store *BaseStore) BaseLoadOneChildById(tx *bbolt.Tx, id string, childId string, entity Entity) (bool, error) {
 	if entity == nil {
 		return false, errors.Errorf("cannot load child into nil %v", store.GetEntityType())
 	}
@@ -82,7 +83,7 @@ func (store *BaseStore) BaseLoadOneChildById(tx *bbolt.Tx, id string, childId st
 	return true, nil
 }
 
-func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity BaseEntity) (bool, error) {
+func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity Entity) (bool, error) {
 	ids, _, err := store.QueryIds(tx, query)
 	if err != nil {
 		return false, err
@@ -93,9 +94,9 @@ func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity Ba
 	return store.BaseLoadOneById(tx, ids[0], entity)
 }
 
-func (store *BaseStore) Create(ctx MutateContext, entity BaseEntity) error {
+func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	if entity == nil {
-		return errors.Errorf("cannot create %v from nil value", store.GetEntityType())
+		return errors.Errorf("cannot create %v from nil value", store.GetSingularEntityType())
 	}
 
 	if entity.GetEntityType() != store.GetEntityType() {
@@ -104,11 +105,11 @@ func (store *BaseStore) Create(ctx MutateContext, entity BaseEntity) error {
 	}
 
 	if entity.GetId() == "" {
-		return errors.Errorf("cannot create %v with blank id", store.GetEntityType())
+		return errors.Errorf("cannot create %v with blank id", store.GetSingularEntityType())
 	}
 
 	if store.IsEntityPresent(ctx.Tx(), entity.GetId()) {
-		return errors.Errorf("an entity of type %v already exists with id %v", store.GetEntityType(), entity.GetId())
+		return errors.Errorf("an entity of type %v already exists with id %v", store.GetSingularEntityType(), entity.GetId())
 	}
 
 	bucket := store.GetOrCreateEntityBucket(ctx.Tx(), []byte(entity.GetId()))
@@ -126,9 +127,9 @@ func (store *BaseStore) Create(ctx MutateContext, entity BaseEntity) error {
 	return bucket.Err
 }
 
-func (store *BaseStore) Update(ctx MutateContext, entity BaseEntity, checker FieldChecker) error {
+func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldChecker) error {
 	if entity == nil {
-		return errors.Errorf("cannot update %v from nil value", store.GetEntityType())
+		return errors.Errorf("cannot update %v from nil value", store.GetSingularEntityType())
 	}
 
 	if entity.GetEntityType() != store.GetEntityType() {
@@ -137,7 +138,7 @@ func (store *BaseStore) Update(ctx MutateContext, entity BaseEntity, checker Fie
 	}
 
 	if entity.GetId() == "" {
-		return errors.Errorf("cannot update %v with blank id", store.GetEntityType())
+		return errors.Errorf("cannot update %v with blank id", store.GetSingularEntityType())
 	}
 
 	bucket := store.GetEntityBucket(ctx.Tx(), []byte(entity.GetId()))
@@ -161,7 +162,7 @@ func (store *BaseStore) Update(ctx MutateContext, entity BaseEntity, checker Fie
 	return bucket.Err
 }
 
-func (store *BaseStore) CreateChild(ctx MutateContext, id string, entity BaseEntity) error {
+func (store *BaseStore) CreateChild(ctx MutateContext, id string, entity Entity) error {
 	if entity == nil {
 		return errors.Errorf("cannot create child of %v from nil value", store.GetEntityType())
 	}
@@ -190,7 +191,7 @@ func (store *BaseStore) CreateChild(ctx MutateContext, id string, entity BaseEnt
 	return bucket.Err
 }
 
-func (store *BaseStore) UpdateChild(ctx MutateContext, id string, entity BaseEntity, checker FieldChecker) error {
+func (store *BaseStore) UpdateChild(ctx MutateContext, id string, entity Entity, checker FieldChecker) error {
 	if entity == nil {
 		return errors.Errorf("cannot update child of %v from nil value", store.GetEntityType())
 	}
@@ -223,7 +224,7 @@ func (store *BaseStore) UpdateChild(ctx MutateContext, id string, entity BaseEnt
 	return bucket.Err
 }
 
-func (store *BaseStore) DeleteChild(ctx MutateContext, id string, entity BaseEntity) error {
+func (store *BaseStore) DeleteChild(ctx MutateContext, id string, entity Entity) error {
 	if entity == nil {
 		return errors.Errorf("cannot update child of %v from nil value", store.GetEntityType())
 	}
@@ -278,6 +279,20 @@ func (store *BaseStore) GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field 
 		return nil
 	}
 	return bucket.GetStringList(field)
+}
+
+func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor {
+	bucket := store.GetEntityBucket(tx, []byte(id))
+	if bucket == nil {
+		return nil
+	}
+	listBucket := bucket.GetBucket(field)
+	if listBucket == nil {
+		return nil
+	}
+
+	cursor := listBucket.Cursor()
+	return NewTypedForwardBoltCursor(cursor)
 }
 
 func (store *BaseStore) IsChildStore() bool {
@@ -353,7 +368,7 @@ func (store *BaseStore) DeleteWhere(ctx MutateContext, query string) error {
 	return nil
 }
 
-func (store *BaseStore) FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string {
+func (*BaseStore) FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string {
 	if len(values) == 0 {
 		return nil
 	}
@@ -374,5 +389,32 @@ func (store *BaseStore) FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, value
 			result = append(result, string(val))
 		})
 	}
+	return result
+}
+
+func (*BaseStore) FindMatchingAnyOf(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	var result []string
+	if len(values) == 1 {
+		readIndex.Read(tx, []byte(values[0]), func(val []byte) {
+			result = append(result, string(val))
+		})
+		return result
+	}
+
+	// If there are multiple roles, we want to avoid duplicates
+	set := map[string]struct{}{}
+	for _, role := range values {
+		readIndex.Read(tx, []byte(role), func(val []byte) {
+			set[string(val)] = struct{}{}
+		})
+	}
+
+	for key := range set {
+		result = append(result, key)
+	}
+
 	return result
 }

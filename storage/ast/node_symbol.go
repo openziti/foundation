@@ -17,6 +17,7 @@
 package ast
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -284,6 +285,18 @@ func (node *AnyTypeSymbolNode) Symbol() string {
 	return node.symbol
 }
 
+type UnknownSymbolError struct {
+	Symbol string
+}
+
+func (u UnknownSymbolError) Error() string {
+	return fmt.Sprintf("unknown symbol '%v'", u.Symbol)
+}
+
+func NewUnknownSymbolError(symbol string) UnknownSymbolError {
+	return UnknownSymbolError{Symbol: symbol}
+}
+
 type SymbolValidator struct {
 	DefaultVisitor
 	inSetFunction bool
@@ -310,7 +323,7 @@ func (visitor *SymbolValidator) VisitSetFunctionNodeEnd(node *SetFunctionNode) {
 func (visitor *SymbolValidator) VisitUntypedSymbolNode(node *UntypedSymbolNode) {
 	isSet, found := visitor.symbolTypes.IsSet(node.Symbol())
 	if !found {
-		visitor.SetError(errors.Errorf("unknown symbol %v", node.Symbol()))
+		visitor.SetError(NewUnknownSymbolError(node.Symbol()))
 		return
 	}
 

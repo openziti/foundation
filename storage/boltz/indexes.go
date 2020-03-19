@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -167,6 +167,7 @@ type SetChangeListener func(tx *bbolt.Tx, rowId []byte, old []FieldTypeAndValue,
 type SetReadIndex interface {
 	GetSymbol() EntitySetSymbol
 	Read(tx *bbolt.Tx, key []byte, f func(val []byte))
+	ReadKeys(tx *bbolt.Tx, f func(val []byte))
 	AddListener(listener SetChangeListener)
 }
 
@@ -279,6 +280,17 @@ func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 	for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
 		_, value := GetTypeAndValue(val)
 		f(value)
+	}
+}
+
+func (index *setIndex) ReadKeys(tx *bbolt.Tx, f func(val []byte)) {
+	indexBucket := Path(tx, index.indexPath...)
+	if indexBucket == nil {
+		return
+	}
+	cursor := indexBucket.Cursor()
+	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+		f(key)
 	}
 }
 

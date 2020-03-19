@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -35,11 +35,7 @@ func (s *scanner) setPaging(query ast.Query) {
 	}
 	s.targetOffset = *query.GetSkip()
 
-	if query.GetLimit() == nil {
-		query.SetLimit(math.MaxInt64)
-	}
-
-	if *query.GetLimit() < 0 {
+	if query.GetLimit() == nil || *query.GetLimit() < 0 {
 		query.SetLimit(math.MaxInt64)
 	}
 
@@ -75,15 +71,19 @@ func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query
 }
 
 func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
-	scanner.setPaging(query)
 	entityBucket := scanner.store.GetEntitiesBucket(tx)
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
-	boltCursor := entityBucket.Cursor()
-	scanner.rowCursor = newRowCursor(scanner.store, boltCursor.Bucket().Tx())
+	cursor := NewBoltCursor(entityBucket.Cursor(), scanner.forward)
+	return scanner.ScanCursor(tx, cursor, query)
+}
+
+func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+	scanner.setPaging(query)
+	scanner.rowCursor = newRowCursor(scanner.store, tx)
 	scanner.filter = query
-	scanner.cursor = NewBoltCursor(boltCursor, scanner.forward)
+	scanner.cursor = cursor
 	if err := scanner.Next(); err != nil {
 		return nil, 0, err
 	}
@@ -150,18 +150,23 @@ type sortingScanner struct {
 }
 
 func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
-	scanner.setPaging(query)
-	comparator, err := scanner.store.NewRowComparator(query.GetSortFields())
-	if err != nil {
-		return nil, 0, err
-	}
 	entityBucket := scanner.store.GetEntitiesBucket(tx)
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
 
-	rowCursor := newRowCursor(scanner.store, tx)
 	cursor := NewForwardBoltCursor(entityBucket.Cursor())
+	return scanner.ScanCursor(tx, cursor, query)
+}
+
+func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+	scanner.setPaging(query)
+	comparator, err := scanner.store.NewRowComparator(query.GetSortFields())
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rowCursor := newRowCursor(scanner.store, tx)
 	rowContext := &RowContext{comparator: comparator, rowCursor1: rowCursor, rowCursor2: newRowCursor(scanner.store, tx)}
 
 	// Longer term, if we're looking for better performance, we could make a version of llrb which takes a comparator

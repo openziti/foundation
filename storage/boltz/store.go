@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package boltz
 import (
 	"github.com/kataras/go-events"
 	"go.etcd.io/bbolt"
+	"strings"
 )
 
 func NewBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
@@ -146,4 +147,15 @@ func (store *BaseStore) AddDeleteHandler(handler EntityChangeHandler) {
 	} else {
 		store.deleteHandlers.Add(handler)
 	}
+}
+
+func (store *BaseStore) GetSingularEntityType() string {
+	return GetSingularEntityType(store.entityType)
+}
+
+func GetSingularEntityType(entityType string) string {
+	if strings.HasSuffix(entityType, "ies") {
+		return strings.TrimSuffix(entityType, "ies") + "y"
+	}
+	return strings.TrimSuffix(entityType, "s")
 }
