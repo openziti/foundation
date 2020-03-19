@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ type employeeStoreImpl struct {
 	locationsCollection LinkCollection
 }
 
-func (store *employeeStoreImpl) NewStoreEntity() BaseEntity {
+func (store *employeeStoreImpl) NewStoreEntity() Entity {
 	return &Employee{}
 }
 
@@ -169,7 +169,7 @@ type locationStoreImpl struct {
 	employeesCollection LinkCollection
 }
 
-func (store *locationStoreImpl) NewStoreEntity() BaseEntity {
+func (store *locationStoreImpl) NewStoreEntity() Entity {
 	return &Location{}
 }
 

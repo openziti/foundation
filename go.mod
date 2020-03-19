@@ -7,6 +7,7 @@ require (
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.3.2
+	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
 	github.com/kataras/go-events v0.0.3-0.20170604004442-17d67be645c3
 	github.com/lucas-clemente/quic-go v0.13.1

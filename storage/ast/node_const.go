@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -142,7 +142,7 @@ func (node *StringConstNode) EvalString(_ Symbols) (*string, error) {
 }
 
 func (node *StringConstNode) String() string {
-	return node.value
+	return fmt.Sprintf(`"%v"`, node.value)
 }
 
 // NullNode wraps a null constant expression

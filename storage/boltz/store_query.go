@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package boltz
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/michaelquigley/pfxlog"
@@ -264,6 +265,13 @@ func (store *BaseStore) addSetSymbol(name string, nodeType ast.NodeType, listSto
 	return result
 }
 
+func (store *BaseStore) AddExtEntitySymbols() {
+	store.AddIdSymbol(FieldId, ast.NodeTypeString)
+	store.AddSymbol(FieldCreatedAt, ast.NodeTypeDatetime)
+	store.AddSymbol(FieldUpdatedAt, ast.NodeTypeDatetime)
+	store.AddMapSymbol(FieldTags, ast.NodeTypeAnyType, FieldTags)
+}
+
 func (store *BaseStore) NewScanner(sort []ast.SortField) Scanner {
 	if len(sort) > SortMax {
 		sort = sort[:SortMax]
@@ -289,6 +297,13 @@ func (sortField *sortFieldImpl) Symbol() string {
 
 func (sortField *sortFieldImpl) IsAscending() bool {
 	return sortField.isAsc
+}
+
+func (sortField *sortFieldImpl) String() string {
+	if sortField.isAsc {
+		return sortField.name
+	}
+	return fmt.Sprintf("%v DESC", sortField.name)
 }
 
 func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, error) {
@@ -328,6 +343,10 @@ func (store *BaseStore) NewRowComparator(sort []ast.SortField) (RowComparator, e
 	return &rowComparatorImpl{symbols: symbolsComparators}, nil
 }
 
+func (store *BaseStore) QueryIdsf(tx *bbolt.Tx, queryString string, args ...interface{}) ([]string, int64, error) {
+	return store.QueryIds(tx, fmt.Sprintf(queryString, args...))
+}
+
 func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([]string, int64, error) {
 	query, err := ast.Parse(store, queryString)
 	if err != nil {
@@ -339,4 +358,9 @@ func (store *BaseStore) QueryIds(tx *bbolt.Tx, queryString string) ([]string, in
 func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
 	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.Scan(tx, query)
+}
+
+func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+	scanner := store.NewScanner(query.GetSortFields())
+	return scanner.ScanCursor(tx, cursor, query)
 }

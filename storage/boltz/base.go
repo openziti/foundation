@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -33,6 +33,11 @@ const (
 	EventCreate events.EventName = "CREATE"
 	EventDelete events.EventName = "DELETE"
 	EventUpdate events.EventName = "UPDATE"
+
+	FieldId        = "id"
+	FieldCreatedAt = "createdAt"
+	FieldUpdatedAt = "updatedAt"
+	FieldTags      = "tags"
 )
 
 type Db interface {
@@ -40,12 +45,16 @@ type Db interface {
 	Update(fn func(tx *bbolt.Tx) error) error
 	View(fn func(tx *bbolt.Tx) error) error
 	RootBucket(tx *bbolt.Tx) (*bbolt.Bucket, error)
+
+	// Snapshot makes a copy of the bolt file
+	Snapshot(tx *bbolt.Tx) error
 }
 
 type ListStore interface {
 	ast.SymbolTypes
 
 	GetEntityType() string
+	GetSingularEntityType() string
 	GetEntitiesBucket(tx *bbolt.Tx) *TypedBucket
 	GetOrCreateEntitiesBucket(tx *bbolt.Tx) *TypedBucket
 	GetEntityBucket(tx *bbolt.Tx, id []byte) *TypedBucket
@@ -67,17 +76,26 @@ type ListStore interface {
 	AddSetSymbol(name string, nodeType ast.NodeType) EntitySetSymbol
 	AddFkSetSymbol(name string, linkedType ListStore) EntitySetSymbol
 	NewEntitySymbol(name string, nodeType ast.NodeType) EntitySymbol
+	AddExtEntitySymbols()
 
 	NewRowComparator(sort []ast.SortField) (RowComparator, error)
 	GetPublicSymbols() []string
 
 	FindMatching(tx *bbolt.Tx, readIndex SetReadIndex, values []string) []string
 
+	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
+	GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor
+
 	// QueryIds compiles the query and runs it against the store
 	QueryIds(tx *bbolt.Tx, query string) ([]string, int64, error)
 
+	// QueryIdsf compiles the query with the given params and runs it against the store
+	QueryIdsf(tx *bbolt.Tx, query string, args ...interface{}) ([]string, int64, error)
+
 	// QueryIdsC executes a compile query against the store
 	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
+
+	QueryWithCursorC(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error)
 }
 
 type CrudStore interface {
@@ -87,23 +105,21 @@ type CrudStore interface {
 	AddLinkCollection(local EntitySymbol, remove EntitySymbol) LinkCollection
 	GetLinkCollection(name string) LinkCollection
 
-	Create(ctx MutateContext, entity BaseEntity) error
-	Update(ctx MutateContext, entity BaseEntity, checker FieldChecker) error
+	Create(ctx MutateContext, entity Entity) error
+	Update(ctx MutateContext, entity Entity, checker FieldChecker) error
 	DeleteById(ctx MutateContext, id string) error
 	DeleteWhere(ctx MutateContext, query string) error
 	CleanupExternal(ctx MutateContext, id string) error
 
-	CreateChild(ctx MutateContext, parentId string, entity BaseEntity) error
-	UpdateChild(ctx MutateContext, parentId string, entity BaseEntity, checker FieldChecker) error
-	DeleteChild(ctx MutateContext, parentId string, entity BaseEntity) error
+	CreateChild(ctx MutateContext, parentId string, entity Entity) error
+	UpdateChild(ctx MutateContext, parentId string, entity Entity, checker FieldChecker) error
+	DeleteChild(ctx MutateContext, parentId string, entity Entity) error
 	ListChildIds(tx *bbolt.Tx, parentId string, childType string) []string
 
-	BaseLoadOneById(tx *bbolt.Tx, id string, entity BaseEntity) (bool, error)
-	BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity BaseEntity) (bool, error)
-	BaseLoadOneChildById(tx *bbolt.Tx, id string, childId string, entity BaseEntity) (bool, error)
-	NewStoreEntity() BaseEntity
-
-	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
+	BaseLoadOneById(tx *bbolt.Tx, id string, entity Entity) (bool, error)
+	BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity Entity) (bool, error)
+	BaseLoadOneChildById(tx *bbolt.Tx, id string, childId string, entity Entity) (bool, error)
+	NewStoreEntity() Entity
 
 	AddDeleteHandler(handler EntityChangeHandler)
 	events.EventEmmiter
@@ -176,10 +192,111 @@ func (ctx *PersistContext) SetLinkedIds(field string, value []string) {
 	}
 }
 
-type BaseEntity interface {
+type Entity interface {
 	GetId() string
 	SetId(id string)
 	LoadValues(store CrudStore, bucket *TypedBucket)
 	SetValues(ctx *PersistContext)
 	GetEntityType() string
+}
+
+type ExtEntity interface {
+	Entity
+	GetCreatedAt() time.Time
+	GetUpdatedAt() time.Time
+	GetTags() map[string]interface{}
+
+	SetCreatedAt(createdAt time.Time)
+	SetUpdatedAt(updatedAt time.Time)
+	SetTags(tags map[string]interface{})
+}
+
+type NamedExtEntity interface {
+	ExtEntity
+	GetName() string
+}
+
+func NewExtEntity(id string, tags map[string]interface{}) *BaseExtEntity {
+	return &BaseExtEntity{
+		Id: id,
+		ExtEntityFields: ExtEntityFields{
+			Tags: tags,
+		},
+	}
+}
+
+type BaseExtEntity struct {
+	Id string
+	ExtEntityFields
+}
+
+type ExtEntityFields struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Tags      map[string]interface{}
+	Migrate   bool
+}
+
+func (entity *BaseExtEntity) GetId() string {
+	return entity.Id
+}
+
+func (entity *BaseExtEntity) SetId(id string) {
+	entity.Id = id
+}
+
+func (entity *ExtEntityFields) GetCreatedAt() time.Time {
+	return entity.CreatedAt
+}
+
+func (entity *ExtEntityFields) GetUpdatedAt() time.Time {
+	return entity.UpdatedAt
+}
+
+func (entity *ExtEntityFields) GetTags() map[string]interface{} {
+	return entity.Tags
+}
+
+func (entity *ExtEntityFields) SetCreatedAt(createdAt time.Time) {
+	entity.CreatedAt = createdAt
+}
+
+func (entity *ExtEntityFields) SetUpdatedAt(updatedAt time.Time) {
+	entity.UpdatedAt = updatedAt
+}
+
+func (entity *ExtEntityFields) SetTags(tags map[string]interface{}) {
+	entity.Tags = tags
+}
+
+func (entity *ExtEntityFields) LoadBaseValues(bucket *TypedBucket) {
+	entity.CreatedAt = bucket.GetTimeOrError(FieldCreatedAt)
+	entity.UpdatedAt = bucket.GetTimeOrError(FieldUpdatedAt)
+	entity.Tags = bucket.GetMap(FieldTags)
+}
+
+func (entity *ExtEntityFields) SetBaseValues(ctx *PersistContext) {
+	if ctx.IsCreate {
+		entity.CreateBaseValues(ctx.Bucket)
+	} else {
+		entity.UpdateBaseValues(ctx.Bucket, ctx.FieldChecker)
+	}
+}
+
+func (entity *ExtEntityFields) CreateBaseValues(bucket *TypedBucket) {
+	now := time.Now()
+	if entity.Migrate {
+		bucket.SetTimeP(FieldCreatedAt, &entity.CreatedAt, nil)
+		bucket.SetTimeP(FieldUpdatedAt, &entity.UpdatedAt, nil)
+	} else {
+		bucket.SetTimeP(FieldCreatedAt, &now, nil)
+		bucket.SetTimeP(FieldUpdatedAt, &now, nil)
+	}
+	bucket.PutMap(FieldTags, entity.Tags, nil)
+}
+
+func (entity *ExtEntityFields) UpdateBaseValues(bucket *TypedBucket, fieldChecker FieldChecker) {
+	now := time.Now()
+	bucket.SetTimeP(FieldUpdatedAt, &now, nil)
+	bucket.PutMap(FieldTags, entity.Tags, fieldChecker)
 }

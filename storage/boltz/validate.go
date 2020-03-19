@@ -19,7 +19,6 @@ package boltz
 import (
 	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/stringz"
-	"github.com/pkg/errors"
 )
 
 type publicSymbolValidator struct {
@@ -30,7 +29,7 @@ type publicSymbolValidator struct {
 
 func (visitor *publicSymbolValidator) VisitSymbol(symbol string, _ ast.NodeType) {
 	if visitor.err == nil && !stringz.Contains(visitor.store.GetPublicSymbols(), symbol) {
-		visitor.err = errors.Errorf("invalid query identifier '%v' for type %v", symbol, visitor.store.GetEntityType())
+		visitor.err = ast.NewUnknownSymbolError(symbol)
 	}
 }
 

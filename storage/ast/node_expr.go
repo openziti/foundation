@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -51,6 +51,13 @@ func (node *NotExprNode) EvalBool(s Symbols) (bool, error) {
 
 func (node *NotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, transformBools(s, &node.expr)
+}
+
+func NewAndExprNode(left, right BoolNode) *AndExprNode {
+	return &AndExprNode{
+		left:  left,
+		right: right,
+	}
 }
 
 // AndExprNode implements logical AND on two wrapped boolean expressions

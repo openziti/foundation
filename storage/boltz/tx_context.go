@@ -1,5 +1,5 @@
 /*
-	Copyright 2019 NetFoundry, Inc.
+	Copyright 2020 NetFoundry, Inc.
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -23,12 +23,12 @@ import (
 
 type MutateContext interface {
 	Tx() *bbolt.Tx
-	AddEvent(em events.EventEmmiter, name events.EventName, entity BaseEntity)
+	AddEvent(em events.EventEmmiter, name events.EventName, entity Entity)
 }
 
 type mutateEvent struct {
 	em     events.EventEmmiter
-	entity BaseEntity
+	entity Entity
 	name   events.EventName
 }
 
@@ -47,7 +47,7 @@ func (context *mutateContext) Tx() *bbolt.Tx {
 	return context.tx
 }
 
-func (context *mutateContext) AddEvent(em events.EventEmmiter, name events.EventName, entity BaseEntity) {
+func (context *mutateContext) AddEvent(em events.EventEmmiter, name events.EventName, entity Entity) {
 	context.events = append(context.events, &mutateEvent{
 		em:     em,
 		entity: entity,

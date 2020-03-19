@@ -320,7 +320,7 @@ func NewZitiQlLexer(input antlr.CharStream) *ZitiQlLexer {
 	var lexerDeserializer = antlr.NewATNDeserializer(nil)
 	var lexerAtn = lexerDeserializer.DeserializeFromUInt16(serializedLexerAtn)
 
-	var lexerDecisionToDFA = make([]*antlr.DFA, len(lexerAtn.DecisionToState))
+var lexerDecisionToDFA = make([]*antlr.DFA, len(lexerAtn.DecisionToState))
 	for index, ds := range lexerAtn.DecisionToState {
 		lexerDecisionToDFA[index] = antlr.NewDFA(ds, index)
 	}
