@@ -281,7 +281,7 @@ func (store *BaseStore) GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field 
 	return bucket.GetStringList(field)
 }
 
-func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string) ast.SetCursor {
+func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string, forward bool) ast.SetCursor {
 	bucket := store.GetEntityBucket(tx, []byte(id))
 	if bucket == nil {
 		return nil
@@ -292,7 +292,10 @@ func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field 
 	}
 
 	cursor := listBucket.Cursor()
-	return NewTypedForwardBoltCursor(cursor)
+	if forward {
+		return NewTypedForwardBoltCursor(cursor)
+	}
+	return NewTypedReverseBoltCursor(cursor)
 }
 
 func (store *BaseStore) IsChildStore() bool {

@@ -18,20 +18,13 @@ package boltz
 
 import (
 	"bytes"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
-
-/*
-
-/ziti/services/<id>/fabric-properties
-/ziti/services/<id>/edge/edge-properties
-/ziti/services/edge/<index-name>
-
-*/
 
 type Indexer struct {
 	constraints []Constraint
@@ -168,6 +161,7 @@ type SetReadIndex interface {
 	GetSymbol() EntitySetSymbol
 	Read(tx *bbolt.Tx, key []byte, f func(val []byte))
 	ReadKeys(tx *bbolt.Tx, f func(val []byte))
+	OpenCursor(tx *bbolt.Tx, forward bool) ast.SetCursor
 	AddListener(listener SetChangeListener)
 }
 
@@ -283,6 +277,15 @@ func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 	}
 }
 
+func (index *setIndex) OpenCursor(tx *bbolt.Tx, forward bool) ast.SetCursor {
+	indexBucket := Path(tx, index.indexPath...)
+	if indexBucket == nil {
+		return nil
+	}
+	cursor := indexBucket.Cursor()
+	return NewBoltCursor(cursor, forward)
+}
+
 func (index *setIndex) ReadKeys(tx *bbolt.Tx, f func(val []byte)) {
 	indexBucket := Path(tx, index.indexPath...)
 	if indexBucket == nil {
@@ -349,6 +352,9 @@ func (index *setIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 		for _, oldVal := range oldValues {
 			indexBucket := index.getIndexBucket(ctx.Tx, oldVal.Value)
 			ctx.ErrHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.RowId).Err)
+			if k, _ := indexBucket.Cursor().First(); k == nil {
+				ctx.ErrHolder.SetError(index.deleteIndexKey(ctx.Tx, oldVal.Value))
+			}
 		}
 		for _, newVal := range newValues {
 			indexBucket := index.getIndexBucket(ctx.Tx, newVal.Value)
@@ -384,6 +390,14 @@ func (index *setIndex) getIndexBucket(tx *bbolt.Tx, key []byte) *TypedBucket {
 		return ErrBucket(errors.Errorf("bucket at %+v for index not created", index.indexPath))
 	}
 	return indexBucket.GetOrCreateBucket(string(key))
+}
+
+func (index *setIndex) deleteIndexKey(tx *bbolt.Tx, key []byte) error {
+	indexBucket := Path(tx, index.indexPath...)
+	if indexBucket == nil {
+		return errors.Errorf("bucket at %+v for index not created", index.indexPath)
+	}
+	return indexBucket.DeleteBucket(key)
 }
 
 type fkIndex struct {
