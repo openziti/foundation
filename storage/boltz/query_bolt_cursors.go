@@ -77,13 +77,6 @@ func (f *ReverseBoltCursor) Next() error {
 	return nil
 }
 
-func NewTypedBoltCursor(cursor *bbolt.Cursor, forward bool) ast.SetCursor {
-	if forward {
-		return NewTypedForwardBoltCursor(cursor)
-	}
-	return NewTypedReverseBoltCursor(cursor)
-}
-
 func NewTypedForwardBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
 	result := &TypedForwardBoltCursor{BaseBoltCursor{
 		cursor: cursor,

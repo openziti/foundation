@@ -292,7 +292,10 @@ func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field 
 	}
 
 	cursor := listBucket.Cursor()
-	return NewTypedBoltCursor(cursor, forward)
+	if forward {
+		return NewTypedForwardBoltCursor(cursor)
+	}
+	return NewTypedReverseBoltCursor(cursor)
 }
 
 func (store *BaseStore) IsChildStore() bool {
