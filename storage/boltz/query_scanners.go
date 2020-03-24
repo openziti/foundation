@@ -75,15 +75,22 @@ func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
-	cursor := NewBoltCursor(entityBucket.Cursor(), scanner.forward)
-	return scanner.ScanCursor(tx, cursor, query)
+	cursorProvider := func(forward bool) ast.SetCursor {
+		return NewBoltCursor(entityBucket.Cursor(), forward)
+	}
+	return scanner.ScanCursor(tx, cursorProvider, query)
 }
 
-func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	scanner.rowCursor = newRowCursor(scanner.store, tx)
 	scanner.filter = query
-	scanner.cursor = cursor
+	scanner.cursor = cursorProvider(scanner.forward)
+
+	if scanner.cursor == nil {
+		return nil, 0, nil
+	}
+
 	if err := scanner.Next(); err != nil {
 		return nil, 0, err
 	}
@@ -154,12 +161,13 @@ func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, in
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
-
-	cursor := NewForwardBoltCursor(entityBucket.Cursor())
-	return scanner.ScanCursor(tx, cursor, query)
+	cursorProvider := func(forward bool) ast.SetCursor {
+		return NewBoltCursor(entityBucket.Cursor(), forward)
+	}
+	return scanner.ScanCursor(tx, cursorProvider, query)
 }
 
-func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursor ast.SetCursor, query ast.Query) ([]string, int64, error) {
+func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	comparator, err := scanner.store.NewRowComparator(query.GetSortFields())
 	if err != nil {
@@ -168,6 +176,12 @@ func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursor ast.SetCursor, qu
 
 	rowCursor := newRowCursor(scanner.store, tx)
 	rowContext := &RowContext{comparator: comparator, rowCursor1: rowCursor, rowCursor2: newRowCursor(scanner.store, tx)}
+
+	cursor := cursorProvider(true)
+
+	if cursor == nil {
+		return nil, 0, nil
+	}
 
 	// Longer term, if we're looking for better performance, we could make a version of llrb which takes a comparator
 	// function instead of putting the comparison on the elements, so we don't need to start a context with each row
