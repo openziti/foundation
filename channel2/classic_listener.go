@@ -91,7 +91,6 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 				request, hello, err := listener.receiveHello(impl)
 				if err == nil {
 					for _, h := range listener.handlers {
-						log.Infof("hello: %v, peer: %v, handler: %v", hello, peer, h)
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
 							log.Errorf("connection handler error (%s)", err)
 							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
