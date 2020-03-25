@@ -95,7 +95,7 @@ type ListStore interface {
 	// QueryIdsC executes a compile query against the store
 	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
 
-	QueryWithCursorC(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error)
+	QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error)
 }
 
 type CrudStore interface {

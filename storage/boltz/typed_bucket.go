@@ -19,6 +19,7 @@ package boltz
 import (
 	"encoding/binary"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -742,6 +743,17 @@ func (bucket *TypedBucket) PutMap(name string, value map[string]interface{}, che
 
 func (bucket *TypedBucket) ProceedWithSet(name string, checker FieldChecker) bool {
 	return bucket.Err == nil && (checker == nil || checker.IsUpdated(name))
+}
+
+func (bucket *TypedBucket) OpenCursor(_ *bbolt.Tx, forward bool) ast.SetCursor {
+	return NewBoltCursor(bucket.Cursor(), forward)
+}
+
+func (bucket *TypedBucket) OpenTypedCursor(_ *bbolt.Tx, forward bool) ast.SetCursor {
+	if forward {
+		return NewTypedForwardBoltCursor(bucket.Cursor())
+	}
+	return NewTypedReverseBoltCursor(bucket.Cursor())
 }
 
 func clone(val []byte) []byte {

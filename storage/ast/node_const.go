@@ -22,6 +22,12 @@ import (
 	"time"
 )
 
+var _ BoolNode = (*BoolConstNode)(nil)
+var _ DatetimeNode = (*DatetimeConstNode)(nil)
+var _ Int64Node = (*Int64ConstNode)(nil)
+var _ Float64Node = (*Float64ConstNode)(nil)
+var _ StringNode = (*StringConstNode)(nil)
+
 func NewBoolConstNode(value bool) BoolNode {
 	return &BoolConstNode{value: value}
 }
@@ -39,8 +45,8 @@ func (node *BoolConstNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BoolConstNode) EvalBool(_ Symbols) (bool, error) {
-	return node.value, nil
+func (node *BoolConstNode) EvalBool(_ Symbols) bool {
+	return node.value
 }
 
 func (node *BoolConstNode) String() string {
@@ -60,8 +66,8 @@ func (node *DatetimeConstNode) GetType() NodeType {
 	return NodeTypeDatetime
 }
 
-func (node *DatetimeConstNode) EvalDatetime(_ Symbols) (*time.Time, error) {
-	return &node.value, nil
+func (node *DatetimeConstNode) EvalDatetime(_ Symbols) *time.Time {
+	return &node.value
 }
 
 func (node *DatetimeConstNode) String() string {
@@ -81,13 +87,13 @@ func (node *Float64ConstNode) GetType() NodeType {
 	return NodeTypeFloat64
 }
 
-func (node *Float64ConstNode) EvalFloat64(_ Symbols) (*float64, error) {
-	return &node.value, nil
+func (node *Float64ConstNode) EvalFloat64(_ Symbols) *float64 {
+	return &node.value
 }
 
-func (node *Float64ConstNode) EvalString(_ Symbols) (*string, error) {
+func (node *Float64ConstNode) EvalString(_ Symbols) *string {
 	result := strconv.FormatFloat(node.value, 'f', -1, 64)
-	return &result, nil
+	return &result
 }
 
 func (node *Float64ConstNode) String() string {
@@ -107,13 +113,13 @@ func (node *Int64ConstNode) GetType() NodeType {
 	return NodeTypeInt64
 }
 
-func (node *Int64ConstNode) EvalInt64(_ Symbols) (*int64, error) {
-	return &node.value, nil
+func (node *Int64ConstNode) EvalInt64(_ Symbols) *int64 {
+	return &node.value
 }
 
-func (node *Int64ConstNode) EvalString(_ Symbols) (*string, error) {
+func (node *Int64ConstNode) EvalString(_ Symbols) *string {
 	result := strconv.FormatInt(node.value, 10)
-	return &result, nil
+	return &result
 }
 
 func (node *Int64ConstNode) ToFloat64() Float64Node {
@@ -137,8 +143,8 @@ func (node *StringConstNode) GetType() NodeType {
 	return NodeTypeString
 }
 
-func (node *StringConstNode) EvalString(_ Symbols) (*string, error) {
-	return &node.value, nil
+func (node *StringConstNode) EvalString(_ Symbols) *string {
+	return &node.value
 }
 
 func (node *StringConstNode) String() string {

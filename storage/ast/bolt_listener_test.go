@@ -17,7 +17,7 @@
 package ast
 
 import (
-	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"reflect"
 	"testing"
 	"time"
@@ -26,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
+
+var _ Symbols = (*testSymbols)(nil)
 
 type testSymbols struct {
 	values  map[string]interface{}
@@ -37,7 +39,7 @@ func (symbols *testSymbols) GetSetSymbolTypes(string) SymbolTypes {
 	return nil
 }
 
-func (symbols *testSymbols) OpenSetCursorForQuery(string, Query) (SetCursor, error) {
+func (symbols *testSymbols) OpenSetCursorForQuery(string, Query) SetCursor {
 	panic("not implemented")
 }
 
@@ -51,10 +53,11 @@ func (symbols *testSymbols) IsSet(name string) (bool, bool) {
 	return false, found
 }
 
-func (symbols *testSymbols) OpenSetCursor(name string) (SetCursor, error) {
+func (symbols *testSymbols) OpenSetCursor(name string) SetCursor {
 	value, found := symbols.values[name]
 	if !found {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation pass", name)
+		return NewEmptyCursor()
 	}
 
 	cursor := &testSymbolsSetCursor{
@@ -65,15 +68,15 @@ func (symbols *testSymbols) OpenSetCursor(name string) (SetCursor, error) {
 	}
 
 	symbols.cursors[name] = cursor
-	return cursor, nil
+	return cursor
 }
 
-func (symbols *testSymbols) IsNil(name string) (bool, error) {
+func (symbols *testSymbols) IsNil(name string) bool {
 	value, found := symbols.values[name]
 	if !found {
-		return false, errors.Errorf("unknown symbol %v", name)
+		panic(errors.Errorf("unknown symbol %v", name))
 	}
-	return value == nil, nil
+	return value == nil
 }
 
 func (symbols *testSymbols) GetSymbolType(name string) (NodeType, bool) {
@@ -98,92 +101,77 @@ func (symbols *testSymbols) GetSymbolType(name string) (NodeType, bool) {
 	return nodeType, found
 }
 
-func (symbols *testSymbols) getValue(name string) (interface{}, error) {
+func (symbols *testSymbols) getValue(name string) interface{} {
 	isSet, found := symbols.IsSet(name)
 	if !found {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		panic(errors.Errorf("unknown symbol %v", name))
 	}
 	if isSet {
 		cursor, found := symbols.cursors[name]
 		if !found {
-			return nil, errors.Errorf("attempt to traverse set %v with no open cursor", name)
+			panic(errors.Errorf("attempt to traverse set %v with no open cursor", name))
 		}
 		if !cursor.IsValid() {
-			return nil, errors.Errorf("attempt to traverse set %v with invalid cursor", name)
+			panic(errors.Errorf("attempt to traverse set %v with invalid cursor", name))
 		}
-		return cursor.CurrentValue(), nil
+		return cursor.CurrentValue()
 	}
 
 	value, found := symbols.values[name]
 	if !found {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		panic(errors.Errorf("unknown symbol %v", name))
 	}
-	return value, nil
+	return value
 }
 
-func (symbols *testSymbols) EvalBool(name string) (*bool, error) {
-	value, err := symbols.getValue(name)
-	if err != nil {
-		return nil, err
-	}
+func (symbols *testSymbols) EvalBool(name string) *bool {
+	value := symbols.getValue(name)
 	typedVal, ok := value.(bool)
 	if ok {
-		return &typedVal, nil
+		return &typedVal
 	}
-	return nil, errors.Errorf("symbol %v not of type bool, is %v", name, reflect.TypeOf(value))
+	panic(errors.Errorf("symbol %v not of type bool, is %v", name, reflect.TypeOf(value)))
 }
 
-func (symbols *testSymbols) EvalString(name string) (*string, error) {
-	value, err := symbols.getValue(name)
-	if err != nil {
-		return nil, err
-	}
+func (symbols *testSymbols) EvalString(name string) *string {
+	value := symbols.getValue(name)
 	typedVal, ok := value.(string)
 	if ok {
-		return &typedVal, nil
+		return &typedVal
 	}
-	return nil, errors.Errorf("symbol %v not of type string, is %v", name, reflect.TypeOf(value))
+	panic(errors.Errorf("symbol %v not of type string, is %v", name, reflect.TypeOf(value)))
 }
 
-func (symbols *testSymbols) EvalInt64(name string) (*int64, error) {
-	value, err := symbols.getValue(name)
-	if err != nil {
-		return nil, err
-	}
+func (symbols *testSymbols) EvalInt64(name string) *int64 {
+	value := symbols.getValue(name)
 	typedVal, ok := value.(int64)
 	if ok {
-		return &typedVal, nil
+		return &typedVal
 	}
-	return nil, errors.Errorf("symbol %v not of type int64, is %v", name, reflect.TypeOf(value))
+	panic(errors.Errorf("symbol %v not of type int64, is %v", name, reflect.TypeOf(value)))
 }
 
-func (symbols *testSymbols) EvalFloat64(name string) (*float64, error) {
-	value, err := symbols.getValue(name)
-	if err != nil {
-		return nil, err
-	}
+func (symbols *testSymbols) EvalFloat64(name string) *float64 {
+	value := symbols.getValue(name)
 	float64Val, ok := value.(float64)
 	if ok {
-		return &float64Val, nil
+		return &float64Val
 	}
 	float32Val, ok := value.(float32)
 	float64Val = float64(float32Val)
 	if ok {
-		return &float64Val, nil
+		return &float64Val
 	}
-	return nil, errors.Errorf("symbol %v not of type string, is %v", name, reflect.TypeOf(value))
+	panic(errors.Errorf("symbol %v not of type float, is %v", name, reflect.TypeOf(value)))
 }
 
-func (symbols *testSymbols) EvalDatetime(name string) (*time.Time, error) {
-	value, err := symbols.getValue(name)
-	if err != nil {
-		return nil, err
-	}
+func (symbols *testSymbols) EvalDatetime(name string) *time.Time {
+	value := symbols.getValue(name)
 	typedVal, ok := value.(time.Time)
 	if ok {
-		return &typedVal, nil
+		return &typedVal
 	}
-	return nil, errors.Errorf("symbol %v not of type string, is %v", name, reflect.TypeOf(value))
+	panic(errors.Errorf("symbol %v not of type string, is %v", name, reflect.TypeOf(value)))
 }
 
 type testSymbolsSetCursor struct {
@@ -193,9 +181,8 @@ type testSymbolsSetCursor struct {
 	index   int
 }
 
-func (cursor *testSymbolsSetCursor) Next() error {
+func (cursor *testSymbolsSetCursor) Next() {
 	cursor.index++
-	return nil
 }
 
 func (cursor *testSymbolsSetCursor) IsValid() bool {
@@ -629,12 +616,12 @@ func sorts(vals ...interface{}) []SortField {
 	for i := 0; i < len(vals); i += 2 {
 		name := vals[i].(string)
 		asc := vals[i+1].(bool)
-		result = append(result, sort(name, asc))
+		result = append(result, sortField(name, asc))
 	}
 	return result
 }
 
-func sort(name string, asc bool) SortField {
+func sortField(name string, asc bool) SortField {
 	return &SortFieldNode{
 		symbol:      &UntypedSymbolNode{symbol: name},
 		isAscending: asc,
@@ -690,12 +677,7 @@ func runSortPageTest(t *testing.T, tt sortPageTestDef) {
 		return
 	}
 
-	result, err := query.EvalBool(ts)
-	if err != nil {
-		fmt.Printf("%v = err(%v)\n", query, err)
-		t.Error(err)
-		return
-	}
+	result := query.EvalBool(ts)
 
 	if tt.result != result {
 		t.Errorf("expected filter result %v, got %v", tt.result, result)
@@ -728,12 +710,7 @@ func runFilterTest(t *testing.T, tt testDef) {
 		return
 	}
 
-	result, err := filter.EvalBool(ts)
-	if err != nil {
-		fmt.Printf("%v = err(%v)\n", filter, err)
-		t.Error(err)
-		return
-	}
+	result := filter.EvalBool(ts)
 
 	if tt.result != result {
 		t.Errorf("expected filter result %v, got %v", tt.result, result)

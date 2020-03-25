@@ -44,28 +44,16 @@ func (node *AllOfSetExprNode) Accept(visitor Visitor) {
 	visitor.VisitAllOfSetExprNodeEnd(node)
 }
 
-func (node *AllOfSetExprNode) EvalBool(s Symbols) (result bool, err error) {
-	var cursor SetCursor
-	result = true
-
-	cursor, err = s.OpenSetCursor(node.name)
-	if err != nil || cursor == nil {
-		return
-	}
+func (node *AllOfSetExprNode) EvalBool(s Symbols) bool {
+	cursor := s.OpenSetCursor(node.name)
 
 	for cursor.IsValid() {
-		result, err = node.predicate.EvalBool(s)
-		if err != nil {
-			return false, err
+		if !node.predicate.EvalBool(s) {
+			return false
 		}
-		if !result {
-			return
-		}
-		if err := cursor.Next(); err != nil {
-			return false, err
-		}
+		cursor.Next()
 	}
-	return
+	return true
 }
 
 type AnyOfSetExprNode struct {
@@ -91,25 +79,16 @@ func (node *AnyOfSetExprNode) Accept(visitor Visitor) {
 	visitor.VisitAnyOfSetExprNodeEnd(node)
 }
 
-func (node *AnyOfSetExprNode) EvalBool(s Symbols) (bool, error) {
-	cursor, err := s.OpenSetCursor(node.name)
-	if err != nil || cursor == nil {
-		return false, err
-	}
+func (node *AnyOfSetExprNode) EvalBool(s Symbols) bool {
+	cursor := s.OpenSetCursor(node.name)
 
 	for cursor.IsValid() {
-		result, err := node.predicate.EvalBool(s)
-		if err != nil {
-			return false, err
+		if node.predicate.EvalBool(s) {
+			return true
 		}
-		if result {
-			return true, nil
-		}
-		if err := cursor.Next(); err != nil {
-			return false, err
-		}
+		cursor.Next()
 	}
-	return false, nil
+	return false
 }
 
 type CountSetExprNode struct {
@@ -138,41 +117,30 @@ func (node *CountSetExprNode) Accept(visitor Visitor) {
 	visitor.VisitCountSetExprNodeEnd(node)
 }
 
-func (node *CountSetExprNode) EvalInt64(s Symbols) (*int64, error) {
+func (node *CountSetExprNode) EvalInt64(s Symbols) *int64 {
 	var result int64
 	var cursor SetCursor
-	var err error
 
 	if node.query == nil {
-		cursor, err = s.OpenSetCursor(node.Symbol())
+		cursor = s.OpenSetCursor(node.Symbol())
 	} else {
-		cursor, err = s.OpenSetCursorForQuery(node.Symbol(), node.query)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	if cursor == nil {
-		return &result, err
+		cursor = s.OpenSetCursorForQuery(node.Symbol(), node.query)
 	}
 
 	for cursor.IsValid() {
 		result++
-		if err := cursor.Next(); err != nil {
-			return nil, err
-		}
+		cursor.Next()
 	}
-	return &result, nil
+	return &result
 }
 
-func (node *CountSetExprNode) EvalString(s Symbols) (*string, error) {
-	result, err := node.EvalInt64(s)
-	if err != nil {
-		return nil, err
+func (node *CountSetExprNode) EvalString(s Symbols) *string {
+	result := node.EvalInt64(s)
+	if result == nil {
+		return nil
 	}
 	stringResult := strconv.FormatInt(*result, 10)
-	return &stringResult, nil
+	return &stringResult
 }
 
 func (node *CountSetExprNode) ToFloat64() Float64Node {
@@ -205,20 +173,13 @@ func (node *IsEmptySetExprNode) Accept(visitor Visitor) {
 	visitor.VisitIsEmptySetExprNodeEnd(node)
 }
 
-func (node *IsEmptySetExprNode) EvalBool(s Symbols) (bool, error) {
+func (node *IsEmptySetExprNode) EvalBool(s Symbols) bool {
 	var cursor SetCursor
-	var err error
 
 	if node.query == nil {
-		cursor, err = s.OpenSetCursor(node.Symbol())
+		cursor = s.OpenSetCursor(node.Symbol())
 	} else {
-		cursor, err = s.OpenSetCursorForQuery(node.Symbol(), node.query)
+		cursor = s.OpenSetCursorForQuery(node.Symbol(), node.query)
 	}
-	if err != nil {
-		return true, err
-	}
-	if cursor == nil {
-		return true, err
-	}
-	return !cursor.IsValid(), nil
+	return !cursor.IsValid()
 }

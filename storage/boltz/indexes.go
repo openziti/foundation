@@ -161,7 +161,8 @@ type SetReadIndex interface {
 	GetSymbol() EntitySetSymbol
 	Read(tx *bbolt.Tx, key []byte, f func(val []byte))
 	ReadKeys(tx *bbolt.Tx, f func(val []byte))
-	OpenCursor(tx *bbolt.Tx, forward bool) ast.SetCursor
+	OpenValueCursor(tx *bbolt.Tx, key []byte, forward bool) ast.SetCursor
+	OpenKeyCursor(tx *bbolt.Tx, forward bool) ast.SetCursor
 	AddListener(listener SetChangeListener)
 }
 
@@ -261,6 +262,22 @@ func (index *setIndex) GetSymbol() EntitySetSymbol {
 	return index.symbol
 }
 
+func (index *setIndex) OpenValueCursor(tx *bbolt.Tx, key []byte, forward bool) ast.SetCursor {
+	indexBaseBucket := Path(tx, index.indexPath...)
+	if indexBaseBucket == nil {
+		return ast.OpenEmptyCursor(tx, forward)
+	}
+	indexBucket := indexBaseBucket.Bucket.Bucket(key)
+	if indexBucket == nil {
+		return ast.OpenEmptyCursor(tx, forward)
+	}
+	cursor := indexBucket.Cursor()
+	if forward {
+		return NewTypedForwardBoltCursor(cursor)
+	}
+	return NewTypedReverseBoltCursor(cursor)
+}
+
 func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 	indexBaseBucket := Path(tx, index.indexPath...)
 	if indexBaseBucket == nil {
@@ -277,10 +294,10 @@ func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {
 	}
 }
 
-func (index *setIndex) OpenCursor(tx *bbolt.Tx, forward bool) ast.SetCursor {
+func (index *setIndex) OpenKeyCursor(tx *bbolt.Tx, forward bool) ast.SetCursor {
 	indexBucket := Path(tx, index.indexPath...)
 	if indexBucket == nil {
-		return nil
+		return ast.OpenEmptyCursor(tx, forward)
 	}
 	cursor := indexBucket.Cursor()
 	return NewBoltCursor(cursor, forward)
@@ -303,10 +320,7 @@ func (index *setIndex) visitCurrent(ctx *IndexingContext, f func(fieldType Field
 	for cursor.IsValid() {
 		fieldType, value := rtSymbol.Eval(ctx.Tx, ctx.RowId)
 		f(fieldType, value)
-		if err := cursor.Next(); err != nil {
-			ctx.ErrHolder.SetError(err)
-			return
-		}
+		cursor.Next()
 	}
 }
 

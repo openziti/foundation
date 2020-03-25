@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"go.etcd.io/bbolt"
 	"time"
 )
 
@@ -117,19 +118,21 @@ type SymbolTypes interface {
 
 type Symbols interface {
 	SymbolTypes
-	EvalBool(name string) (*bool, error)
-	EvalString(name string) (*string, error)
-	EvalInt64(name string) (*int64, error)
-	EvalFloat64(name string) (*float64, error)
-	EvalDatetime(name string) (*time.Time, error)
-	IsNil(name string) (bool, error)
+	EvalBool(name string) *bool
+	EvalString(name string) *string
+	EvalInt64(name string) *int64
+	EvalFloat64(name string) *float64
+	EvalDatetime(name string) *time.Time
+	IsNil(name string) bool
 
-	OpenSetCursor(name string) (SetCursor, error)
-	OpenSetCursorForQuery(name string, query Query) (SetCursor, error)
+	OpenSetCursor(name string) SetCursor
+	OpenSetCursorForQuery(name string, query Query) SetCursor
 }
 
+type SetCursorProvider func(tx *bbolt.Tx, forward bool) SetCursor
+
 type SetCursor interface {
-	Next() error
+	Next()
 	IsValid() bool
 	Current() []byte
 }
@@ -147,7 +150,10 @@ type TypeTransformable interface {
 
 type BoolNode interface {
 	Node
-	EvalBool(s Symbols) (bool, error)
+	// NOTE: IF we want to reintroduce error reporting on Eval* at some point in the future, probably better plan
+	// would be to incorporate into Symbols, which we can then retrieve at the top level, rather than threading
+	// it through here everywhere, similar to how we do it with TypedBucket
+	EvalBool(s Symbols) bool
 }
 
 type BoolTypeTransformable interface {
@@ -157,23 +163,23 @@ type BoolTypeTransformable interface {
 
 type DatetimeNode interface {
 	Node
-	EvalDatetime(s Symbols) (*time.Time, error)
+	EvalDatetime(s Symbols) *time.Time
 }
 
 type Float64Node interface {
 	StringNode
-	EvalFloat64(s Symbols) (*float64, error)
+	EvalFloat64(s Symbols) *float64
 }
 
 type Int64Node interface {
 	StringNode
-	EvalInt64(s Symbols) (*int64, error)
+	EvalInt64(s Symbols) *int64
 	ToFloat64() Float64Node
 }
 
 type StringNode interface {
 	Node
-	EvalString(s Symbols) (*string, error)
+	EvalString(s Symbols) *string
 }
 
 type SymbolNode interface {

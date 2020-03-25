@@ -250,11 +250,10 @@ func (symbol *entitySetSymbolRuntime) Current() []byte {
 	return value
 }
 
-func (symbol *entitySetSymbolRuntime) Next() error {
+func (symbol *entitySetSymbolRuntime) Next() {
 	if symbol.cursor != nil {
 		symbol.value, _ = symbol.cursor.Next()
 	}
-	return nil
 }
 
 func (symbol *entitySetSymbolRuntime) IsValid() bool {
@@ -441,13 +440,12 @@ func (cursor *stackedCursor) Current() []byte {
 	return value
 }
 
-func (cursor *stackedCursor) Next() error {
+func (cursor *stackedCursor) Next() {
 	if cursor.IsValid() {
 		topStackElem := cursor.stack[len(cursor.stack)-1]
 		key := topStackElem.Next()
 		calculateNextCursorPosition(cursor, topStackElem, key)
 	}
-	return nil
 }
 
 func (cursor *stackedCursor) IsValid() bool {
