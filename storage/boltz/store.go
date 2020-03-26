@@ -57,7 +57,7 @@ type BaseStore struct {
 	symbols       map[string]EntitySymbol
 	publicSymbols []string
 	mapSymbols    map[string]*entityMapSymbol
-
+	isExtended    bool
 	Indexer
 	links           map[string]LinkCollection
 	entityNotFoundF func(id string) error
@@ -96,9 +96,15 @@ func (store *BaseStore) GetOrCreateEntitiesBucket(tx *bbolt.Tx) *TypedBucket {
 func (store *BaseStore) GetEntityBucket(tx *bbolt.Tx, id []byte) *TypedBucket {
 	baseBucket := store.GetEntitiesBucket(tx)
 	entityBucket := baseBucket.GetBucket(string(id))
+
 	if store.parent == nil {
 		return entityBucket
 	}
+
+	if entityBucket == nil {
+		return nil
+	}
+	entityBucket.extended = store.isExtended
 	return entityBucket.GetPath(store.entityPath...)
 }
 
@@ -151,6 +157,11 @@ func (store *BaseStore) AddDeleteHandler(handler EntityChangeHandler) {
 
 func (store *BaseStore) GetSingularEntityType() string {
 	return GetSingularEntityType(store.entityType)
+}
+
+func (store *BaseStore) Extended() *BaseStore {
+	store.isExtended = true
+	return store
 }
 
 func GetSingularEntityType(entityType string) string {
