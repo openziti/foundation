@@ -235,6 +235,7 @@ type ExtEntityFields struct {
 	UpdatedAt time.Time
 	Tags      map[string]interface{}
 	Migrate   bool
+	Bucket    *TypedBucket
 }
 
 func (entity *BaseExtEntity) GetId() string {
@@ -273,6 +274,7 @@ func (entity *ExtEntityFields) LoadBaseValues(bucket *TypedBucket) {
 	entity.CreatedAt = bucket.GetTimeOrError(FieldCreatedAt)
 	entity.UpdatedAt = bucket.GetTimeOrError(FieldUpdatedAt)
 	entity.Tags = bucket.GetMap(FieldTags)
+	entity.Bucket = bucket
 }
 
 func (entity *ExtEntityFields) SetBaseValues(ctx *PersistContext) {

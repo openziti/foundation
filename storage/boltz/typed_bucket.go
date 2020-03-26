@@ -100,6 +100,14 @@ type TypedBucket struct {
 	*bbolt.Bucket
 	parent *TypedBucket
 	errorz.ErrorHolderImpl
+	extended bool
+}
+
+func (bucket *TypedBucket) Tx() *bbolt.Tx {
+	if bucket.Bucket == nil && bucket.extended {
+		return bucket.parent.Tx()
+	}
+	return bucket.Bucket.Tx()
 }
 
 func (bucket *TypedBucket) GetParent() *TypedBucket {
@@ -168,7 +176,11 @@ func (bucket *TypedBucket) GetPath(path ...string) *TypedBucket {
 	for _, pathElem := range path {
 		next = next.GetBucket(pathElem)
 		if next == nil {
-			return nil
+			if !bucket.extended {
+				return nil
+			}
+			next = newTypedBucket(bucket, nil)
+			next.extended = true
 		}
 	}
 	return next
