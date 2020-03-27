@@ -360,7 +360,7 @@ func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int6
 	return scanner.Scan(tx, query)
 }
 
-func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error) {
+func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error) {
 	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.ScanCursor(tx, cursorProvider, query)
 }

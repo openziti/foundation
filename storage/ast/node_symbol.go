@@ -26,6 +26,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ BoolNode = (*BoolSymbolNode)(nil)
+var _ DatetimeNode = (*DatetimeSymbolNode)(nil)
+var _ Int64Node = (*Int64SymbolNode)(nil)
+var _ Float64Node = (*Float64SymbolNode)(nil)
+var _ StringNode = (*StringSymbolNode)(nil)
+
+var _ BoolNode = (*AnyTypeSymbolNode)(nil)
+var _ DatetimeNode = (*AnyTypeSymbolNode)(nil)
+var _ Int64Node = (*AnyTypeSymbolNode)(nil)
+var _ Float64Node = (*AnyTypeSymbolNode)(nil)
+var _ StringNode = (*AnyTypeSymbolNode)(nil)
+
 func NewUntypedSymbolNode(symbol string) SymbolNode {
 	return &UntypedSymbolNode{symbol: symbol}
 }
@@ -87,12 +99,9 @@ func (node *BoolSymbolNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BoolSymbolNode) EvalBool(s Symbols) (bool, error) {
-	result, err := s.EvalBool(node.symbol)
-	if err != nil {
-		return false, err
-	}
-	return result != nil && *result, nil
+func (node *BoolSymbolNode) EvalBool(s Symbols) bool {
+	result := s.EvalBool(node.symbol)
+	return result != nil && *result
 }
 
 func (node *BoolSymbolNode) String() string {
@@ -117,7 +126,7 @@ func (node *DatetimeSymbolNode) GetType() NodeType {
 	return NodeTypeDatetime
 }
 
-func (node *DatetimeSymbolNode) EvalDatetime(s Symbols) (*time.Time, error) {
+func (node *DatetimeSymbolNode) EvalDatetime(s Symbols) *time.Time {
 	return s.EvalDatetime(node.symbol)
 }
 
@@ -143,20 +152,17 @@ func (node *Float64SymbolNode) Accept(visitor Visitor) {
 	visitor.VisitFloat64SymbolNode(node)
 }
 
-func (node *Float64SymbolNode) EvalFloat64(s Symbols) (*float64, error) {
+func (node *Float64SymbolNode) EvalFloat64(s Symbols) *float64 {
 	return s.EvalFloat64(node.symbol)
 }
 
-func (node *Float64SymbolNode) EvalString(s Symbols) (*string, error) {
-	float64Val, err := s.EvalFloat64(node.symbol)
-	if err != nil {
-		return nil, err
-	}
+func (node *Float64SymbolNode) EvalString(s Symbols) *string {
+	float64Val := s.EvalFloat64(node.symbol)
 	if float64Val != nil {
 		result := strconv.FormatFloat(*float64Val, 'f', -1, 64)
-		return &result, nil
+		return &result
 	}
-	return nil, nil
+	return nil
 }
 
 func (node *Float64SymbolNode) String() string {
@@ -181,20 +187,17 @@ func (node *Int64SymbolNode) Accept(visitor Visitor) {
 	visitor.VisitInt64SymbolNode(node)
 }
 
-func (node *Int64SymbolNode) EvalInt64(s Symbols) (*int64, error) {
+func (node *Int64SymbolNode) EvalInt64(s Symbols) *int64 {
 	return s.EvalInt64(node.symbol)
 }
 
-func (node *Int64SymbolNode) EvalString(s Symbols) (*string, error) {
-	int64Val, err := s.EvalInt64(node.symbol)
-	if err != nil {
-		return nil, err
-	}
+func (node *Int64SymbolNode) EvalString(s Symbols) *string {
+	int64Val := s.EvalInt64(node.symbol)
 	if int64Val != nil {
 		result := strconv.FormatInt(*int64Val, 10)
-		return &result, nil
+		return &result
 	}
-	return nil, nil
+	return nil
 }
 
 func (node *Int64SymbolNode) ToFloat64() Float64Node {
@@ -223,7 +226,7 @@ func (node *StringSymbolNode) Accept(visitor Visitor) {
 	visitor.VisitStringSymbolNode(node)
 }
 
-func (node *StringSymbolNode) EvalString(s Symbols) (*string, error) {
+func (node *StringSymbolNode) EvalString(s Symbols) *string {
 	return s.EvalString(node.symbol)
 }
 
@@ -249,19 +252,16 @@ func (node *AnyTypeSymbolNode) Accept(visitor Visitor) {
 	visitor.VisitAnyTypeSymbolNode(node)
 }
 
-func (node *AnyTypeSymbolNode) EvalBool(s Symbols) (bool, error) {
-	result, err := s.EvalBool(node.symbol)
-	if err != nil {
-		return false, err
-	}
-	return result != nil && *result, nil
+func (node *AnyTypeSymbolNode) EvalBool(s Symbols) bool {
+	result := s.EvalBool(node.symbol)
+	return result != nil && *result
 }
 
-func (node *AnyTypeSymbolNode) EvalDatetime(s Symbols) (*time.Time, error) {
+func (node *AnyTypeSymbolNode) EvalDatetime(s Symbols) *time.Time {
 	return s.EvalDatetime(node.symbol)
 }
 
-func (node *AnyTypeSymbolNode) EvalInt64(s Symbols) (*int64, error) {
+func (node *AnyTypeSymbolNode) EvalInt64(s Symbols) *int64 {
 	return s.EvalInt64(node.symbol)
 }
 
@@ -269,11 +269,11 @@ func (node *AnyTypeSymbolNode) ToFloat64() Float64Node {
 	return node
 }
 
-func (node *AnyTypeSymbolNode) EvalFloat64(s Symbols) (*float64, error) {
+func (node *AnyTypeSymbolNode) EvalFloat64(s Symbols) *float64 {
 	return s.EvalFloat64(node.symbol)
 }
 
-func (node *AnyTypeSymbolNode) EvalString(s Symbols) (*string, error) {
+func (node *AnyTypeSymbolNode) EvalString(s Symbols) *string {
 	return s.EvalString(node.symbol)
 }
 
@@ -306,7 +306,7 @@ type SymbolValidator struct {
 	onDeck    SymbolTypes
 }
 
-func (visitor *SymbolValidator) VisitSetFunctionNodeStart(node *SetFunctionNode) {
+func (visitor *SymbolValidator) VisitSetFunctionNodeStart(_ *SetFunctionNode) {
 	visitor.inSetFunction = true
 }
 

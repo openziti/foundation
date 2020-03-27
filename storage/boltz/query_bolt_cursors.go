@@ -54,9 +54,8 @@ type ForwardBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *ForwardBoltCursor) Next() error {
+func (f *ForwardBoltCursor) Next() {
 	f.key, _ = f.cursor.Next()
-	return nil
 }
 
 func NewReverseBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
@@ -72,9 +71,8 @@ type ReverseBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *ReverseBoltCursor) Next() error {
+func (f *ReverseBoltCursor) Next() {
 	f.key, _ = f.cursor.Prev()
-	return nil
 }
 
 func NewTypedForwardBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
@@ -93,10 +91,9 @@ type TypedForwardBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *TypedForwardBoltCursor) Next() error {
+func (f *TypedForwardBoltCursor) Next() {
 	key, _ := f.cursor.Next()
 	_, f.key = GetTypeAndValue(key)
-	return nil
 }
 
 func NewTypedReverseBoltCursor(cursor *bbolt.Cursor) ast.SetCursor {
@@ -115,8 +112,7 @@ type TypedReverseBoltCursor struct {
 	BaseBoltCursor
 }
 
-func (f *TypedReverseBoltCursor) Next() error {
+func (f *TypedReverseBoltCursor) Next() {
 	key, _ := f.cursor.Prev()
 	_, f.key = GetTypeAndValue(key)
-	return nil
 }

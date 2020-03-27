@@ -55,7 +55,7 @@ type uniqueIndexScanner struct {
 	current   []byte
 }
 
-func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query ast.Query) (ast.SetCursor, error) {
+func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query ast.Query) ast.SetCursor {
 	result := &uniqueIndexScanner{
 		store:     store,
 		forward:   true,
@@ -64,10 +64,8 @@ func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query
 		filter:    query,
 	}
 	result.setPaging(query)
-	if err := result.Next(); err != nil {
-		return nil, err
-	}
-	return result, nil
+	result.Next()
+	return result
 }
 
 func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
@@ -75,25 +73,20 @@ func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
-	cursorProvider := func(forward bool) ast.SetCursor {
-		return NewBoltCursor(entityBucket.Cursor(), forward)
-	}
-	return scanner.ScanCursor(tx, cursorProvider, query)
+	return scanner.ScanCursor(tx, entityBucket.OpenCursor, query)
 }
 
-func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error) {
+func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	scanner.rowCursor = newRowCursor(scanner.store, tx)
 	scanner.filter = query
-	scanner.cursor = cursorProvider(scanner.forward)
+	scanner.cursor = cursorProvider(tx, scanner.forward)
 
 	if scanner.cursor == nil {
 		return nil, 0, nil
 	}
 
-	if err := scanner.Next(); err != nil {
-		return nil, 0, err
-	}
+	scanner.Next()
 
 	var result []string
 	for scanner.IsValid() {
@@ -106,9 +99,7 @@ func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(
 			}
 			scanner.count++
 		}
-		if err := scanner.Next(); err != nil {
-			return nil, 0, err
-		}
+		scanner.Next()
 	}
 	return result, scanner.count, nil
 }
@@ -121,30 +112,24 @@ func (scanner *uniqueIndexScanner) Current() []byte {
 	return scanner.current
 }
 
-func (scanner *uniqueIndexScanner) Next() error {
+func (scanner *uniqueIndexScanner) Next() {
 	cursor := scanner.cursor
 	rowCursor := scanner.rowCursor
 	for {
 		if !cursor.IsValid() {
 			scanner.current = nil
-			return nil
+			return
 		}
 
 		scanner.current = cursor.Current()
-		if err := cursor.Next(); err != nil {
-			scanner.current = nil
-			return err
-		}
+		cursor.Next()
 		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) {
 			continue
 		}
 		rowCursor.NextRow(scanner.current)
-		match, err := scanner.filter.EvalBool(rowCursor)
-		if err != nil {
-			return err
-		}
+		match := scanner.filter.EvalBool(rowCursor)
 		if match {
-			return nil
+			return
 		}
 	}
 }
@@ -161,13 +146,10 @@ func (scanner *sortingScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, in
 	if entityBucket == nil {
 		return nil, 0, nil
 	}
-	cursorProvider := func(forward bool) ast.SetCursor {
-		return NewBoltCursor(entityBucket.Cursor(), forward)
-	}
-	return scanner.ScanCursor(tx, cursorProvider, query)
+	return scanner.ScanCursor(tx, entityBucket.OpenCursor, query)
 }
 
-func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(forward bool) ast.SetCursor, query ast.Query) ([]string, int64, error) {
+func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error) {
 	scanner.setPaging(query)
 	comparator, err := scanner.store.NewRowComparator(query.GetSortFields())
 	if err != nil {
@@ -177,31 +159,25 @@ func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursorProvider func(forw
 	rowCursor := newRowCursor(scanner.store, tx)
 	rowContext := &RowContext{comparator: comparator, rowCursor1: rowCursor, rowCursor2: newRowCursor(scanner.store, tx)}
 
-	cursor := cursorProvider(true)
+	cursor := cursorProvider(tx, true)
 
 	if cursor == nil {
 		return nil, 0, nil
 	}
 
 	// Longer term, if we're looking for better performance, we could make a version of llrb which takes a comparator
-	// function instead of putting the comparison on the elements, so we don't need to start a context with each row
+	// function instead of putting the comparison on the elements, so we don't need to store a context with each row
 	results := &llrb.Tree{}
 	isChildStore := scanner.store.IsChildStore()
 	maxResults := scanner.targetOffset + scanner.targetLimit
 	for cursor.IsValid() {
 		current := cursor.Current()
-		if err := cursor.Next(); err != nil {
-			return nil, 0, err
-		}
+		cursor.Next()
 		if isChildStore && !scanner.store.IsEntityPresent(tx, string(current)) {
 			continue
 		}
 		rowCursor.NextRow(current)
-		match, err := query.EvalBool(rowCursor)
-		if err != nil {
-			return nil, 0, err
-		}
-		if match {
+		if query.EvalBool(rowCursor) {
 			results.Insert(&Row{id: current, context: rowContext})
 			scanner.count++
 			if scanner.count > maxResults {

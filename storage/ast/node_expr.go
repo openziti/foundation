@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -41,12 +42,9 @@ func (node *NotExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *NotExprNode) EvalBool(s Symbols) (bool, error) {
-	result, err := node.expr.EvalBool(s)
-	if err != nil {
-		return false, err
-	}
-	return !result, nil
+func (node *NotExprNode) EvalBool(s Symbols) bool {
+	val := node.expr.EvalBool(s)
+	return !val
 }
 
 func (node *NotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
@@ -81,16 +79,10 @@ func (node *AndExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, transformBools(s, &node.left, &node.right)
 }
 
-func (node *AndExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalBool(s)
-	if err != nil {
-		return false, err
+func (node *AndExprNode) EvalBool(s Symbols) bool {
+	if !node.left.EvalBool(s) {
+		return false
 	}
-
-	if !leftResult {
-		return false, nil
-	}
-
 	return node.right.EvalBool(s)
 }
 
@@ -119,13 +111,10 @@ func (node *OrExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, transformBools(s, &node.left, &node.right)
 }
 
-func (node *OrExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalBool(s)
-	if err != nil {
-		return false, err
-	}
+func (node *OrExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalBool(s)
 	if leftResult {
-		return true, nil
+		return true
 	}
 	return node.right.EvalBool(s)
 }
@@ -151,24 +140,19 @@ func (*BinaryBoolExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BinaryBoolExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalBool(s)
-	if err != nil {
-		return false, err
-	}
-	rightResult, err := node.right.EvalBool(s)
-	if err != nil {
-		return false, err
-	}
+func (node *BinaryBoolExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalBool(s)
+	rightResult := node.right.EvalBool(s)
 
 	switch node.op {
 	case BinaryOpEQ:
-		return leftResult == rightResult, nil
+		return leftResult == rightResult
 	case BinaryOpNEQ:
-		return leftResult != rightResult, nil
+		return leftResult != rightResult
 	}
 
-	return false, errors.Errorf("unhandled boolean binary expression type %v", node.op)
+	pfxlog.Logger().Errorf("unhandled boolean binary expression type %v", node.op)
+	return false
 }
 
 func (node *BinaryBoolExprNode) String() string {
@@ -192,36 +176,31 @@ func (*BinaryDatetimeExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BinaryDatetimeExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
-	rightResult, err := node.right.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
+func (node *BinaryDatetimeExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalDatetime(s)
+	rightResult := node.right.EvalDatetime(s)
 
 	if leftResult == nil || rightResult == nil {
-		return false, nil
+		return false
 	}
 
 	switch node.op {
 	case BinaryOpEQ:
-		return leftResult.Equal(*rightResult), nil
+		return leftResult.Equal(*rightResult)
 	case BinaryOpNEQ:
-		return !leftResult.Equal(*rightResult), nil
+		return !leftResult.Equal(*rightResult)
 	case BinaryOpLT:
-		return leftResult.Before(*rightResult), nil
+		return leftResult.Before(*rightResult)
 	case BinaryOpLTE:
-		return !leftResult.After(*rightResult), nil
+		return !leftResult.After(*rightResult)
 	case BinaryOpGT:
-		return leftResult.After(*rightResult), nil
+		return leftResult.After(*rightResult)
 	case BinaryOpGTE:
-		return !leftResult.Before(*rightResult), nil
+		return !leftResult.Before(*rightResult)
 	}
 
-	return false, errors.Errorf("unhandled datetime binary expression type %v", node.op)
+	pfxlog.Logger().Errorf("unhandled datetime binary expression type %v", node.op)
+	return false
 }
 
 func (node *BinaryDatetimeExprNode) String() string {
@@ -245,36 +224,31 @@ func (node *BinaryFloat64ExprNode) GetType() NodeType {
 	return NodeTypeFloat64
 }
 
-func (node *BinaryFloat64ExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
-	rightResult, err := node.right.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
+func (node *BinaryFloat64ExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalFloat64(s)
+	rightResult := node.right.EvalFloat64(s)
 
 	if leftResult == nil || rightResult == nil {
-		return false, nil
+		return false
 	}
 
 	switch node.op {
 	case BinaryOpEQ:
-		return *leftResult == *rightResult, nil
+		return *leftResult == *rightResult
 	case BinaryOpNEQ:
-		return *leftResult != *rightResult, nil
+		return *leftResult != *rightResult
 	case BinaryOpLT:
-		return *leftResult < *rightResult, nil
+		return *leftResult < *rightResult
 	case BinaryOpLTE:
-		return *leftResult <= *rightResult, nil
+		return *leftResult <= *rightResult
 	case BinaryOpGT:
-		return *leftResult > *rightResult, nil
+		return *leftResult > *rightResult
 	case BinaryOpGTE:
-		return *leftResult >= *rightResult, nil
+		return *leftResult >= *rightResult
 	}
 
-	return false, errors.Errorf("unhandled float64 binary expression type %v", node.op)
+	pfxlog.Logger().Errorf("unhandled float64 binary expression type %v", node.op)
+	return false
 }
 
 func (node *BinaryFloat64ExprNode) String() string {
@@ -298,36 +272,31 @@ func (node *BinaryInt64ExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BinaryInt64ExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
-	rightResult, err := node.right.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
+func (node *BinaryInt64ExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalInt64(s)
+	rightResult := node.right.EvalInt64(s)
 
 	if leftResult == nil || rightResult == nil {
-		return false, nil
+		return false
 	}
 
 	switch node.op {
 	case BinaryOpEQ:
-		return *leftResult == *rightResult, nil
+		return *leftResult == *rightResult
 	case BinaryOpNEQ:
-		return *leftResult != *rightResult, nil
+		return *leftResult != *rightResult
 	case BinaryOpLT:
-		return *leftResult < *rightResult, nil
+		return *leftResult < *rightResult
 	case BinaryOpLTE:
-		return *leftResult <= *rightResult, nil
+		return *leftResult <= *rightResult
 	case BinaryOpGT:
-		return *leftResult > *rightResult, nil
+		return *leftResult > *rightResult
 	case BinaryOpGTE:
-		return *leftResult >= *rightResult, nil
+		return *leftResult >= *rightResult
 	}
 
-	return false, errors.Errorf("unhandled int64 binary expression type %v", node.op)
+	pfxlog.Logger().Errorf("unhandled int64 binary expression type %v", node.op)
+	return false
 }
 
 func (node *BinaryInt64ExprNode) String() string {
@@ -351,40 +320,35 @@ func (*BinaryStringExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BinaryStringExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalString(s)
-	if err != nil {
-		return false, err
-	}
-	rightResult, err := node.right.EvalString(s)
-	if err != nil {
-		return false, err
-	}
+func (node *BinaryStringExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalString(s)
+	rightResult := node.right.EvalString(s)
 
 	if leftResult == nil || rightResult == nil {
-		return false, nil
+		return false
 	}
 
 	switch node.op {
 	case BinaryOpEQ:
-		return *leftResult == *rightResult, nil
+		return *leftResult == *rightResult
 	case BinaryOpNEQ:
-		return *leftResult != *rightResult, nil
+		return *leftResult != *rightResult
 	case BinaryOpLT:
-		return *leftResult < *rightResult, nil
+		return *leftResult < *rightResult
 	case BinaryOpLTE:
-		return *leftResult <= *rightResult, nil
+		return *leftResult <= *rightResult
 	case BinaryOpGT:
-		return *leftResult > *rightResult, nil
+		return *leftResult > *rightResult
 	case BinaryOpGTE:
-		return *leftResult >= *rightResult, nil
+		return *leftResult >= *rightResult
 	case BinaryOpContains:
-		return strings.Contains(*leftResult, *rightResult), nil
+		return strings.Contains(*leftResult, *rightResult)
 	case BinaryOpNotContains:
-		return !strings.Contains(*leftResult, *rightResult), nil
+		return !strings.Contains(*leftResult, *rightResult)
 	}
 
-	return false, errors.Errorf("unhandled string binary expression type %v", node.op)
+	pfxlog.Logger().Errorf("unhandled string binary expression type %v", node.op)
+	return false
 }
 
 func (node *BinaryStringExprNode) String() string {
@@ -406,20 +370,18 @@ func (*IsNilExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *IsNilExprNode) EvalBool(s Symbols) (bool, error) {
-	isNil, err := s.IsNil(node.symbol.Symbol())
-	if err != nil {
-		return false, err
-	}
+func (node *IsNilExprNode) EvalBool(s Symbols) bool {
+	isNil := s.IsNil(node.symbol.Symbol())
 
 	switch node.op {
 	case BinaryOpEQ:
-		return isNil, nil
+		return isNil
 	case BinaryOpNEQ:
-		return !isNil, nil
+		return !isNil
 	}
 
-	return false, errors.Errorf("unhandled binary expression type %v", node)
+	pfxlog.Logger().Errorf("unhandled binary expression type %v", node)
+	return true
 }
 
 func (node *IsNilExprNode) String() string {
@@ -455,33 +417,24 @@ func (*Int64BetweenExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *Int64BetweenExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
+func (node *Int64BetweenExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalInt64(s)
 
 	if leftResult == nil {
-		return false, err
+		return false
 	}
 
-	lowerResult, err := node.lower.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
+	lowerResult := node.lower.EvalInt64(s)
 	if lowerResult == nil {
-		return false, nil
+		return false
 	}
 
-	upperResult, err := node.upper.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
+	upperResult := node.upper.EvalInt64(s)
 	if upperResult == nil {
-		return false, nil
+		return false
 	}
 
-	return *leftResult >= *lowerResult && *leftResult < *upperResult, nil
+	return *leftResult >= *lowerResult && *leftResult < *upperResult
 }
 
 func (node *Int64BetweenExprNode) String() string {
@@ -517,33 +470,23 @@ func (*Float64BetweenExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *Float64BetweenExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
-
+func (node *Float64BetweenExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalFloat64(s)
 	if leftResult == nil {
-		return false, err
+		return false
 	}
 
-	lowerResult, err := node.lower.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
+	lowerResult := node.lower.EvalFloat64(s)
 	if lowerResult == nil {
-		return false, nil
+		return false
 	}
 
-	upperResult, err := node.upper.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
+	upperResult := node.upper.EvalFloat64(s)
 	if upperResult == nil {
-		return false, nil
+		return false
 	}
 
-	return *leftResult >= *lowerResult && *leftResult < *upperResult, nil
+	return *leftResult >= *lowerResult && *leftResult < *upperResult
 }
 
 func (node *Float64BetweenExprNode) String() string {
@@ -568,33 +511,24 @@ func (*DatetimeBetweenExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *DatetimeBetweenExprNode) EvalBool(s Symbols) (bool, error) {
-	leftResult, err := node.left.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
+func (node *DatetimeBetweenExprNode) EvalBool(s Symbols) bool {
+	leftResult := node.left.EvalDatetime(s)
 
 	if leftResult == nil {
-		return false, err
+		return false
 	}
 
-	lowerResult, err := node.lower.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
+	lowerResult := node.lower.EvalDatetime(s)
 	if lowerResult == nil {
-		return false, nil
+		return false
 	}
 
-	upperResult, err := node.upper.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
+	upperResult := node.upper.EvalDatetime(s)
 	if upperResult == nil {
-		return false, nil
+		return false
 	}
 
-	return (leftResult.Equal(*lowerResult) || leftResult.After(*lowerResult)) && leftResult.Before(*upperResult), nil
+	return (leftResult.Equal(*lowerResult) || leftResult.After(*lowerResult)) && leftResult.Before(*upperResult)
 }
 
 func (node *DatetimeBetweenExprNode) String() string {

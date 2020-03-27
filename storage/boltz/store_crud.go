@@ -290,12 +290,7 @@ func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field 
 	if listBucket == nil {
 		return nil
 	}
-
-	cursor := listBucket.Cursor()
-	if forward {
-		return NewTypedForwardBoltCursor(cursor)
-	}
-	return NewTypedReverseBoltCursor(cursor)
+	return listBucket.OpenTypedCursor(tx, forward)
 }
 
 func (store *BaseStore) IsChildStore() bool {
@@ -420,4 +415,46 @@ func (*BaseStore) FindMatchingAnyOf(tx *bbolt.Tx, readIndex SetReadIndex, values
 	}
 
 	return result
+}
+
+func (*BaseStore) IteratorMatchingAllOf(readIndex SetReadIndex, values []string) ast.SetCursorProvider {
+	if len(values) == 0 {
+		return ast.OpenEmptyCursor
+	}
+
+	if len(values) == 1 {
+		return func(tx *bbolt.Tx, forward bool) ast.SetCursor {
+			return readIndex.OpenValueCursor(tx, []byte(values[0]), forward)
+		}
+	}
+
+	return func(tx *bbolt.Tx, forward bool) ast.SetCursor {
+		cursor := readIndex.OpenValueCursor(tx, []byte(values[0]), forward)
+		return ast.NewFilteredCursor(cursor, func(val []byte) bool {
+			currentRowValues := readIndex.GetSymbol().EvalStringList(tx, val)
+			return stringz.ContainsAll(currentRowValues, values[1:]...)
+		})
+	}
+}
+
+func (*BaseStore) IteratorMatchingAnyOf(readIndex SetReadIndex, values []string) ast.SetCursorProvider {
+	if len(values) == 0 {
+		return ast.OpenEmptyCursor
+	}
+
+	if len(values) == 1 {
+		return func(tx *bbolt.Tx, forward bool) ast.SetCursor {
+			return readIndex.OpenValueCursor(tx, []byte(values[0]), forward)
+		}
+	}
+
+	return func(tx *bbolt.Tx, forward bool) ast.SetCursor {
+		set := ast.NewTreeSet(forward)
+		for _, role := range values {
+			readIndex.Read(tx, []byte(role), func(val []byte) {
+				set.Add(val)
+			})
+		}
+		return set.ToCursor()
+	}
 }
