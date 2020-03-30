@@ -194,24 +194,18 @@ func (*InStringArrayExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *InStringArrayExprNode) EvalBool(s Symbols) (bool, error) {
-	left, err := node.left.EvalString(s)
-	if err != nil {
-		return false, err
-	}
+func (node *InStringArrayExprNode) EvalBool(s Symbols) bool {
+	left := node.left.EvalString(s)
 
 	for _, rightNode := range node.right.values {
-		right, err := rightNode.EvalString(s)
-		if err != nil {
-			return false, err
-		}
+		right := rightNode.EvalString(s)
 		if left != nil && right != nil {
 			if *left == *right {
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 func (node *InStringArrayExprNode) Accept(visitor Visitor) {
@@ -234,24 +228,18 @@ func (node *InInt64ArrayExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *InInt64ArrayExprNode) EvalBool(s Symbols) (bool, error) {
-	left, err := node.left.EvalInt64(s)
-	if err != nil {
-		return false, err
-	}
+func (node *InInt64ArrayExprNode) EvalBool(s Symbols) bool {
+	left := node.left.EvalInt64(s)
 
 	for _, rightNode := range node.right.values {
-		right, err := rightNode.EvalInt64(s)
-		if err != nil {
-			return false, err
-		}
+		right := rightNode.EvalInt64(s)
 		if left != nil && right != nil {
 			if *left == *right {
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 func (node *InInt64ArrayExprNode) Accept(visitor Visitor) {
@@ -274,24 +262,18 @@ func (node *InFloat64ArrayExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *InFloat64ArrayExprNode) EvalBool(s Symbols) (bool, error) {
-	left, err := node.left.EvalFloat64(s)
-	if err != nil {
-		return false, err
-	}
+func (node *InFloat64ArrayExprNode) EvalBool(s Symbols) bool {
+	left := node.left.EvalFloat64(s)
 
 	for _, rightNode := range node.right.values {
-		right, err := rightNode.EvalFloat64(s)
-		if err != nil {
-			return false, err
-		}
+		right := rightNode.EvalFloat64(s)
 		if left != nil && right != nil {
 			if *left == *right {
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 func (node *InFloat64ArrayExprNode) Accept(visitor Visitor) {
@@ -314,24 +296,18 @@ func (*InDatetimeArrayExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *InDatetimeArrayExprNode) EvalBool(s Symbols) (bool, error) {
-	left, err := node.left.EvalDatetime(s)
-	if err != nil {
-		return false, err
-	}
+func (node *InDatetimeArrayExprNode) EvalBool(s Symbols) bool {
+	left := node.left.EvalDatetime(s)
 
 	for _, rightNode := range node.right.values {
-		right, err := rightNode.EvalDatetime(s)
-		if err != nil {
-			return false, err
-		}
+		right := rightNode.EvalDatetime(s)
 		if left != nil && right != nil {
 			if left.Equal(*right) {
-				return true, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 func (node *InDatetimeArrayExprNode) Accept(visitor Visitor) {

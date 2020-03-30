@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"reflect"
 
 	"github.com/pkg/errors"
@@ -94,8 +95,9 @@ func (node *BooleanLogicExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BooleanLogicExprNode) EvalBool(_ Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory binary bool op node %v", node)
+func (node *BooleanLogicExprNode) EvalBool(_ Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory binary bool op node %v", node)
+	return false
 }
 
 func (node *BooleanLogicExprNode) String() string {
@@ -146,8 +148,9 @@ func (node *BinaryExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BinaryExprNode) EvalBool(_ Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory binary op node %v", node)
+func (node *BinaryExprNode) EvalBool(_ Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory binary op node %v", node)
+	return false
 }
 
 func (node *BinaryExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
@@ -318,16 +321,16 @@ func (node *Int64ToFloat64Node) Accept(visitor Visitor) {
 	visitor.VisitInt64ToFloat64NodeEnd(node)
 }
 
-func (node *Int64ToFloat64Node) EvalFloat64(s Symbols) (*float64, error) {
-	result, err := node.wrapped.EvalInt64(s)
-	if result == nil || err != nil {
-		return nil, err
+func (node *Int64ToFloat64Node) EvalFloat64(s Symbols) *float64 {
+	result := node.wrapped.EvalInt64(s)
+	if result == nil {
+		return nil
 	}
 	floatResult := float64(*result)
-	return &floatResult, nil
+	return &floatResult
 }
 
-func (node *Int64ToFloat64Node) EvalString(s Symbols) (*string, error) {
+func (node *Int64ToFloat64Node) EvalString(s Symbols) *string {
 	return node.wrapped.EvalString(s)
 }
 
@@ -363,8 +366,9 @@ func (*InArrayExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *InArrayExprNode) EvalBool(_ Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory in node %v", node)
+func (node *InArrayExprNode) EvalBool(_ Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory in node %v", node)
+	return false
 }
 
 func (node *InArrayExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
@@ -448,8 +452,9 @@ func (*BetweenExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *BetweenExprNode) EvalBool(_ Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory between node %v", node)
+func (node *BetweenExprNode) EvalBool(_ Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory between node %v", node)
+	return false
 }
 
 func (node *BetweenExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
@@ -593,8 +598,9 @@ func (node *UntypedNotExprNode) GetType() NodeType {
 	return NodeTypeBool
 }
 
-func (node *UntypedNotExprNode) EvalBool(_ Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory untyped not node %v", node)
+func (node *UntypedNotExprNode) EvalBool(_ Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory untyped not node %v", node)
+	return false
 }
 
 func (node *UntypedNotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {

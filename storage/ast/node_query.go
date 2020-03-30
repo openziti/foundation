@@ -18,6 +18,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"reflect"
 	"strings"
 
@@ -48,8 +49,9 @@ func (node *untypedQueryNode) Accept(visitor Visitor) {
 	visitor.VisitUntypedQueryNodeEnd(node)
 }
 
-func (node *untypedQueryNode) EvalBool(Symbols) (bool, error) {
-	return false, errors.Errorf("cannot evaluate transitory untyped query node %v", node)
+func (node *untypedQueryNode) EvalBool(Symbols) bool {
+	pfxlog.Logger().Errorf("cannot evaluate transitory untyped query node %v", node)
+	return false
 }
 
 func (node *untypedQueryNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
@@ -98,7 +100,7 @@ func (node *queryNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, nil
 }
 
-func (node *queryNode) EvalBool(s Symbols) (bool, error) {
+func (node *queryNode) EvalBool(s Symbols) bool {
 	return node.Predicate.EvalBool(s)
 }
 

@@ -17,10 +17,10 @@
 package boltz
 
 import (
+	"github.com/michaelquigley/pfxlog"
 	"time"
 
 	"github.com/netfoundry/ziti-foundation/storage/ast"
-	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
 
@@ -84,77 +84,88 @@ func (rs *rowCursorImpl) IsSet(name string) (bool, bool) {
 	return symbol.IsSet(), true
 }
 
-func (rs *rowCursorImpl) OpenSetCursor(name string) (ast.SetCursor, error) {
+func (rs *rowCursorImpl) OpenSetCursor(name string) ast.SetCursor {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation pass", name)
+		return ast.NewEmptyCursor()
 	}
 	setRowSymbol, ok := symbol.(RuntimeEntitySetSymbol)
 	if !ok {
-		return nil, errors.Errorf("attempting to iterate non-set symbol %v", name)
+		pfxlog.Logger().Errorf("attempting to iterate non-set symbol %v, should have been caught in symbol validation pass", name)
+		return ast.NewEmptyCursor()
 	}
-	return setRowSymbol.OpenCursor(rs.tx, rs.currentRow), nil
+
+	return setRowSymbol.OpenCursor(rs.tx, rs.currentRow)
 }
 
-func (rs *rowCursorImpl) OpenSetCursorForQuery(name string, query ast.Query) (ast.SetCursor, error) {
+func (rs *rowCursorImpl) OpenSetCursorForQuery(name string, query ast.Query) ast.SetCursor {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation pass", name)
+		return ast.NewEmptyCursor()
 	}
 	setRowSymbol, ok := symbol.(RuntimeEntitySetSymbol)
 	if !ok {
-		return nil, errors.Errorf("attempting to iterate non-set symbol %v", name)
+		pfxlog.Logger().Errorf("attempting to iterate non-set symbol %v, should have been caught in symbol validation pass", name)
+		return ast.NewEmptyCursor()
 	}
 	setCursor := setRowSymbol.OpenCursor(rs.tx, rs.currentRow)
 	return newCursorScanner(rs.tx, symbol.GetLinkedType(), setCursor, query)
 }
 
-func (rs *rowCursorImpl) EvalBool(name string) (*bool, error) {
+func (rs *rowCursorImpl) EvalBool(name string) *bool {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return nil
 	}
-	return FieldToBool(symbol.Eval(rs.tx, rs.currentRow)), nil
+	return FieldToBool(symbol.Eval(rs.tx, rs.currentRow))
 }
 
-func (rs *rowCursorImpl) EvalString(name string) (*string, error) {
+func (rs *rowCursorImpl) EvalString(name string) *string {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return nil
 	}
-	return FieldToString(symbol.Eval(rs.tx, rs.currentRow)), nil
+	return FieldToString(symbol.Eval(rs.tx, rs.currentRow))
 }
 
-func (rs *rowCursorImpl) EvalInt64(name string) (*int64, error) {
+func (rs *rowCursorImpl) EvalInt64(name string) *int64 {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return nil
 	}
-	return FieldToInt64(symbol.Eval(rs.tx, rs.currentRow)), nil
+	return FieldToInt64(symbol.Eval(rs.tx, rs.currentRow))
 }
 
-func (rs *rowCursorImpl) EvalFloat64(name string) (*float64, error) {
+func (rs *rowCursorImpl) EvalFloat64(name string) *float64 {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return nil
 	}
-	return FieldToFloat64(symbol.Eval(rs.tx, rs.currentRow)), nil
+	return FieldToFloat64(symbol.Eval(rs.tx, rs.currentRow))
 }
 
-func (rs *rowCursorImpl) EvalDatetime(name string) (*time.Time, error) {
+func (rs *rowCursorImpl) EvalDatetime(name string) *time.Time {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return nil, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return nil
 	}
 	fieldType, val := symbol.Eval(rs.tx, rs.currentRow)
-	return FieldToDatetime(fieldType, val, symbol.GetName()), nil
+	return FieldToDatetime(fieldType, val, symbol.GetName())
 }
 
-func (rs *rowCursorImpl) IsNil(name string) (bool, error) {
+func (rs *rowCursorImpl) IsNil(name string) bool {
 	symbol := rs.getSymbol(name)
 	if symbol == nil {
-		return false, errors.Errorf("unknown symbol %v", name)
+		pfxlog.Logger().Errorf("unknown symbol %v, should have been caught in symbol validation", name)
+		return true
 	}
 	fieldType, _ := symbol.Eval(rs.tx, rs.currentRow)
-	return fieldType == TypeNil, nil
+	return fieldType == TypeNil
 }
