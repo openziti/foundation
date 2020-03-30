@@ -759,7 +759,7 @@ func (bucket *TypedBucket) OpenTypedCursor(_ *bbolt.Tx, forward bool) ast.SetCur
 
 func (bucket *TypedBucket) IsKeyPresent(key []byte) bool {
 	result, _ := bucket.Cursor().Seek(key)
-	return result != nil && !bytes.Equal(key, result)
+	return result != nil && bytes.Equal(key, result)
 }
 
 func clone(val []byte) []byte {

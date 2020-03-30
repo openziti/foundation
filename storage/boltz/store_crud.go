@@ -302,7 +302,8 @@ func (store *BaseStore) IsEntityRelated(tx *bbolt.Tx, id string, field string, r
 	if listBucket == nil {
 		return false
 	}
-	return listBucket.IsKeyPresent([]byte(relatedEntityId))
+	key := PrependFieldType(TypeString, []byte(relatedEntityId))
+	return listBucket.IsKeyPresent(key)
 }
 
 func (store *BaseStore) IsChildStore() bool {
