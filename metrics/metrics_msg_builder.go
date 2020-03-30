@@ -102,6 +102,31 @@ func (builder *messageBuilder) addHistogram(name string, metric metrics.Histogra
 	builder.Histograms[name] = histogram
 }
 
+func (builder *messageBuilder) addTimer(name string, metric metrics.Timer) {
+	histogram := &metrics_pb.MetricsMessage_Histogram{}
+	histogram.Count = metric.Count()
+	histogram.Max = metric.Max()
+	histogram.Mean = metric.Mean()
+	histogram.Min = metric.Min()
+	histogram.StdDev = metric.StdDev()
+	histogram.Variance = metric.Variance()
+
+	ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999})
+
+	histogram.P50 = ps[0]
+	histogram.P75 = ps[1]
+	histogram.P95 = ps[2]
+	histogram.P99 = ps[3]
+	histogram.P999 = ps[4]
+	histogram.P9999 = ps[5]
+
+	if builder.Histograms == nil {
+		builder.Histograms = make(map[string]*metrics_pb.MetricsMessage_Histogram)
+	}
+
+	builder.Histograms[name] = histogram
+}
+
 func (builder *messageBuilder) addIntervalBucketEvents(events []*bucketEvent) {
 	for _, event := range events {
 		if builder.IntervalCounters == nil {
