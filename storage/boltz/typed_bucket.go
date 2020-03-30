@@ -17,6 +17,7 @@
 package boltz
 
 import (
+	"bytes"
 	"encoding/binary"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/storage/ast"
@@ -754,6 +755,11 @@ func (bucket *TypedBucket) OpenTypedCursor(_ *bbolt.Tx, forward bool) ast.SetCur
 		return NewTypedForwardBoltCursor(bucket.Cursor())
 	}
 	return NewTypedReverseBoltCursor(bucket.Cursor())
+}
+
+func (bucket *TypedBucket) IsKeyPresent(key []byte) bool {
+	result, _ := bucket.Cursor().Seek(key)
+	return result != nil && bytes.Equal(key, result)
 }
 
 func clone(val []byte) []byte {
