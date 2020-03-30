@@ -95,13 +95,14 @@ func (reporter *influxReporter) run() {
 	}
 }
 
-func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
+func AsBatch(msg *metrics_pb.MetricsMessage) (*influxdb.BatchPoints, error) {
+
 	var pts []influxdb.Point
 
-	now, err := ptypes.Timestamp(msg.Timestamp)
+	ts, err := ptypes.Timestamp(msg.Timestamp)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tags := make(map[string]string)
@@ -117,7 +118,7 @@ func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
 			Fields: map[string]interface{}{
 				"value": val,
 			},
-			Time: now,
+			Time: ts,
 		})
 	}
 
@@ -128,7 +129,7 @@ func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
 			Fields: map[string]interface{}{
 				"value": val,
 			},
-			Time: now,
+			Time: ts,
 		})
 	}
 
@@ -150,7 +151,7 @@ func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
 				"p999":     val.P999,
 				"p9999":    val.P9999,
 			},
-			Time: now,
+			Time: ts,
 		})
 	}
 
@@ -165,17 +166,25 @@ func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
 				"m15":   val.M15Rate,
 				"mean":  val.MeanRate,
 			},
-			Time: now,
+			Time: ts,
 		})
 	}
 
-	bps := influxdb.BatchPoints{
-		Points:   pts,
-		Database: reporter.database,
+	bps := &influxdb.BatchPoints{
+		Points: pts,
 	}
 
-	_, err = reporter.client.Write(bps)
-	return err
+	return bps, nil
+}
+func (reporter *influxReporter) send(msg *metrics_pb.MetricsMessage) error {
+
+	if bps, err := AsBatch(msg); err != nil {
+		return err
+	} else {
+		bps.Database = reporter.database
+		_, err = reporter.client.Write(*bps)
+		return err
+	}
 }
 
 type influxConfig struct {
