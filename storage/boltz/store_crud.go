@@ -284,11 +284,11 @@ func (store *BaseStore) GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field 
 func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string, forward bool) ast.SetCursor {
 	bucket := store.GetEntityBucket(tx, []byte(id))
 	if bucket == nil {
-		return nil
+		return ast.NewEmptyCursor()
 	}
 	listBucket := bucket.GetBucket(field)
 	if listBucket == nil {
-		return nil
+		return ast.NewEmptyCursor()
 	}
 	return listBucket.OpenTypedCursor(tx, forward)
 }
