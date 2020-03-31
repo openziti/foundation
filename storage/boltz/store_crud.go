@@ -284,13 +284,26 @@ func (store *BaseStore) GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field 
 func (store *BaseStore) GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string, forward bool) ast.SetCursor {
 	bucket := store.GetEntityBucket(tx, []byte(id))
 	if bucket == nil {
-		return nil
+		return ast.NewEmptyCursor()
 	}
 	listBucket := bucket.GetBucket(field)
 	if listBucket == nil {
-		return nil
+		return ast.NewEmptyCursor()
 	}
 	return listBucket.OpenTypedCursor(tx, forward)
+}
+
+func (store *BaseStore) IsEntityRelated(tx *bbolt.Tx, id string, field string, relatedEntityId string) bool {
+	bucket := store.GetEntityBucket(tx, []byte(id))
+	if bucket == nil {
+		return false
+	}
+	listBucket := bucket.GetBucket(field)
+	if listBucket == nil {
+		return false
+	}
+	key := PrependFieldType(TypeString, []byte(relatedEntityId))
+	return listBucket.IsKeyPresent(key)
 }
 
 func (store *BaseStore) IsChildStore() bool {

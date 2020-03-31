@@ -36,6 +36,7 @@ type Registry interface {
 	SourceId() string
 	Meter(name string) Meter
 	Histogram(name string) Histogram
+	Timer(name string) Timer
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
 	Each(visitor func(name string, metric Metric))
 	EventController() EventController
@@ -137,6 +138,26 @@ func (registry *registryImpl) Histogram(name string) Histogram {
 	return histogram
 }
 
+func (registry *registryImpl) Timer(name string) Timer {
+	metric, present := registry.metricMap.Get(name)
+	if present {
+		timer, ok := metric.(Timer)
+		if !ok {
+			panic(fmt.Errorf("metric '%v' already exists and is not a histogram. It is a %v", name, reflect.TypeOf(metric).Name()))
+		}
+		return timer
+	}
+
+	timer := &timerImpl{
+		Timer: metrics.NewTimer(),
+		dispose: func() {
+			registry.dispose(name)
+		},
+	}
+	registry.metricMap.Set(name, timer)
+	return timer
+}
+
 // NewIntervalCounter creates an IntervalCounter
 func (registry *registryImpl) IntervalCounter(name string, intervalSize time.Duration) IntervalCounter {
 	metric, present := registry.metricMap.Get(name)
@@ -188,6 +209,8 @@ func (registry *registryImpl) report() {
 			builder.addMeter(name, metric.Snapshot())
 		case *histogramImpl:
 			builder.addHistogram(name, metric.Snapshot())
+		case *timerImpl:
+			builder.addTimer(name, metric.Snapshot())
 		case *intervalCounterImpl:
 			// ignore, handled below
 		default:

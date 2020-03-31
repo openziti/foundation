@@ -85,6 +85,7 @@ type ListStore interface {
 
 	GetRelatedEntitiesIdList(tx *bbolt.Tx, id string, field string) []string
 	GetRelatedEntitiesCursor(tx *bbolt.Tx, id string, field string, forward bool) ast.SetCursor
+	IsEntityRelated(tx *bbolt.Tx, id string, field string, relatedEntityId string) bool
 
 	// QueryIds compiles the query and runs it against the store
 	QueryIds(tx *bbolt.Tx, query string) ([]string, int64, error)
