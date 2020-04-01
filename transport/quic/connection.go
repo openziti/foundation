@@ -34,49 +34,49 @@ type Connection struct {
 	stream  quic.Stream
 }
 
-func (c *Connection) Detail() *transport.ConnectionDetail {
-	return c.detail
+func (self *Connection) Detail() *transport.ConnectionDetail {
+	return self.detail
 }
 
-func (c *Connection) PeerCertificates() []*x509.Certificate {
-	return c.session.ConnectionState().PeerCertificates
+func (self *Connection) PeerCertificates() []*x509.Certificate {
+	return self.session.ConnectionState().PeerCertificates
 }
 
 // Reader method on the transport.Connection interface.
 //
-func (c *Connection) Reader() io.Reader {
-	return c.stream
+func (self *Connection) Reader() io.Reader {
+	return self.stream
 }
 
 // Writer method on the transport.Connection interface.
 //
-func (c *Connection) Writer() io.Writer {
-	return c.stream
+func (self *Connection) Writer() io.Writer {
+	return self.stream
 }
 
 // QUIC doesn't provide an underlying net.Conn
 //
-func (c *Connection) Conn() net.Conn {
+func (self *Connection) Conn() net.Conn {
 	return nil
 }
 
 // SetReadTimeout sets the read timeout to the provided duration.
 //
-func (c *Connection) SetReadTimeout(t time.Duration) error {
-	return c.stream.SetReadDeadline(time.Now().Add(t))
+func (self *Connection) SetReadTimeout(t time.Duration) error {
+	return self.stream.SetReadDeadline(time.Now().Add(t))
 }
 
 // SetWriteTimeout sets the write timeout to the provided duration.
 //
-func (c *Connection) SetWriteTimeout(t time.Duration) error {
-	return c.stream.SetWriteDeadline(time.Now().Add(t))
+func (self *Connection) SetWriteTimeout(t time.Duration) error {
+	return self.stream.SetWriteDeadline(time.Now().Add(t))
 }
 
 // Close method on the transport.Connection interface.
 //
-func (c *Connection) Close() error {
-	err1 := c.stream.Close()
-	err2 := c.session.Close()
+func (self *Connection) Close() error {
+	err1 := self.stream.Close()
+	err2 := self.session.Close()
 
 	if err1 == nil {
 		return err2

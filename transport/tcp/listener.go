@@ -44,10 +44,11 @@ func acceptLoop(log *logrus.Entry, name string, listener net.Listener, incoming 
 		socket, err := listener.Accept()
 		if err != nil {
 			if netErr, ok := err.(net.Error); ok && !netErr.Temporary() {
-				log.WithField("err", err).Error("accept failed. Failure not recoverable. Exiting listen loop")
+				log.WithField("err", err).Error("accept failed. failure not recoverable. exiting listen loop")
 				return
 			}
 			log.WithField("err", err).Error("accept failed")
+
 		} else {
 			connection := &Connection{
 				detail: &transport.ConnectionDetail{

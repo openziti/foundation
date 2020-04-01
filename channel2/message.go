@@ -37,10 +37,10 @@ import (
  *   2000-2255 is reserved for xgress implementation headers
  */
 const (
-	ConnectionIdHeader  = 0
-	ReplyForHeader      = 1
-	ResultSuccessHeader = 2
-	HelloListenerHeader = 3
+	ConnectionIdHeader              = 0
+	ReplyForHeader                  = 1
+	ResultSuccessHeader             = 2
+	HelloRouterAdvertisementsHeader = 3
 
 	// Headers in the range 128-255 inclusive will be reflected when creating replies
 	ReflectedHeaderBitMask = 1 << 7

@@ -17,11 +17,11 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/transport"
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/netfoundry/ziti-foundation/transport"
 	"io"
 )
 
@@ -44,7 +44,7 @@ func NewClassicListener(identity *identity.TokenId, endpoint transport.Address) 
 }
 
 func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
-	incoming := make(chan transport.Connection)
+	incoming := make(chan transport.Connection, 1)
 	socket, err := listener.endpoint.Listen("classic", listener.identity, incoming)
 	if err != nil {
 		return err
@@ -91,7 +91,6 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 				request, hello, err := listener.receiveHello(impl)
 				if err == nil {
 					for _, h := range listener.handlers {
-						log.Infof("hello: %v, peer: %v, handler: %v", hello, peer, h)
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
 							log.Errorf("connection handler error (%s)", err)
 							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {

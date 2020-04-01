@@ -29,34 +29,34 @@ type Connection struct {
 	socket net.Conn
 }
 
-func (c *Connection) Detail() *transport.ConnectionDetail {
-	return c.detail
+func (self *Connection) Detail() *transport.ConnectionDetail {
+	return self.detail
 }
 
-func (c *Connection) PeerCertificates() []*x509.Certificate {
+func (self *Connection) PeerCertificates() []*x509.Certificate {
 	return nil
 }
 
-func (c *Connection) Reader() io.Reader {
-	return c.socket
+func (self *Connection) Reader() io.Reader {
+	return self.socket
 }
 
-func (c *Connection) Writer() io.Writer {
-	return c.socket
+func (self *Connection) Writer() io.Writer {
+	return self.socket
 }
 
-func (c *Connection) Conn() net.Conn {
-	return c.socket
+func (self *Connection) Conn() net.Conn {
+	return self.socket
 }
 
-func (c *Connection) SetReadTimeout(t time.Duration) error {
-	return c.socket.SetReadDeadline(time.Now().Add(t))
+func (self *Connection) SetReadTimeout(t time.Duration) error {
+	return self.socket.SetReadDeadline(time.Now().Add(t))
 }
 
-func (c *Connection) SetWriteTimeout(t time.Duration) error {
-	return c.socket.SetWriteDeadline(time.Now().Add(t))
+func (self *Connection) SetWriteTimeout(t time.Duration) error {
+	return self.socket.SetWriteDeadline(time.Now().Add(t))
 }
 
-func (c *Connection) Close() error {
-	return c.socket.Close()
+func (self *Connection) Close() error {
+	return self.socket.Close()
 }
