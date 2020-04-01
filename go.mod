@@ -1,6 +1,6 @@
 module github.com/netfoundry/ziti-foundation
 
-go 1.13
+go 1.14
 
 require (
 	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
