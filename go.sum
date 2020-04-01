@@ -62,6 +62,7 @@ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrk
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/netfoundry/ziti-fabric v0.11.5 h1:AJxt35P8uj62vB4m4HkSDHbhcN9auVX6RVrpS2/MYhY=
 github.com/netfoundry/ziti-fabric v0.11.6 h1:LDZfauNOwpb5akv4T7zWZO4raUSp18zs10NCvrhpOw8=
+github.com/netfoundry/ziti-fabric v0.11.9 h1:YdZa1aLTaBhnRpjbFqV8LJVjYlfx3ILtLDwq4LbPXWE=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0 h1:WSHQ+IS43OoUrWtD1/bbclrwK8TTH5hzp+umCiuxHgs=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
