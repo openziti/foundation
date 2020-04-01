@@ -48,11 +48,6 @@ func (self *Connection) Reader() io.Reader {
 	return self.stream
 }
 
-func (self *Connection) ReadPeer(p []byte) (int, transport.Address, error) {
-	n, err := self.stream.Read(p)
-	return n, nil, err
-}
-
 // Writer method on the transport.Connection interface.
 //
 func (self *Connection) Writer() io.Writer {

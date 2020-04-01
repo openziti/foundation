@@ -41,11 +41,6 @@ func (self *Connection) Reader() io.Reader {
 	return self.socket
 }
 
-func (self *Connection) ReadPeer(p []byte) (int, transport.Address, error) {
-	n, err := self.socket.Read(p)
-	return n, nil, err
-}
-
 func (self *Connection) Writer() io.Writer {
 	return self.socket
 }

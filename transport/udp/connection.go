@@ -70,15 +70,6 @@ func (c *connection) Reader() io.Reader {
 	return c
 }
 
-func (c *connection) ReadPeer(p []byte) (int, transport.Address, error) {
-	n, peer, err := c.socket.ReadFromUDP(p)
-	var addr transport.Address
-	if peer != nil {
-		addr = &address{hostname: peer.IP.String(), port: uint16(peer.Port)}
-	}
-	return n, addr, err
-}
-
 func (c *connection) Writer() io.Writer {
 	return c.socket
 }
