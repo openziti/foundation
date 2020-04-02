@@ -17,9 +17,11 @@
 package sequencer
 
 import (
+	"fmt"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 	"math"
 	"math/rand"
 	"sync"
@@ -37,7 +39,6 @@ func Test_treeSeq(t *testing.T) {
 	seq := newIntSeq()
 
 	go func() {
-
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 		for _, v := range r.Perm(127) {
 			v = v + 1
@@ -45,7 +46,7 @@ func Test_treeSeq(t *testing.T) {
 				t.Error("put", err)
 			}
 		}
-		seq.Close()
+		seq.CloseByProducer()
 	}()
 
 	var c int
@@ -84,7 +85,7 @@ func Test_treeSeqSync(t *testing.T) {
 		}
 
 		wg.Wait()
-		seq.Close()
+		seq.CloseByProducer()
 	}()
 
 	c := 1
@@ -105,16 +106,73 @@ func Test_treeSeqSync(t *testing.T) {
 func Test_treeSeqClosed(t *testing.T) {
 	seq := newIntSeq()
 
-	seq.Close()
+	seq.CloseByProducer()
 	if err := seq.Put(128); err == nil {
 		t.Error("error expected")
 	}
 
-	seq.Close()
 	v := seq.GetNext()
 	if v != nil {
 		t.Error("not nil from closed sequencer")
 	}
+}
+
+func Test_treeSeqClosedAsyncClose(t *testing.T) {
+	req := require.New(t)
+	seq := NewSingleWriterSeq(10)
+
+	writerC := make(chan error, 1)
+	written := make(chan uint32, 1)
+
+	readerC := make(chan error, 1)
+	read := make(chan uint32, 1)
+
+	go func() {
+		current := uint32(1)
+		next := current
+		for {
+			if err := seq.PutSequenced(next, next); err != nil {
+				writerC <- err
+				written <- current
+				return
+			}
+			current = next
+			next++
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	go func() {
+		current := uint32(0)
+		for {
+			val, err := seq.GetNextWithDeadline(time.Now().Add(time.Second))
+			if err != nil {
+				readerC <- err
+				read <- current
+			} else if val == nil {
+				readerC <- nil
+				read <- current
+			} else {
+				current = val.(uint32)
+			}
+		}
+	}()
+
+	time.Sleep(time.Second)
+	seq.Close()
+
+	err := <-writerC
+	req.Equal(err, ErrClosed)
+
+	writeCount := <-written
+	fmt.Printf("writer wrote %v\n", writeCount)
+	req.True(writeCount > 100)
+
+	err = <-readerC
+	req.Equal(err, ErrClosed)
+	readCount := <-read
+	fmt.Printf("reader read %v\n", readCount)
+	req.Equal(writeCount, readCount)
 }
 
 func Test_treeSeqPreloaded(t *testing.T) {
@@ -131,7 +189,7 @@ func Test_treeSeqPreloaded(t *testing.T) {
 				t.Error("put", err)
 			}
 		}
-		seq.Close()
+		seq.CloseByProducer()
 
 	}()
 
@@ -158,6 +216,7 @@ func newMultiWriterBtreeSeq(seqF func(interface{}) uint32) *multiWriterBtreeSeq 
 			tree:          btree.NewWith(4, utils.UInt32Comparator),
 			nextSeq:       1,
 			maxOutOfOrder: math.MaxUint32,
+			ticker:        time.NewTicker(time.Second),
 		},
 		writeCh: make(chan *multiWriterSeqEntry),
 	}
