@@ -17,9 +17,9 @@
 package sequencer
 
 import (
-	"github.com/netfoundry/ziti-foundation/util/concurrenz"
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
+	"github.com/netfoundry/ziti-foundation/util/concurrenz"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -30,6 +30,7 @@ func NewSingleWriterSeq(maxOutOfOrder uint32) Sequencer {
 		ch:            make(chan interface{}, 16),
 		tree:          btree.NewWith(4, utils.UInt32Comparator),
 		nextSeq:       1,
+		ticker:        time.NewTicker(time.Second),
 	}
 }
 
@@ -40,15 +41,19 @@ type singleWriterBtreeSeq struct {
 	tree          *btree.Tree
 	nextSeq       uint32
 	closed        concurrenz.AtomicBoolean
+	chanClosed    concurrenz.AtomicBoolean
+	ticker        *time.Ticker
 }
 
 func (seq *singleWriterBtreeSeq) PutSequenced(itemSeq uint32, val interface{}) error {
 	if seq.closed.Get() {
-		return errors.New("can't write to closed sequencer")
+		seq.ensureClosed()
+		return ErrClosed
 	}
 	if seq.nextSeq == itemSeq {
-		seq.ch <- val
-		seq.nextSeq++
+		if err := seq.enqueue(val); err != nil {
+			return err
+		}
 		for !seq.tree.Empty() {
 			nextKey := seq.tree.LeftKey().(uint32)
 			if seq.nextSeq != nextKey {
@@ -56,8 +61,9 @@ func (seq *singleWriterBtreeSeq) PutSequenced(itemSeq uint32, val interface{}) e
 			}
 			nextVal := seq.tree.LeftValue()
 			seq.tree.Remove(nextKey)
-			seq.ch <- nextVal
-			seq.nextSeq++
+			if err := seq.enqueue(nextVal); err != nil {
+				return err
+			}
 		}
 	} else if seq.tree.Size() < seq.maxOutOfOrder {
 		seq.tree.Put(itemSeq, val)
@@ -65,6 +71,28 @@ func (seq *singleWriterBtreeSeq) PutSequenced(itemSeq uint32, val interface{}) e
 		return errors.Errorf("exceeded max out of order entries: %v", seq.maxOutOfOrder)
 	}
 	return nil
+}
+
+func (seq *singleWriterBtreeSeq) ensureClosed() {
+	if seq.chanClosed.CompareAndSwap(false, true) {
+		close(seq.ch)
+		seq.ticker.Stop()
+	}
+}
+
+func (seq *singleWriterBtreeSeq) enqueue(val interface{}) error {
+	for {
+		select {
+		case seq.ch <- val:
+			seq.nextSeq++
+			return nil
+		case <-seq.ticker.C:
+			if seq.closed.Get() {
+				seq.ensureClosed()
+				return ErrClosed
+			}
+		}
+	}
 }
 
 func (seq *singleWriterBtreeSeq) GetNext() interface{} {
@@ -94,10 +122,13 @@ func (seq *singleWriterBtreeSeq) GetNextWithDeadline(t time.Time) (interface{}, 
 	}
 }
 
+// CloseByProducer should be called to close the sequence if called from the Producer thread
+func (seq *singleWriterBtreeSeq) CloseByProducer() {
+	seq.closed.Set(true)
+	seq.ensureClosed()
+}
+
+// Close should be called if a non-producer threads wants to notify the producer that it should stop producing
 func (seq *singleWriterBtreeSeq) Close() {
-	if seq.closed.CompareAndSwap(false, true) {
-		time.AfterFunc(time.Second, func() {
-			close(seq.ch)
-		})
-	}
+	seq.closed.Set(true)
 }
