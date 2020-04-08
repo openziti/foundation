@@ -71,8 +71,7 @@ func (symbol *entitySymbol) Eval(tx *bbolt.Tx, rowId []byte) (FieldType, []byte)
 	if entityBucket == nil {
 		return TypeNil, nil
 	}
-	val := entityBucket.Get([]byte(symbol.key))
-	return GetTypeAndValue(val)
+	return entityBucket.getTyped(symbol.key)
 }
 
 func (symbol *entitySymbol) getLinkedType() ListStore {

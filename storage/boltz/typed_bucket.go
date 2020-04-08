@@ -239,7 +239,10 @@ func GetTypeAndValue(bytes []byte) (FieldType, []byte) {
 }
 
 func (bucket *TypedBucket) getTyped(name string) (FieldType, []byte) {
-	bytes := bucket.Get([]byte(name))
+	var bytes []byte
+	if bucket.Bucket != nil {
+		bytes = bucket.Get([]byte(name))
+	}
 	return GetTypeAndValue(bytes)
 }
 

@@ -66,6 +66,7 @@ type ListStore interface {
 	IsEntityPresent(tx *bbolt.Tx, id string) bool
 
 	GetSymbol(name string) EntitySymbol
+	MapSymbol(name string, wrapper SymbolMapper)
 	GrantSymbols(child ListStore)
 	inheritSymbol(symbol EntitySymbol)
 	AddIdSymbol(name string, nodeType ast.NodeType) EntitySymbol
