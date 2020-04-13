@@ -1,0 +1,7 @@
+version: ~> 1.0
+
+before_install:
+  - sudo apt-get install -y libsofthsm2 libsofthsm2-dev
+
+import:
+  - source: netfoundry/ziti-ci:ziti-go-defaults.yml@v1
