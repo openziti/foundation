@@ -17,12 +17,13 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/transport"
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/netfoundry/ziti-foundation/transport"
 	"io"
+	"time"
 )
 
 type classicListener struct {
@@ -78,70 +79,98 @@ func (listener *classicListener) Create() (Underlay, error) {
 }
 
 func (listener *classicListener) listener(incoming chan transport.Connection) {
-	log := pfxlog.ContextLogger(listener.endpoint.String())
-	log.Debug("started")
-	defer log.Debug("exited")
+	logger := pfxlog.ContextLogger(listener.endpoint.String())
+	logger.Debug("listener waiting for connections: started")
+	defer logger.Debug("listener stopped waiting for connections: exited")
 
 	for {
 		select {
 		case peer := <-incoming:
-			impl := newClassicImpl(peer, 2)
-			if connectionId, err := globalRegistry.newConnectionId(); err == nil {
-				impl.connectionId = connectionId
-				request, hello, err := listener.receiveHello(impl)
-				if err == nil {
-					for _, h := range listener.handlers {
-						log.Infof("hello: %v, peer: %v, handler: %v", hello, peer, h)
-						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
-							log.Errorf("connection handler error (%s)", err)
-							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
-								log.Errorf("error acknowledging hello (%s)", err)
-							}
-							break
-						}
-					}
-
-					impl.id = &identity.TokenId{Token: hello.IdToken}
-					impl.headers = hello.Headers
-
-					if err := listener.ackHello(impl, request, true, ""); err == nil {
-						listener.created <- impl
-					} else {
-						log.Errorf("error acknowledging hello (%s)", err)
-					}
-
-				} else {
-					log.Errorf("error receiving hello (%s)", err)
-				}
-			} else {
-				log.Errorf("error getting connection id (%s)", err)
-			}
-
+			go listener.onConnect(peer)
 		case <-listener.close:
 			return
 		}
 	}
 }
 
-func (listener *classicListener) receiveHello(impl *classicImpl) (*Message, *Hello, error) {
-	log := pfxlog.ContextLogger(impl.Label())
-	log.Debug("started")
-	defer log.Debug("exited")
+func (listener *classicListener) onConnect(peer transport.Connection) {
+	logger := pfxlog.ContextLogger(listener.endpoint.String())
+	impl := newClassicImpl(peer, 2)
+	if connectionId, err := globalRegistry.newConnectionId(); err == nil {
+		impl.connectionId = connectionId
+		request, hello, err := listener.receiveHello(impl)
+		if err == nil {
+			for _, h := range listener.handlers {
+				logger.Infof("hello: %v, peer: %v, handler: %v", hello, peer, h)
+				if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
+					logger.Errorf("connection handler error (%s)", err)
+					if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
+						logger.Errorf("error acknowledging hello (%s)", err)
+					}
+					break
+				}
+			}
 
-	request, err := impl.rxHello()
-	if err != nil {
-		if err == UnknownVersionError {
-			writeUnknownVersionResponse(impl.peer.Writer())
+			impl.id = &identity.TokenId{Token: hello.IdToken}
+			impl.headers = hello.Headers
+
+			if err := listener.ackHello(impl, request, true, ""); err == nil {
+				listener.created <- impl
+			} else {
+				logger.Errorf("error acknowledging hello (%s)", err)
+			}
+
+		} else {
+			logger.Errorf("error receiving hello (%s)", err)
 		}
-		_ = impl.Close()
-		return nil, nil, fmt.Errorf("receive error (%s)", err)
+	} else {
+		logger.Errorf("error getting connection id (%s)", err)
 	}
-	if request.ContentType != ContentTypeHelloType {
-		_ = impl.Close()
-		return nil, nil, fmt.Errorf("unexpected content type [%d]", request.ContentType)
+
+}
+
+type helloResponse struct {
+	message *Message
+	hello   *Hello
+	error   error
+}
+
+func (listener *classicListener) receiveHello(impl *classicImpl) (*Message, *Hello, error) {
+	responseChan := make(chan helloResponse)
+
+	go func() {
+		log := pfxlog.ContextLogger(impl.Label())
+		log.Debug("started")
+		defer log.Debug("exited")
+
+		request, err := impl.rxHello()
+		if err != nil {
+			if err == UnknownVersionError {
+				writeUnknownVersionResponse(impl.peer.Writer())
+			}
+			_ = impl.Close()
+			resp := helloResponse{error: fmt.Errorf("receive error (%s)", err)}
+			responseChan <- resp
+		}
+		if request.ContentType != ContentTypeHelloType {
+			_ = impl.Close()
+			resp := helloResponse{error: fmt.Errorf("unexpected content type [%d]", request.ContentType)}
+			responseChan <- resp
+		}
+		hello := UnmarshalHello(request)
+		responseChan <- helloResponse{message: request, hello: hello}
+	}()
+
+	select {
+	case helloResp := <-responseChan:
+
+		return helloResp.message, helloResp.hello, helloResp.error
+	case <-time.After(250 * time.Millisecond):
+		if err := impl.Close(); err != nil {
+			return nil, nil, fmt.Errorf("hello timed out, closing errored: %s", err)
+		}
+		return nil, nil, fmt.Errorf("hello timed out")
 	}
-	hello := UnmarshalHello(request)
-	return request, hello, nil
 }
 
 func (listener *classicListener) ackHello(impl *classicImpl, request *Message, success bool, message string) error {
