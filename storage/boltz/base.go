@@ -137,13 +137,16 @@ type PersistContext struct {
 }
 
 func (ctx *PersistContext) GetParentContext() *PersistContext {
-	return &PersistContext{
+	result := &PersistContext{
 		Id:           ctx.Id,
 		Store:        ctx.Store.GetParentStore(),
 		Bucket:       ctx.Store.GetParentStore().GetEntityBucket(ctx.Bucket.Tx(), []byte(ctx.Id)),
 		FieldChecker: ctx.FieldChecker,
 		IsCreate:     ctx.IsCreate,
 	}
+	// inherit error context
+	result.Bucket.ErrorHolderImpl = ctx.Bucket.ErrorHolderImpl
+	return result
 }
 
 func (ctx *PersistContext) WithFieldOverrides(overrides map[string]string) {

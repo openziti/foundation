@@ -84,7 +84,7 @@ func (f *MappedFieldChecker) IsUpdated(field string) bool {
 }
 
 func ErrBucket(err error) *TypedBucket {
-	return &TypedBucket{ErrorHolderImpl: errorz.ErrorHolderImpl{Err: err}}
+	return &TypedBucket{ErrorHolderImpl: &errorz.ErrorHolderImpl{Err: err}}
 }
 
 func newRootTypedBucket(bucket *bbolt.Bucket) *TypedBucket {
@@ -93,15 +93,16 @@ func newRootTypedBucket(bucket *bbolt.Bucket) *TypedBucket {
 
 func newTypedBucket(parent *TypedBucket, bucket *bbolt.Bucket) *TypedBucket {
 	return &TypedBucket{
-		Bucket: bucket,
-		parent: parent,
+		Bucket:          bucket,
+		parent:          parent,
+		ErrorHolderImpl: &errorz.ErrorHolderImpl{},
 	}
 }
 
 type TypedBucket struct {
 	*bbolt.Bucket
 	parent *TypedBucket
-	errorz.ErrorHolderImpl
+	*errorz.ErrorHolderImpl
 	extended bool
 }
 
