@@ -26,6 +26,10 @@ import (
 	"time"
 )
 
+const (
+	helloTimeout = 3 * time.Second
+)
+
 type classicListener struct {
 	identity *identity.TokenId
 	endpoint transport.Address
@@ -165,7 +169,7 @@ func (listener *classicListener) receiveHello(impl *classicImpl) (*Message, *Hel
 	case helloResp := <-responseChan:
 
 		return helloResp.message, helloResp.hello, helloResp.error
-	case <-time.After(250 * time.Millisecond):
+	case <-time.After(helloTimeout):
 		if err := impl.Close(); err != nil {
 			return nil, nil, fmt.Errorf("hello timed out, closing errored: %s", err)
 		}
