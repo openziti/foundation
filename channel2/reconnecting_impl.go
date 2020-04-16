@@ -17,20 +17,20 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/transport"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"sync"
+	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/netfoundry/ziti-foundation/util/concurrenz"
+	"io"
 )
 
 func (impl *reconnectingImpl) Rx() (*Message, error) {
 	log := pfxlog.ContextLogger(impl.Label())
 
 	connected := true
-	for {
+	for !impl.closed.Get() {
 		if connected {
 			m, err := impl.rx()
 			if err != nil {
@@ -49,6 +49,7 @@ func (impl *reconnectingImpl) Rx() (*Message, error) {
 			}
 		}
 	}
+	return nil, io.EOF
 }
 
 func (impl *reconnectingImpl) Tx(m *Message) error {
@@ -56,7 +57,7 @@ func (impl *reconnectingImpl) Tx(m *Message) error {
 
 	done := false
 	connected := true
-	for !done {
+	for !done && !impl.closed.Get() {
 		if connected {
 			if err := impl.tx(m); err != nil {
 				log.Errorf("tx error (%s). starting reconnection process", err)
@@ -103,18 +104,14 @@ func (impl *reconnectingImpl) Label() string {
 }
 
 func (impl *reconnectingImpl) Close() error {
-	impl.closeLock.Lock()
-	defer impl.closeLock.Unlock()
-
-	if !impl.closed {
-		impl.closed = true
+	if impl.closed.CompareAndSwap(false, true) {
 		return impl.peer.Close()
 	}
 	return nil
 }
 
 func (impl *reconnectingImpl) IsClosed() bool {
-	return impl.closed
+	return impl.closed.Get()
 }
 
 func newReconnectingImpl(peer transport.Connection, reconnectionHandler reconnectionHandler) *reconnectingImpl {
@@ -136,17 +133,10 @@ func (impl *reconnectingImpl) setProtocolVersion(version uint32) {
 }
 
 func (impl *reconnectingImpl) rx() (*Message, error) {
-	if impl.closed {
-		return nil, errors.New("underlay closed")
-	}
 	return impl.readF(impl.peer.Reader())
 }
 
 func (impl *reconnectingImpl) tx(m *Message) error {
-	if impl.closed {
-		return errors.New("underlay closed")
-	}
-
 	data, body, err := impl.marshalF(m)
 	if err != nil {
 		return err
@@ -186,8 +176,7 @@ type reconnectingImpl struct {
 	connectionId        string
 	headers             map[int32][]byte
 	reconnectionHandler reconnectionHandler
-	closeLock           sync.Mutex
-	closed              bool
+	closed              concurrenz.AtomicBoolean
 	readF               readFunction
 	marshalF            marshalFunction
 }

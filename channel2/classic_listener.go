@@ -17,7 +17,6 @@
 package channel2
 
 import (
-	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/identity/identity"
@@ -73,11 +72,11 @@ func (listener *classicListener) Close() error {
 
 func (listener *classicListener) Create() (Underlay, error) {
 	if listener.created == nil {
-		return nil, errors.New("closed")
+		return nil, ListenerClosedError
 	}
 	impl := <-listener.created
 	if impl == nil {
-		return nil, errors.New("closed")
+		return nil, ListenerClosedError
 	}
 	return impl, nil
 }

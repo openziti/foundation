@@ -17,8 +17,8 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
 	"crypto/x509"
+	"github.com/netfoundry/ziti-foundation/identity/identity"
 	"io"
 	"time"
 )
@@ -100,3 +100,11 @@ type Sender interface {
 
 const AnyContentType = -1
 const HelloSequence = -1
+
+var ListenerClosedError = listenerClosedError{}
+
+type listenerClosedError struct{}
+
+func (err listenerClosedError) Error() string {
+	return "closed"
+}
