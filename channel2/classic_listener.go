@@ -95,7 +95,7 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 				impl.connectionId = connectionId
 
 				if err := peer.SetReadTimeout(listener.connectOptions.ConnectTimeout()); err != nil {
-					log.Errorf("could not set read timeout (%s) for %s", err, peer.Detail().Address)
+					log.Errorf("could not set read timeout for [%s] (%v)", peer.Detail().Address, err)
 					_ = peer.Close()
 					return
 				}
@@ -104,16 +104,16 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 
 				if err == nil {
 					if err = peer.ClearReadTimeout(); err != nil {
-						log.Errorf("could not clear read timeout (%s) for %s", err, peer.Detail().Address)
+						log.Errorf("could not clear read timeout for [%s] (%v)", peer.Detail().Address, err)
 						_ = peer.Close()
 						return
 					}
 
 					for _, h := range listener.handlers {
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
-							log.Errorf("connection handler error (%s) for %s", err, peer.Detail().Address)
+							log.Errorf("connection handler error for [%s] (%v)", peer.Detail().Address, err)
 							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
-								log.Errorf("error acknowledging hello (%s) from %s", err, peer.Detail().Address)
+								log.Errorf("error acknowledging hello for [%s] (%v)", peer.Detail().Address, err)
 							}
 							break
 						}
@@ -125,16 +125,16 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 					if err := listener.ackHello(impl, request, true, ""); err == nil {
 						listener.created <- impl
 					} else {
-						log.Errorf("error acknowledging hello (%s) from %s", err, peer.Detail().Address)
+						log.Errorf("error acknowledging hello for [%s] (%v)", peer.Detail().Address, err)
 					}
 
 				} else {
 					_ = peer.Close()
-					log.Errorf("error receiving hello (%s) from %s", err, peer.Detail().Address)
+					log.Errorf("error receiving hello from [%s] (%v)", peer.Detail().Address, err)
 				}
 			} else {
 				_ = peer.Close()
-				log.Errorf("error getting connection id (%s) from %s", err, peer.Detail().Address)
+				log.Errorf("error getting connection id for [%s] (%v)", peer.Detail().Address, err)
 			}
 
 		case <-listener.close:
