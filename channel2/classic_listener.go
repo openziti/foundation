@@ -26,32 +26,37 @@ import (
 )
 
 type classicListener struct {
-	identity *identity.TokenId
-	endpoint transport.Address
-	socket   io.Closer
-	close    chan struct{}
-	handlers []ConnectionHandler
-	created  chan Underlay
+	identity       *identity.TokenId
+	endpoint       transport.Address
+	socket         io.Closer
+	close          chan struct{}
+	handlers       []ConnectionHandler
+	created        chan Underlay
+	connectOptions ConnectOptions
 }
 
-func NewClassicListener(identity *identity.TokenId, endpoint transport.Address) UnderlayListener {
+func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions) UnderlayListener {
 	return &classicListener{
-		identity: identity,
-		endpoint: endpoint,
-		close:    make(chan struct{}),
-		created:  make(chan Underlay),
+		identity:       identity,
+		endpoint:       endpoint,
+		close:          make(chan struct{}),
+		created:        make(chan Underlay),
+		connectOptions: connectOptions,
 	}
 }
 
 func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
-	incoming := make(chan transport.Connection, 1)
+	incoming := make(chan transport.Connection, listener.connectOptions.MaxQueuedConnects)
 	socket, err := listener.endpoint.Listen("classic", listener.identity, incoming)
 	if err != nil {
 		return err
 	}
 	listener.socket = socket
 	listener.handlers = handlers
-	go listener.listener(incoming)
+
+	for i := 0; i < listener.connectOptions.MaxOutstandingConnects; i++ {
+		go listener.listener(incoming)
+	}
 
 	return nil
 }
@@ -88,13 +93,27 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 			impl := newClassicImpl(peer, 2)
 			if connectionId, err := globalRegistry.newConnectionId(); err == nil {
 				impl.connectionId = connectionId
+
+				if err := peer.SetReadTimeout(listener.connectOptions.ConnectTimeout()); err != nil {
+					log.Errorf("could not set read timeout (%s) for %s", err, peer.Detail().Address)
+					_ = peer.Close()
+					return
+				}
+
 				request, hello, err := listener.receiveHello(impl)
+
 				if err == nil {
+					if err = peer.ClearReadTimeout(); err != nil {
+						log.Errorf("could not clear read timeout (%s) for %s", err, peer.Detail().Address)
+						_ = peer.Close()
+						return
+					}
+
 					for _, h := range listener.handlers {
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
-							log.Errorf("connection handler error (%s)", err)
+							log.Errorf("connection handler error (%s) for %s", err, peer.Detail().Address)
 							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
-								log.Errorf("error acknowledging hello (%s)", err)
+								log.Errorf("error acknowledging hello (%s) from %s", err, peer.Detail().Address)
 							}
 							break
 						}
@@ -106,14 +125,16 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 					if err := listener.ackHello(impl, request, true, ""); err == nil {
 						listener.created <- impl
 					} else {
-						log.Errorf("error acknowledging hello (%s)", err)
+						log.Errorf("error acknowledging hello (%s) from %s", err, peer.Detail().Address)
 					}
 
 				} else {
-					log.Errorf("error receiving hello (%s)", err)
+					_ = peer.Close()
+					log.Errorf("error receiving hello (%s) from %s", err, peer.Detail().Address)
 				}
 			} else {
-				log.Errorf("error getting connection id (%s)", err)
+				_ = peer.Close()
+				log.Errorf("error getting connection id (%s) from %s", err, peer.Detail().Address)
 			}
 
 		case <-listener.close:

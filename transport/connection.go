@@ -55,6 +55,8 @@ type Connection interface {
 	Writer() io.Writer
 	Conn() net.Conn
 	SetReadTimeout(t time.Duration) error
+	ClearReadTimeout() error
 	SetWriteTimeout(t time.Duration) error
+	ClearWriteTimeout() error
 	io.Closer
 }

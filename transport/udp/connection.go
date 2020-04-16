@@ -86,6 +86,20 @@ func (c *connection) SetWriteTimeout(t time.Duration) error {
 	return c.socket.SetWriteDeadline(time.Now().Add(t))
 }
 
+// ClearReadTimeout clears the read time for all current and future reads
+//
+func (self *connection) ClearReadTimeout() error {
+	var zero time.Time
+	return self.socket.SetReadDeadline(zero)
+}
+
+// ClearWriteTimeout clears the write timeout for all current and future writes
+//
+func (self *connection) ClearWriteTimeout() error {
+	var zero time.Time
+	return self.socket.SetWriteDeadline(zero)
+}
+
 func (c *connection) Close() error {
 	return c.socket.Close()
 }
