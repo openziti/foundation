@@ -26,7 +26,6 @@ const (
 	defaultOutstandingConnects = 16
 	defaultQueuedConnects      = 1
 	defaultConnectTimeoutMs    = 1000
-	defaultConnectTimeout      = time.Duration(defaultConnectTimeoutMs) * time.Millisecond
 
 	minQueuedConnects      = 1
 	minOutstandingConnects = 1
