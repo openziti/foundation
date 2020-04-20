@@ -17,9 +17,9 @@
 package tls
 
 import (
-	"github.com/netfoundry/ziti-foundation/transport"
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/netfoundry/ziti-foundation/transport"
 	"io"
 	"net"
 	"time"
@@ -56,6 +56,16 @@ func (self *Connection) SetReadTimeout(t time.Duration) error {
 
 func (self *Connection) SetWriteTimeout(t time.Duration) error {
 	return self.socket.SetWriteDeadline(time.Now().Add(t))
+}
+
+func (self *Connection) ClearReadTimeout() error {
+	var zero time.Time
+	return self.socket.SetReadDeadline(zero)
+}
+
+func (self *Connection) ClearWriteTimeout() error {
+	var zero time.Time
+	return self.socket.SetWriteDeadline(zero)
 }
 
 func (self *Connection) Close() error {

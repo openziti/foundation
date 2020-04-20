@@ -17,11 +17,11 @@
 package underlay
 
 import (
+	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"github.com/netfoundry/ziti-foundation/channel2"
 	"github.com/netfoundry/ziti-foundation/identity/dotziti"
 	"github.com/netfoundry/ziti-foundation/transport"
-	"fmt"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/spf13/cobra"
 	"time"
 )
@@ -60,7 +60,7 @@ func runListener(_ *cobra.Command, _ []string) {
 	var listener channel2.UnderlayListener
 	switch listenerUnderlay {
 	case "classic":
-		listener = channel2.NewClassicListener(id, endpoint)
+		listener = channel2.NewClassicListener(id, endpoint, channel2.DefaultConnectOptions())
 	case "reconnecting":
 		panic("not implemented")
 	default:

@@ -17,10 +17,10 @@
 package quic
 
 import (
-	"github.com/netfoundry/ziti-foundation/transport"
 	"crypto/x509"
 	"fmt"
 	"github.com/lucas-clemente/quic-go"
+	"github.com/netfoundry/ziti-foundation/transport"
 	"io"
 	"net"
 	"time"
@@ -70,6 +70,20 @@ func (self *Connection) SetReadTimeout(t time.Duration) error {
 //
 func (self *Connection) SetWriteTimeout(t time.Duration) error {
 	return self.stream.SetWriteDeadline(time.Now().Add(t))
+}
+
+// ClearReadTimeout clears the read time for all current and future reads
+//
+func (self *Connection) ClearReadTimeout() error {
+	var zero time.Time
+	return self.stream.SetReadDeadline(zero)
+}
+
+// ClearWriteTimeout clears the write timeout for all current and future writes
+//
+func (self *Connection) ClearWriteTimeout() error {
+	var zero time.Time
+	return self.stream.SetWriteDeadline(zero)
 }
 
 // Close method on the transport.Connection interface.
