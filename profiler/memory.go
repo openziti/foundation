@@ -17,11 +17,11 @@
 package profiler
 
 import (
-	"github.com/netfoundry/ziti-foundation/util/info"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/util/info"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -42,9 +42,10 @@ type Monitor struct {
 }
 
 type Memory struct {
-	path     string
-	interval time.Duration
-	ctr      int
+	path      string
+	interval  time.Duration
+	ctr       int
+	shutdownC chan struct{}
 }
 
 // NewGoroutineMonitor can be used to track down goroutine leaks
@@ -90,19 +91,31 @@ func NewGoroutineMonitor(interval time.Duration) {
 }
 
 func NewMemory(path string, interval time.Duration) *Memory {
+	return NewMemoryWithShutdown(path, interval, nil)
+}
+
+func NewMemoryWithShutdown(path string, interval time.Duration, shutdownC chan struct{}) *Memory {
 	// go NewGoroutineMonitor(interval) // disable for now
-	return &Memory{path: path, interval: interval, ctr: 0}
+	return &Memory{path: path, interval: interval, ctr: 0, shutdownC: shutdownC}
 }
 
 func (memory *Memory) Run() {
 	log := pfxlog.Logger()
 	log.Infof("memory profiling to [%s]", memory.path)
+	timer := time.NewTimer(memory.interval)
+	defer timer.Stop()
 	for {
 		memory.stats()
 		if err := memory.captureProfile(); err != nil {
 			log.Errorf("error capturing memory profile (%s)", err)
 		}
-		time.Sleep(memory.interval)
+		select {
+		case _, ok := <-memory.shutdownC:
+			if !ok {
+				return
+			}
+		case <-timer.C:
+		}
 	}
 }
 

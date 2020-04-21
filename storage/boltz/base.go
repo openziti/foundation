@@ -19,6 +19,7 @@ package boltz
 import (
 	"github.com/kataras/go-events"
 	"github.com/netfoundry/ziti-foundation/storage/ast"
+	"github.com/netfoundry/ziti-foundation/validation"
 	"go.etcd.io/bbolt"
 	"io"
 	"time"
@@ -65,6 +66,7 @@ type ListStore interface {
 	IsEntityPresent(tx *bbolt.Tx, id string) bool
 
 	GetSymbol(name string) EntitySymbol
+	MapSymbol(name string, wrapper SymbolMapper)
 	GrantSymbols(child ListStore)
 	inheritSymbol(symbol EntitySymbol)
 	AddIdSymbol(name string, nodeType ast.NodeType) EntitySymbol
@@ -135,13 +137,16 @@ type PersistContext struct {
 }
 
 func (ctx *PersistContext) GetParentContext() *PersistContext {
-	return &PersistContext{
+	result := &PersistContext{
 		Id:           ctx.Id,
 		Store:        ctx.Store.GetParentStore(),
 		Bucket:       ctx.Store.GetParentStore().GetEntityBucket(ctx.Bucket.Tx(), []byte(ctx.Id)),
 		FieldChecker: ctx.FieldChecker,
 		IsCreate:     ctx.IsCreate,
 	}
+	// inherit error context
+	result.Bucket.ErrorHolderImpl = ctx.Bucket.ErrorHolderImpl
+	return result
 }
 
 func (ctx *PersistContext) WithFieldOverrides(overrides map[string]string) {
@@ -152,6 +157,16 @@ func (ctx *PersistContext) WithFieldOverrides(overrides map[string]string) {
 
 func (ctx *PersistContext) GetAndSetString(field string, value string) (*string, bool) {
 	return ctx.Bucket.GetAndSetString(field, value, ctx.FieldChecker)
+}
+
+func (ctx *PersistContext) SetRequiredString(field string, value string) {
+	if ctx.ProceedWithSet(field) {
+		if value == "" {
+			ctx.Bucket.SetError(validation.NewFieldError(field+" is required", field, value))
+			return
+		}
+		ctx.Bucket.setTyped(TypeString, field, []byte(value))
+	}
 }
 
 func (ctx *PersistContext) SetString(field string, value string) {
@@ -174,6 +189,10 @@ func (ctx *PersistContext) SetInt32(field string, value int32) {
 	ctx.Bucket.SetInt32(field, value, ctx.FieldChecker)
 }
 
+func (ctx *PersistContext) SetInt64(field string, value int64) {
+	ctx.Bucket.SetInt64(field, value, ctx.FieldChecker)
+}
+
 func (ctx *PersistContext) SetMap(field string, value map[string]interface{}) {
 	ctx.Bucket.PutMap(field, value, ctx.FieldChecker)
 }
@@ -187,10 +206,14 @@ func (ctx *PersistContext) GetAndSetStringList(field string, value []string) ([]
 }
 
 func (ctx *PersistContext) SetLinkedIds(field string, value []string) {
-	if ctx.Bucket.Err == nil && (ctx.FieldChecker == nil || ctx.FieldChecker.IsUpdated(field)) {
+	if ctx.ProceedWithSet(field) {
 		serviceLinks := ctx.Store.GetLinkCollection(field)
 		ctx.Bucket.SetError(serviceLinks.SetLinks(ctx.Bucket.Tx(), ctx.Id, value))
 	}
+}
+
+func (ctx *PersistContext) ProceedWithSet(field string) bool {
+	return ctx.Bucket.ProceedWithSet(field, ctx.FieldChecker)
 }
 
 type Entity interface {

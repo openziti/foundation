@@ -25,9 +25,15 @@ import (
 )
 
 type CPU struct {
-	path    string
+	path      string
+	shutdownC chan struct{}
 }
+
 func NewCPU(path string) (*CPU, error) {
+	return NewCPUWithShutdown(path, nil)
+}
+
+func NewCPUWithShutdown(path string, shutdownC chan struct{}) (*CPU, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
@@ -36,13 +42,18 @@ func NewCPU(path string) (*CPU, error) {
 		return nil, err
 	}
 	pfxlog.Logger().Infof("cpu profiling to [%s]", path)
-	return &CPU{path: path}, nil
+	return &CPU{path: path, shutdownC: shutdownC}, nil
 }
 
 func (cpu *CPU) Run() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGUSR2)
-	<-signalChan
+
+	select {
+	case <-signalChan:
+	case <-cpu.shutdownC:
+	}
+
 	pprof.StopCPUProfile()
 	pfxlog.Logger().Info("stopped profiling cpu")
 }

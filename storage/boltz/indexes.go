@@ -18,9 +18,8 @@ package boltz
 
 import (
 	"bytes"
-	"github.com/netfoundry/ziti-foundation/storage/ast"
-
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/storage/ast"
 	"github.com/netfoundry/ziti-foundation/util/errorz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -464,7 +463,7 @@ func (index *fkIndex) getIndexBucket(tx *bbolt.Tx, fkId []byte) *TypedBucket {
 	fkStore := index.fkSymbol.GetStore()
 	entityBucket := fkStore.GetEntityBucket(tx, fkId)
 	if entityBucket == nil {
-		return ErrBucket(errors.Errorf("no entity of type %v with id %v", fkStore.GetEntityType(), string(fkId)))
+		return ErrBucket(NewNotFoundError(fkStore.GetSingularEntityType(), "id", string(fkId)))
 	}
 	return entityBucket.GetOrCreatePath(index.fkSymbol.GetPath()...)
 }

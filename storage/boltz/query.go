@@ -50,6 +50,30 @@ type EntitySymbol interface {
 	Eval(tx *bbolt.Tx, rowId []byte) (FieldType, []byte)
 }
 
+type SymbolMapper interface {
+	Map(source EntitySymbol, fieldType FieldType, value []byte) (FieldType, []byte)
+}
+
+type symbolMapWrapper struct {
+	EntitySymbol
+	SymbolMapper
+}
+
+func (wrapper *symbolMapWrapper) Eval(tx *bbolt.Tx, rowId []byte) (FieldType, []byte) {
+	fieldType, value := wrapper.EntitySymbol.Eval(tx, rowId)
+	return wrapper.Map(wrapper.EntitySymbol, fieldType, value)
+}
+
+type NotNilStringMapper struct {
+}
+
+func (n NotNilStringMapper) Map(_ EntitySymbol, fieldType FieldType, value []byte) (FieldType, []byte) {
+	if fieldType == TypeNil {
+		return TypeString, []byte("")
+	}
+	return fieldType, value
+}
+
 type MapContext struct {
 	fieldType FieldType
 	val       []byte

@@ -17,10 +17,9 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/identity/identity"
 )
 
 type memoryListener struct {
@@ -52,7 +51,7 @@ func (listener *memoryListener) Close() error {
 func (listener *memoryListener) Create() (Underlay, error) {
 	impl := <-listener.created
 	if impl == nil {
-		return nil, errors.New("closed")
+		return nil, ListenerClosedError
 	}
 	return impl, nil
 }

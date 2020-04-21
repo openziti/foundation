@@ -205,7 +205,7 @@ func (symbol *LinkedSetSymbol) AddLinkS(tx *bbolt.Tx, id string, link string) er
 func (symbol *LinkedSetSymbol) AddLink(tx *bbolt.Tx, id []byte, link []byte) error {
 	entityBucket := symbol.GetStore().GetEntityBucket(tx, id)
 	if entityBucket == nil {
-		return errors.Errorf("can't link to unknown %v with id %v", symbol.GetStore().GetEntityType(), string(id))
+		return NewNotFoundError(symbol.GetStore().GetSingularEntityType(), "id", string(id))
 	}
 	fieldBucket := entityBucket.GetOrCreatePath(symbol.GetPath()...)
 	return fieldBucket.SetListEntry(TypeString, link).Err

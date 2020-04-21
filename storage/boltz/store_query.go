@@ -185,6 +185,15 @@ func (store *BaseStore) AddIdSymbol(name string, nodeType ast.NodeType) EntitySy
 	})
 }
 
+func (store *BaseStore) MapSymbol(name string, mapper SymbolMapper) {
+	if symbol, found := store.symbols[name]; found {
+		store.symbols[name] = &symbolMapWrapper{
+			EntitySymbol: symbol,
+			SymbolMapper: mapper,
+		}
+	}
+}
+
 func (store *BaseStore) AddSymbol(name string, nodeType ast.NodeType, prefix ...string) EntitySymbol {
 	return store.AddSymbolWithKey(name, nodeType, name, prefix...)
 }
