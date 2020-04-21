@@ -29,8 +29,8 @@ type CPU struct {
 	shutdownC chan struct{}
 }
 
-func NewCPU(path string, shutdownC chan struct{}) (*CPU, error) {
-	return NewCPU(path, nil)
+func NewCPU(path string) (*CPU, error) {
+	return NewCPUWithShutdown(path, nil)
 }
 
 func NewCPUWithShutdown(path string, shutdownC chan struct{}) (*CPU, error) {
