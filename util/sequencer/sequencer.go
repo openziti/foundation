@@ -28,6 +28,7 @@ type Sequencer interface {
 	GetNext() interface{}
 	GetNextWithDeadline(t time.Time) (interface{}, error)
 	Close()
+	CloseByProducer()
 }
 
 var ErrClosed = errors.New("sequencer closed")
