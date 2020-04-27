@@ -29,6 +29,10 @@ const (
 	HandlerTypeInfluxDB HandlerType = "influxdb"
 )
 
+const (
+	HandlerTypeJSONFile HandlerType = "jsonfile"
+)
+
 // Handler represents a sink for metric events
 type Handler interface {
 	// AcceptMetrics is called when new metrics become available
