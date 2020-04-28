@@ -44,10 +44,11 @@ func (s *scanner) setPaging(query ast.Query) {
 
 type uniqueIndexScanner struct {
 	scanner
-	store   ListStore
-	forward bool
-	offset  int64
-	count   int64
+	store     ListStore
+	forward   bool
+	offset    int64
+	count     int64
+	collected int64
 
 	cursor    ast.SetCursor
 	rowCursor *rowCursorImpl
@@ -94,11 +95,12 @@ func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.S
 		if scanner.offset < scanner.targetOffset {
 			scanner.offset++
 		} else {
-			if scanner.count < scanner.targetLimit {
+			if scanner.collected < scanner.targetLimit {
 				result = append(result, string(id))
+				scanner.collected++
 			}
-			scanner.count++
 		}
+		scanner.count++
 		scanner.Next()
 	}
 	return result, scanner.count, nil
