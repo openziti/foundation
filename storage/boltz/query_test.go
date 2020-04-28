@@ -347,7 +347,7 @@ func (test *boltQueryTests) testBusinessEquals(*testing.T) {
 	test.Equal(60, len(people))
 }
 
-func (test *boltQueryTests) testSortPage(*testing.T) {
+func (test *boltQueryTests) testSortPage(t *testing.T) {
 	ids, count := test.query(`firstName in ["Alice", "Bob"] SORT BY lastName desc`)
 	test.Equal(20, len(ids))
 	test.Equal(int64(20), count)
@@ -392,6 +392,12 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal("Smith", people[9].lastName)
 	test.Equal("Bob", people[9].firstName)
 
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
+	assertOrderById(t, test.toPersonList(ids), nil)
+	prevLastId := ids[9]
+
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 10 limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
@@ -420,6 +426,12 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal("Cecilia", people[8].firstName)
 	test.Equal("Miller", people[9].lastName)
 	test.Equal("David", people[9].firstName)
+
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] skip 10 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
+	assertOrderById(t, test.toPersonList(ids), &prevLastId)
+	prevLastId = ids[9]
 
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 20 limit 10`)
 	test.Equal(10, len(ids))
@@ -450,6 +462,12 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal("Garcia", people[9].lastName)
 	test.Equal("Bob", people[9].firstName)
 
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] skip 20 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
+	assertOrderById(t, test.toPersonList(ids), &prevLastId)
+	prevLastId = ids[9]
+
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 30 limit 10`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(40), count)
@@ -479,12 +497,34 @@ func (test *boltQueryTests) testSortPage(*testing.T) {
 	test.Equal("Brown", people[9].lastName)
 	test.Equal("David", people[9].firstName)
 
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] skip 30 limit 10`)
+	test.Equal(10, len(ids))
+	test.Equal(int64(40), count)
+	assertOrderById(t, test.toPersonList(ids), &prevLastId)
+	prevLastId = ids[9]
+
 	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] SORT BY lastName desc, firstName skip 40 limit 10`)
 	test.Equal(0, len(ids))
 	test.Equal(int64(40), count)
 
 	people = test.toPersonList(ids)
 	test.Equal(0, len(people))
+
+	ids, count = test.query(`firstName in ["Alice", "Bob", "Cecilia", "David"] skip 40 limit 10`)
+	test.Equal(0, len(ids))
+	test.Equal(int64(40), count)
+}
+
+func assertOrderById(t *testing.T, people []*testPerson, prevId *string) {
+	for idx, person := range people {
+		if idx == 0 {
+			if prevId != nil {
+				require.True(t, *prevId < person.id)
+			}
+			continue
+		}
+		require.True(t, people[idx-1].id < person.id)
+	}
 }
 
 func (test *boltQueryTests) testMapQueries(*testing.T) {
