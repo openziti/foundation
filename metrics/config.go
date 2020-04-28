@@ -29,9 +29,31 @@ type Config struct {
 func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 	cfg := &Config{handlers: make(map[Handler]Handler)}
 
+	pfxlog.Logger().Infof("Loading metrics configs")
+
 	for k, v := range srcmap {
 		if name, ok := k.(string); ok {
 			switch name {
+
+			// testing file output
+			case string(HandlerTypeJSONFile):
+
+				if submap, ok := v.(map[interface{}]interface{}); ok {
+					if jsonfileConfig, err := LoadJSONFileConfig(submap); err == nil {
+						if jsonFileHandler, err := NewJsonFileMetricsHandler(jsonfileConfig); err == nil {
+							cfg.handlers[jsonFileHandler] = jsonFileHandler
+							pfxlog.Logger().Infof("added JSON File handler")
+						} else {
+							return nil, fmt.Errorf("error creating JSON File handler (%s)", err)
+						}
+					}else {
+						pfxlog.Logger().Warnf("Error loading the JSON File handler: (%s)", err)
+					}
+				} else {
+					return nil, errors.New("invalid config for JSON File Handler ")
+				}
+
+
 			case string(HandlerTypeInfluxDB):
 				if submap, ok := v.(map[interface{}]interface{}); ok {
 					if influxCfg, err := LoadInfluxConfig(submap); err == nil {
