@@ -31,7 +31,7 @@ const (
 //
 func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Duration) {
 	log := pfxlog.ContextLogger(ch.Label())
-	log.Info("started")
+	log.Debug("started")
 	defer log.Warn("exited")
 	defer func() {
 		histogram.Dispose()
