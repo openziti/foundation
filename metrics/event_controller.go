@@ -94,8 +94,8 @@ func (eventController *eventControllerImpl) Shutdown() {
 
 func (eventController *eventControllerImpl) run() {
 	log := pfxlog.Logger()
-	log.Info("started")
-	defer log.Errorf("exited")
+	log.Debug("started")
+	defer log.Warn("exited")
 
 	running := true
 	for running {
