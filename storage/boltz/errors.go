@@ -22,24 +22,24 @@ import (
 )
 
 func NewNotFoundError(entityType, field, id string) error {
-	return &recordNotFoundError{
+	return &RecordNotFoundError{
 		EntityType: entityType,
 		Field:      field,
 		Id:         id,
 	}
 }
 
-type recordNotFoundError struct {
+type RecordNotFoundError struct {
 	EntityType string
 	Field      string
 	Id         string
 }
 
-func (err *recordNotFoundError) Error() string {
+func (err *RecordNotFoundError) Error() string {
 	return fmt.Sprintf("%v with %v %v not found", err.EntityType, err.Field, err.Id)
 }
 
-var testError = &recordNotFoundError{}
+var testError = &RecordNotFoundError{}
 
 func IsErrNotFoundErr(err error) bool {
 	return errors.As(err, &testError)
