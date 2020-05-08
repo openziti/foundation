@@ -103,7 +103,7 @@ func (header *MessageHeader) PutUint64Header(key int32, value uint64) {
 
 func (header *MessageHeader) GetUint64Header(key int32) (uint64, bool) {
 	encoded, ok := header.Headers[key]
-	if !ok {
+	if !ok || len(encoded) != 8 {
 		return 0, ok
 	}
 	result := binary.LittleEndian.Uint64(encoded)
@@ -118,10 +118,25 @@ func (header *MessageHeader) PutUint32Header(key int32, value uint32) {
 
 func (header *MessageHeader) GetUint32Header(key int32) (uint32, bool) {
 	encoded, ok := header.Headers[key]
-	if !ok {
-		return 0, ok
+	if !ok || len(encoded) != 4 {
+		return 0, false
 	}
 	result := binary.LittleEndian.Uint32(encoded)
+	return result, true
+}
+
+func (header *MessageHeader) PutUint16Header(key int32, value uint16) {
+	encoded := make([]byte, 2)
+	binary.LittleEndian.PutUint16(encoded, value)
+	header.Headers[key] = encoded
+}
+
+func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
+	encoded, ok := header.Headers[key]
+	if !ok || len(encoded) != 2 {
+		return 0, false
+	}
+	result := binary.LittleEndian.Uint16(encoded)
 	return result, true
 }
 
@@ -149,7 +164,7 @@ func (header *MessageHeader) GetStringHeader(key int32) (string, bool) {
 
 type Message struct {
 	MessageHeader
-	Body        []byte
+	Body []byte
 }
 
 func NewMessage(contentType int32, body []byte) *Message {
@@ -159,7 +174,7 @@ func NewMessage(contentType int32, body []byte) *Message {
 			sequence:    -1,
 			Headers:     make(map[int32][]byte),
 		},
-		Body:        body,
+		Body: body,
 	}
 }
 
