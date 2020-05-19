@@ -9,15 +9,7 @@ enum ContentType {
     MetricsType = 1007; // see ziti-fabric/pb/ctrl_pb/ctrl.proto
 }
 
-enum MetricsSourceType {
-    Ingress = 0;
-    Egress = 1;
-    Internal = 2; // Is there a better word here? Router, Intermediary, NonEdge?
-    Edge = 3;
-}
-
 message MetricsMessage {
-    MetricsSourceType sourceType = 1;
     string sourceId = 2;
     google.protobuf.Timestamp timestamp = 3;
     map<string, string> tags = 4;

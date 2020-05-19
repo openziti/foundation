@@ -1,20 +1,19 @@
 package metrics
 
 import (
-	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
+	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
 	"log"
 	"os"
-	"encoding/json"
 	"strings"
 )
 
-
 type jsonfileReporter struct {
-	path         string
-	maxsize   int
+	path        string
+	maxsize     int
 	metricsChan chan *metrics_pb.MetricsMessage
 }
 
@@ -25,15 +24,14 @@ func (reporter *jsonfileReporter) AcceptMetrics(message *metrics_pb.MetricsMessa
 // Message handler that write node and link metrics to a file in json format
 func NewJsonFileMetricsHandler(cfg *jsonfileConfig) (Handler, error) {
 	rep := &jsonfileReporter{
-		path:         cfg.path,
-		maxsize:    cfg.maxsizemb,
+		path:        cfg.path,
+		maxsize:     cfg.maxsizemb,
 		metricsChan: make(chan *metrics_pb.MetricsMessage, 10),
 	}
 
 	go rep.run()
 	return rep, nil
 }
-
 
 func (reporter *jsonfileReporter) run() {
 	log := pfxlog.Logger()
@@ -64,7 +62,6 @@ func (reporter *jsonfileReporter) send(msg *metrics_pb.MetricsMessage) error {
 	event["tags"] = tags
 	event["sourceId"] = msg.SourceId
 	event["timestamp"] = msg.Timestamp.Seconds * 1000
-	event["sourceType"] = metrics_pb.MetricsSourceType_name[int32(msg.SourceType)]
 
 	// ints
 	for name, val := range msg.IntValues {
@@ -152,7 +149,7 @@ func (reporter *jsonfileReporter) send(msg *metrics_pb.MetricsMessage) error {
 	}
 	// get the size
 	size := stat.Size()
-	if size >= int64(reporter.maxsize * 1024 * 1024) {
+	if size >= int64(reporter.maxsize*1024*1024) {
 		err := os.Truncate(reporter.path, 0)
 		if err != nil {
 			log.Println(err)
@@ -173,13 +170,12 @@ func (reporter *jsonfileReporter) send(msg *metrics_pb.MetricsMessage) error {
 		linkEvent.(map[string]interface{})["linkId"] = linkName
 		linkEvent.(map[string]interface{})["sourceId"] = msg.SourceId
 		linkEvent.(map[string]interface{})["timestamp"] = msg.Timestamp.Seconds * 1000
-		linkEvent.(map[string]interface{})["sourceType"] = metrics_pb.MetricsSourceType_name[int32(msg.SourceType)]
 		linkEvent.(map[string]interface{})["tags"] = tags
 
 		// json format
 		out, err := json.Marshal(linkEvent)
 		if err != nil {
-			panic (err)
+			panic(err)
 		}
 
 		// log the link-level event
@@ -194,13 +190,12 @@ func (reporter *jsonfileReporter) send(msg *metrics_pb.MetricsMessage) error {
 	return err
 }
 
-
-func ProcessLinkEvent(links map[string]interface{}, name string, val interface{}) map[string]interface{}  {
+func ProcessLinkEvent(links map[string]interface{}, name string, val interface{}) map[string]interface{} {
 	parts := strings.Split(name, ".")
 	linkName := string(parts[1])
 
 	//rename the metric key without the id in it
-	metricName := strings.Replace(name, linkName+".","", 1)
+	metricName := strings.Replace(name, linkName+".", "", 1)
 
 	// see if the link event exists, if not create it
 	_, exists := links[linkName]
@@ -216,9 +211,8 @@ func ProcessLinkEvent(links map[string]interface{}, name string, val interface{}
 
 type jsonfileConfig struct {
 	path      string
-	maxsizemb   int
+	maxsizemb int
 }
-
 
 func LoadJSONFileConfig(src map[interface{}]interface{}) (*jsonfileConfig, error) {
 	cfg := &jsonfileConfig{}
@@ -231,7 +225,7 @@ func LoadJSONFileConfig(src map[interface{}]interface{}) (*jsonfileConfig, error
 			f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
 			if err != nil {
 				return nil, fmt.Errorf("cannot write to log file path: %s", path)
-			}else {
+			} else {
 				f.Close()
 			}
 		} else {
@@ -254,4 +248,3 @@ func LoadJSONFileConfig(src map[interface{}]interface{}) (*jsonfileConfig, error
 
 	return cfg, nil
 }
-
