@@ -43,9 +43,8 @@ type Registry interface {
 }
 
 // NewRegistry create a new metrics registry instance
-func NewRegistry(sourceType metrics_pb.MetricsSourceType, sourceId string, tags map[string]string, reportInterval time.Duration, cfg *Config) Registry {
+func NewRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, cfg *Config) Registry {
 	registry := &registryImpl{
-		sourceType:         sourceType,
 		sourceId:           sourceId,
 		tags:               tags,
 		metricMap:          cmap.New(),
@@ -64,7 +63,6 @@ type bucketEvent struct {
 }
 
 type registryImpl struct {
-	sourceType         metrics_pb.MetricsSourceType
 	sourceId           string
 	tags               map[string]string
 	metricMap          cmap.ConcurrentMap
@@ -201,7 +199,7 @@ func (registry *registryImpl) reportInterval(counter *intervalCounterImpl, inter
 }
 
 func (registry *registryImpl) report() {
-	builder := newMessageBuilder(registry.sourceType, registry.sourceId, registry.tags)
+	builder := newMessageBuilder(registry.sourceId, registry.tags)
 
 	registry.Each(func(name string, i Metric) {
 		switch metric := i.(type) {

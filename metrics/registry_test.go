@@ -16,7 +16,6 @@ type testData struct {
 func setUpTest(t *testing.T) *testData {
 	td := &testData{
 		registry: &registryImpl{
-			sourceType:         metrics_pb.MetricsSourceType_Internal,
 			sourceId:           t.Name(),
 			metricMap:          cmap.New(),
 			intervalBucketChan: make(chan *bucketEvent, 1),
@@ -24,6 +23,7 @@ func setUpTest(t *testing.T) *testData {
 	td.registry.eventController = td
 	return td
 }
+
 func (t *testData) AddHandler(handler Handler) {
 	panic("implement me")
 }
@@ -46,7 +46,6 @@ func TestEmpty(t *testing.T) {
 	assert.Len(t, td.events, 1)
 	ev := td.events[0]
 
-	assert.Equal(t, ev.SourceType, metrics_pb.MetricsSourceType_Internal)
 	assert.Nil(t, ev.FloatValues)
 	assert.Nil(t, ev.Histograms)
 	assert.Nil(t, ev.Meters)
@@ -54,7 +53,6 @@ func TestEmpty(t *testing.T) {
 }
 
 func Test_Histogram(t *testing.T) {
-
 	td := setUpTest(t)
 
 	hist := td.registry.Histogram("test.hist")
@@ -64,7 +62,6 @@ func Test_Histogram(t *testing.T) {
 	assert.Len(t, td.events, 1)
 
 	ev := td.events[0]
-	assert.Equal(t, metrics_pb.MetricsSourceType_Internal, ev.SourceType, ev.SourceType)
 	assert.Nil(t, ev.FloatValues)
 	assert.Nil(t, ev.Meters)
 	assert.Nil(t, ev.IntValues)
@@ -78,7 +75,6 @@ func Test_Histogram(t *testing.T) {
 }
 
 func Test_Timer(t *testing.T) {
-
 	td := setUpTest(t)
 
 	timer := td.registry.Timer("test.timer")
@@ -93,7 +89,6 @@ func Test_Timer(t *testing.T) {
 	assert.Len(t, td.events, 1)
 
 	ev := td.events[0]
-	assert.Equal(t, metrics_pb.MetricsSourceType_Internal, ev.SourceType, ev.SourceType)
 	assert.Nil(t, ev.FloatValues)
 	assert.Nil(t, ev.Meters)
 	assert.Nil(t, ev.IntValues)

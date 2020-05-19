@@ -26,14 +26,13 @@ import (
 
 type messageBuilder metrics_pb.MetricsMessage
 
-func newMessageBuilder(sourceType metrics_pb.MetricsSourceType, sourceId string, tags map[string]string) *messageBuilder {
+func newMessageBuilder(sourceId string, tags map[string]string) *messageBuilder {
 	now := time.Now()
 	nowTS, err := ptypes.TimestampProto(now)
 	if err != nil {
 		pfxlog.Logger().Errorf("The now time (%v) is out of range for valid timestamps. Your clock is wrong", now)
 	}
 	builder := &messageBuilder{Timestamp: nowTS}
-	builder.SourceType = sourceType
 	builder.SourceId = sourceId
 	builder.Tags = tags
 
