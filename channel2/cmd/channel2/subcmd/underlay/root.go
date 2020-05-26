@@ -17,7 +17,7 @@
 package underlay
 
 import (
-	"github.com/netfoundry/ziti-foundation/channel2/cmd/channel2/subcmd"
+	"github.com/openziti/foundation/channel2/cmd/channel2/subcmd"
 	"github.com/spf13/cobra"
 )
 

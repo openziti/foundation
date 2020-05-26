@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 	"log"
 	"os"
 	"strings"

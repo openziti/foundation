@@ -17,8 +17,8 @@
 package identity
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/certtools"
-	"github.com/netfoundry/ziti-foundation/util/tlz"
+	"github.com/openziti/foundation/identity/certtools"
+	"github.com/openziti/foundation/util/tlz"
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"

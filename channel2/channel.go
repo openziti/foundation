@@ -18,7 +18,7 @@ package channel2
 
 import (
 	"crypto/x509"
-	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/openziti/foundation/identity/identity"
 	"io"
 	"time"
 )

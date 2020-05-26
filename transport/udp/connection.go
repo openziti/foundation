@@ -17,7 +17,7 @@
 package udp
 
 import (
-	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/openziti/foundation/transport"
 	"crypto/x509"
 	"io"
 	"net"

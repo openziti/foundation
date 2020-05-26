@@ -17,7 +17,7 @@
 package transport
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/openziti/foundation/identity/identity"
 	"errors"
 	"fmt"
 	"io"

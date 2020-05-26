@@ -18,13 +18,13 @@ package main
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/channel2/cmd/channel2/subcmd"
-	_ "github.com/netfoundry/ziti-foundation/channel2/cmd/channel2/subcmd/memory"
-	_ "github.com/netfoundry/ziti-foundation/channel2/cmd/channel2/subcmd/underlay"
-	"github.com/netfoundry/ziti-foundation/transport"
-	"github.com/netfoundry/ziti-foundation/transport/quic"
-	"github.com/netfoundry/ziti-foundation/transport/tcp"
-	"github.com/netfoundry/ziti-foundation/transport/tls"
+	"github.com/openziti/foundation/channel2/cmd/channel2/subcmd"
+	_ "github.com/openziti/foundation/channel2/cmd/channel2/subcmd/memory"
+	_ "github.com/openziti/foundation/channel2/cmd/channel2/subcmd/underlay"
+	"github.com/openziti/foundation/transport"
+	"github.com/openziti/foundation/transport/quic"
+	"github.com/openziti/foundation/transport/tcp"
+	"github.com/openziti/foundation/transport/tls"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,7 +33,7 @@ func init() {
 	transport.AddAddressParser(tcp.AddressParser{})
 	transport.AddAddressParser(tls.AddressParser{})
 	pfxlog.Global(logrus.InfoLevel)
-	pfxlog.SetPrefix("bitbucket.org/netfoundry/")
+	pfxlog.SetPrefix("github.com/openziti/")
 }
 
 func main() {

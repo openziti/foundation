@@ -18,7 +18,7 @@ package metrics
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 )
 
 // HandlerType is used define known handler types

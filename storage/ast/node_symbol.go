@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/netfoundry/ziti-foundation/util/errorz"
+	"github.com/openziti/foundation/util/errorz"
 
 	"github.com/pkg/errors"
 )

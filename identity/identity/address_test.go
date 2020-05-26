@@ -17,7 +17,7 @@
 package identity
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/certtools"
+	"github.com/openziti/foundation/identity/certtools"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"

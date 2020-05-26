@@ -17,9 +17,9 @@
 package underlay
 
 import (
-	"github.com/netfoundry/ziti-foundation/channel2"
-	"github.com/netfoundry/ziti-foundation/identity/dotziti"
-	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/openziti/foundation/channel2"
+	"github.com/openziti/foundation/identity/dotziti"
+	"github.com/openziti/foundation/transport"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/spf13/cobra"

@@ -17,7 +17,7 @@
 package tcp
 
 import (
-	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/openziti/foundation/transport"
 	"net"
 )
 

@@ -17,7 +17,7 @@
 package trace
 
 import (
-	"github.com/netfoundry/ziti-foundation/trace/pb"
+	"github.com/openziti/foundation/trace/pb"
 	"bytes"
 	"encoding/binary"
 	"errors"

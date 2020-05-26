@@ -19,7 +19,7 @@ package sequencer
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/netfoundry/ziti-foundation/util/concurrenz"
+	"github.com/openziti/foundation/util/concurrenz"
 	"github.com/pkg/errors"
 	"time"
 )

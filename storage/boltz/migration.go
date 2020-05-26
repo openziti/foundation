@@ -3,7 +3,7 @@ package boltz
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/util/errorz"
+	"github.com/openziti/foundation/util/errorz"
 	"go.etcd.io/bbolt"
 )
 
