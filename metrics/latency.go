@@ -18,8 +18,8 @@ package metrics
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/channel2"
-	"github.com/netfoundry/ziti-foundation/util/info"
+	"github.com/openziti/foundation/channel2"
+	"github.com/openziti/foundation/util/info"
 	"time"
 )
 

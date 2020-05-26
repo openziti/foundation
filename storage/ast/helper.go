@@ -18,7 +18,7 @@ package ast
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
+	zitiql "github.com/openziti/foundation/storage/zitiql"
 )
 
 func Parse(symbolTypes SymbolTypes, query string) (Query, error) {

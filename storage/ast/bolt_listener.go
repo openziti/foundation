@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	zitiql "github.com/netfoundry/ziti-foundation/storage/zitiql"
+	zitiql "github.com/openziti/foundation/storage/zitiql"
 	"github.com/pkg/errors"
 )
 

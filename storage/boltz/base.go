@@ -18,8 +18,8 @@ package boltz
 
 import (
 	"github.com/kataras/go-events"
-	"github.com/netfoundry/ziti-foundation/storage/ast"
-	"github.com/netfoundry/ziti-foundation/validation"
+	"github.com/openziti/foundation/storage/ast"
+	"github.com/openziti/foundation/validation"
 	"go.etcd.io/bbolt"
 	"io"
 	"time"

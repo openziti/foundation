@@ -17,7 +17,7 @@
 package sequence
 
 import (
-	"github.com/netfoundry/ziti-foundation/util/info"
+	"github.com/openziti/foundation/util/info"
 	"fmt"
 	"github.com/speps/go-hashids"
 	"math/rand"

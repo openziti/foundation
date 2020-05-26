@@ -19,7 +19,7 @@ package metrics
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 	"github.com/orcaman/concurrent-map"
 	"github.com/rcrowley/go-metrics"
 	"reflect"

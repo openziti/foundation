@@ -17,7 +17,7 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/openziti/foundation/identity/identity"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 )

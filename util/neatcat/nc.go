@@ -17,7 +17,7 @@
 package main
 
 import (
-	"github.com/netfoundry/ziti-foundation/transport/udp"
+	"github.com/openziti/foundation/transport/udp"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/sirupsen/logrus"
@@ -30,7 +30,7 @@ import (
 
 func init() {
 	pfxlog.Global(logrus.InfoLevel)
-	pfxlog.SetPrefix("bitbucket.org/netfoundry/")
+	pfxlog.SetPrefix("github.com/openziti/")
 }
 
 func init() {

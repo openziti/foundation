@@ -19,8 +19,8 @@ package boltz
 import (
 	"bytes"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/storage/ast"
-	"github.com/netfoundry/ziti-foundation/util/errorz"
+	"github.com/openziti/foundation/storage/ast"
+	"github.com/openziti/foundation/util/errorz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )

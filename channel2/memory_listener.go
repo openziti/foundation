@@ -19,7 +19,7 @@ package channel2
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/openziti/foundation/identity/identity"
 )
 
 type memoryListener struct {

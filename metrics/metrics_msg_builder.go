@@ -19,7 +19,7 @@ package metrics
 import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 	"github.com/rcrowley/go-metrics"
 	"time"
 )

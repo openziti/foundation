@@ -17,8 +17,8 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
-	"github.com/netfoundry/ziti-foundation/util/stringz"
+	"github.com/openziti/foundation/storage/ast"
+	"github.com/openziti/foundation/util/stringz"
 )
 
 type publicSymbolValidator struct {

@@ -17,9 +17,9 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/trace"
-	"github.com/netfoundry/ziti-foundation/trace/pb"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/trace"
+	"github.com/openziti/foundation/trace/pb"
 	"github.com/michaelquigley/pfxlog"
 	"os"
 	"time"

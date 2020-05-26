@@ -17,8 +17,8 @@
 package boltz
 
 import (
-	"github.com/netfoundry/ziti-foundation/storage/ast"
-	"github.com/netfoundry/ziti-foundation/util/errorz"
+	"github.com/openziti/foundation/storage/ast"
+	"github.com/openziti/foundation/util/errorz"
 	"go.etcd.io/bbolt"
 )
 

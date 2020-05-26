@@ -19,8 +19,8 @@ package metrics
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/channel2"
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/channel2"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 )
 
 type channelReporter struct {

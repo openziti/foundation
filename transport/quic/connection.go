@@ -20,7 +20,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/openziti/foundation/transport"
 	"io"
 	"net"
 	"time"

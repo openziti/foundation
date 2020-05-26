@@ -17,9 +17,9 @@
 package channel2
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/util/info"
-	"github.com/netfoundry/ziti-foundation/util/sequence"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/util/info"
+	"github.com/openziti/foundation/util/sequence"
 	"container/heap"
 	"crypto/x509"
 	"errors"

@@ -16,7 +16,7 @@
 
 package channel2
 
-import "github.com/netfoundry/ziti-foundation/util/sequence"
+import "github.com/openziti/foundation/util/sequence"
 
 type underlayRegistry struct {
 	underlays map[string]Underlay

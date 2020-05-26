@@ -20,9 +20,9 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/transport"
-	"github.com/netfoundry/ziti-foundation/util/concurrenz"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
+	"github.com/openziti/foundation/util/concurrenz"
 	"io"
 )
 

@@ -17,7 +17,7 @@
 package dotziti
 
 import (
-	"github.com/netfoundry/ziti-foundation/identity/identity"
+	"github.com/openziti/foundation/identity/identity"
 	"errors"
 	"fmt"
 	"gopkg.in/yaml.v2"

@@ -21,8 +21,8 @@ import (
 	"crypto/tls"
 
 	quicgo "github.com/lucas-clemente/quic-go"
-	"github.com/netfoundry/ziti-foundation/identity/identity"
-	"github.com/netfoundry/ziti-foundation/transport"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 )
 
 // Dial a connection over QUIC.

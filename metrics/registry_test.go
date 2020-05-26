@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/netfoundry/ziti-foundation/metrics/metrics_pb"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 	cmap "github.com/orcaman/concurrent-map"
 	"github.com/stretchr/testify/assert"
 	"testing"
