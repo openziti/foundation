@@ -19,15 +19,21 @@ package certtools
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 )
 
 func LoadCert(pemBytes []byte) ([]*x509.Certificate, error) {
-	certs := make ([]*x509.Certificate, 0)
+	certs := make([]*x509.Certificate, 0)
 	var keyBlock *pem.Block
 	for len(pemBytes) > 0 {
 		keyBlock, pemBytes = pem.Decode(pemBytes)
+
+		if keyBlock == nil {
+			return nil, errors.New("could not parse")
+		}
+
 		switch keyBlock.Type {
 		case "CERTIFICATE":
 			if c, err := x509.ParseCertificate(keyBlock.Bytes); err == nil {
