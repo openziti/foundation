@@ -18,11 +18,16 @@ package ast
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	zitiql "github.com/openziti/foundation/storage/zitiql"
+	"github.com/openziti/foundation/storage/zitiql"
+	"github.com/openziti/foundation/util/concurrenz"
 )
 
+var EnableQueryDebug concurrenz.AtomicBoolean
+
 func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
-	pfxlog.Logger().Debugf(`parsing filter: %v`, query)
+	if EnableQueryDebug.Get() {
+		pfxlog.Logger().Debugf(`parsing filter: %v`, query)
+	}
 	listener := NewListener()
 
 	if query == "" {

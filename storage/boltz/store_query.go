@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -202,17 +201,14 @@ func (store *BaseStore) AddFkSymbol(name string, linkedStore ListStore, prefix .
 	return store.AddFkSymbolWithKey(name, name, linkedStore, prefix...)
 }
 func (store *BaseStore) AddSymbolWithKey(name string, nodeType ast.NodeType, key string, prefix ...string) EntitySymbol {
-	pfxlog.Logger().Debugf("adding symbol %v.%v [entity]", store.GetEntityType(), name)
 	return store.addPublicSymbol(name, store.newEntitySymbol(name, nodeType, key, nil, prefix...))
 }
 
 func (store *BaseStore) AddFkSymbolWithKey(name string, key string, linkedStore ListStore, prefix ...string) EntitySymbol {
-	pfxlog.Logger().Debugf("adding symbol %v.%v [entity]", store.GetEntityType(), name)
 	return store.addPublicSymbol(name, store.newEntitySymbol(name, ast.NodeTypeString, key, linkedStore, prefix...))
 }
 
 func (store *BaseStore) AddMapSymbol(name string, nodeType ast.NodeType, key string, prefix ...string) {
-	pfxlog.Logger().Debugf("adding symbol %v.%v [map]", store.GetEntityType(), name)
 	store.mapSymbols[name] = &entityMapSymbol{
 		key:        key,
 		symbolType: nodeType,
@@ -265,7 +261,6 @@ func (store *BaseStore) AddFkSetSymbol(name string, listStore ListStore) EntityS
 }
 
 func (store *BaseStore) addSetSymbol(name string, nodeType ast.NodeType, listStore ListStore) EntitySetSymbol {
-	pfxlog.Logger().Debugf("adding symbol %v.%v [set]", store.GetEntityType(), name)
 	entitySymbol := store.newEntitySymbol(name, nodeType, name, listStore)
 	result := &entitySetSymbolImpl{
 		entitySymbol: entitySymbol,

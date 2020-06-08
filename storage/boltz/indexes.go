@@ -196,7 +196,6 @@ func (index *uniqueIndex) getIndexBucket(tx *bbolt.Tx) *TypedBucket {
 
 func (index *uniqueIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder) {
 	if !errorHolder.HasError() {
-		pfxlog.Logger().Debugf("Ensuring bolt index bucket exists for %v", index.indexPath)
 		bucket := GetOrCreatePath(tx, index.indexPath...)
 		errorHolder.SetError(bucket.Err)
 	}
@@ -391,7 +390,6 @@ func (index *setIndex) ProcessDelete(ctx *IndexingContext) {
 
 func (index *setIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder) {
 	if !errorHolder.HasError() {
-		pfxlog.Logger().Debugf("Ensuring bolt index bucket exists for %v", index.indexPath)
 		bucket := GetOrCreatePath(tx, index.indexPath...)
 		errorHolder.SetError(bucket.Err)
 	}
