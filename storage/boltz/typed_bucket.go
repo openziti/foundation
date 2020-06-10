@@ -709,6 +709,7 @@ func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBu
 		bucket.SetNil(name)
 		return bucket
 	}
+
 	switch val := value.(type) {
 	case string:
 		bucket.SetString(name, val, nil)
