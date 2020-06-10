@@ -155,11 +155,13 @@ func (listener *classicListener) receiveHello(impl *classicImpl) (*Message, *Hel
 			_ = impl.Close()
 			resp := helloResponse{error: fmt.Errorf("receive error (%s)", err)}
 			responseChan <- resp
+			return
 		}
 		if request.ContentType != ContentTypeHelloType {
 			_ = impl.Close()
 			resp := helloResponse{error: fmt.Errorf("unexpected content type [%d]", request.ContentType)}
 			responseChan <- resp
+			return
 		}
 		hello := UnmarshalHello(request)
 		responseChan <- helloResponse{message: request, hello: hello}
