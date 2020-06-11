@@ -164,12 +164,12 @@ func (test *boltTest) createTestSchema() {
 }
 
 func (test *boltTest) setupScanEntity() {
-	test.placesStore = NewBaseStore(nil, "places", nil, "application")
+	test.placesStore = NewBaseStore("places", nil, "application")
 	test.placesStore.AddIdSymbol("id", ast.NodeTypeString)
 	test.placesStore.AddSymbol("name", ast.NodeTypeString)
 	test.placesStore.AddSetSymbol("businesses", ast.NodeTypeString)
 
-	test.peopleStore = NewBaseStore(nil, "people", nil, "application")
+	test.peopleStore = NewBaseStore("people", nil, "application")
 	test.peopleStore.AddIdSymbol("id", ast.NodeTypeString)
 	test.peopleStore.AddSymbolWithKey("personAge", ast.NodeTypeInt64, "age")
 	test.peopleStore.AddSymbolWithKey("index", ast.NodeTypeInt64, "index32")

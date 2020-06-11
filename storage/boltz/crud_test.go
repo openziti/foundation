@@ -79,7 +79,7 @@ func (entity *Employee) GetEntityType() string {
 
 func newEmployeeStore() *employeeStoreImpl {
 	store := &employeeStoreImpl{
-		BaseStore: NewBaseStore(nil, entityTypeEmployee, func(id string) error {
+		BaseStore: NewBaseStore(entityTypeEmployee, func(id string) error {
 			return errors.Errorf("entity of type %v with id %v not found", entityTypeEmployee, id)
 		}, "stores"),
 	}
@@ -154,7 +154,7 @@ func (entity *Location) GetEntityType() string {
 
 func newLocationStore() *locationStoreImpl {
 	store := &locationStoreImpl{
-		BaseStore: NewBaseStore(nil, entityTypeLocation, func(id string) error {
+		BaseStore: NewBaseStore(entityTypeLocation, func(id string) error {
 			return errors.Errorf("entity of type %v with id %v not found", entityTypeLocation, id)
 		}, "stores"),
 	}

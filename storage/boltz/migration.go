@@ -48,7 +48,7 @@ func (m *migrationManager) Migrate(component string, targetVersion int, migrator
 			version = int(*versionP)
 		}
 
-		if version != targetVersion {
+		if versionP != nil && version != targetVersion {
 			if err := m.db.Snapshot(tx); err != nil {
 				return fmt.Errorf("failed to create bolt db snapshot: %w", err)
 			}
