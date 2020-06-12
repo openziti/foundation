@@ -22,7 +22,15 @@ import (
 	"strings"
 )
 
-func NewBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
+func NewBaseStore(entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
+	return newBaseStore(nil, entityType, entityNotFoundF, basePath...)
+}
+
+func NewChildBaseStore(parent CrudStore, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
+	return newBaseStore(parent, parent.GetEntityType(), entityNotFoundF, basePath...)
+}
+
+func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
 	entityPath := append([]string{}, basePath...)
 	if parent == nil {
 		entityPath = append(entityPath, entityType)
