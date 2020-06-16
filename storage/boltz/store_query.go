@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"fmt"
+	"github.com/openziti/foundation/util/stringz"
 	"strings"
 
 	"github.com/openziti/foundation/storage/ast"
@@ -160,24 +161,23 @@ func (store *BaseStore) createCompositeEntitySymbol(name string, first linkedEnt
 	}
 }
 
-func (store *BaseStore) addPublicSymbol(name string, symbol EntitySymbol) EntitySymbol {
+func (store *BaseStore) addSymbol(name string, public bool, symbol EntitySymbol) EntitySymbol {
 	store.symbols[name] = symbol
-	store.publicSymbols = append(store.publicSymbols, name)
+	if public {
+		store.publicSymbols = append(store.publicSymbols, name)
+	}
 	return symbol
 }
 
 func (store *BaseStore) GrantSymbols(child ListStore) {
-	for _, value := range store.symbols {
-		child.inheritSymbol(value)
+	for name, value := range store.symbols {
+		public := stringz.Contains(store.publicSymbols, name)
+		child.addSymbol(name, public, value)
 	}
 }
 
-func (store *BaseStore) inheritSymbol(symbol EntitySymbol) {
-	store.symbols[symbol.GetName()] = symbol
-}
-
 func (store *BaseStore) AddIdSymbol(name string, nodeType ast.NodeType) EntitySymbol {
-	return store.addPublicSymbol(name, &entityIdSymbol{
+	return store.addSymbol(name, true, &entityIdSymbol{
 		store:      store,
 		symbolType: nodeType,
 		path:       []string{"id"},
@@ -201,11 +201,11 @@ func (store *BaseStore) AddFkSymbol(name string, linkedStore ListStore, prefix .
 	return store.AddFkSymbolWithKey(name, name, linkedStore, prefix...)
 }
 func (store *BaseStore) AddSymbolWithKey(name string, nodeType ast.NodeType, key string, prefix ...string) EntitySymbol {
-	return store.addPublicSymbol(name, store.newEntitySymbol(name, nodeType, key, nil, prefix...))
+	return store.addSymbol(name, true, store.newEntitySymbol(name, nodeType, key, nil, prefix...))
 }
 
 func (store *BaseStore) AddFkSymbolWithKey(name string, key string, linkedStore ListStore, prefix ...string) EntitySymbol {
-	return store.addPublicSymbol(name, store.newEntitySymbol(name, ast.NodeTypeString, key, linkedStore, prefix...))
+	return store.addSymbol(name, true, store.newEntitySymbol(name, ast.NodeTypeString, key, linkedStore, prefix...))
 }
 
 func (store *BaseStore) AddMapSymbol(name string, nodeType ast.NodeType, key string, prefix ...string) {

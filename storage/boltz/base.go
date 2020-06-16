@@ -68,7 +68,7 @@ type ListStore interface {
 	GetSymbol(name string) EntitySymbol
 	MapSymbol(name string, wrapper SymbolMapper)
 	GrantSymbols(child ListStore)
-	inheritSymbol(symbol EntitySymbol)
+	addSymbol(name string, public bool, symbol EntitySymbol) EntitySymbol
 	AddIdSymbol(name string, nodeType ast.NodeType) EntitySymbol
 	AddSymbol(name string, nodeType ast.NodeType, path ...string) EntitySymbol
 	AddFkSymbol(name string, linkedType ListStore, path ...string) EntitySymbol
