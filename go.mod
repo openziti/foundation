@@ -6,7 +6,7 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
-	github.com/golang/protobuf v1.3.5
+	github.com/golang/protobuf v1.4.2
 	github.com/google/go-cmp v0.4.1
 	github.com/google/uuid v1.1.1
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
