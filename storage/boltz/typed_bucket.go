@@ -240,11 +240,11 @@ func GetTypeAndValue(bytes []byte) (FieldType, []byte) {
 }
 
 func (bucket *TypedBucket) getTyped(name string) (FieldType, []byte) {
-	var bytes []byte
+	var fieldBytes []byte
 	if bucket.Bucket != nil {
-		bytes = bucket.Get([]byte(name))
+		fieldBytes = bucket.Get([]byte(name))
 	}
-	return GetTypeAndValue(bytes)
+	return GetTypeAndValue(fieldBytes)
 }
 
 func PrependFieldType(fieldType FieldType, value []byte) []byte {
@@ -544,8 +544,8 @@ func (bucket *TypedBucket) GetTimeOrError(name string) time.Time {
 
 func (bucket *TypedBucket) SetTime(name string, value time.Time, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
-		if bytes, err := value.UTC().MarshalBinary(); err == nil {
-			bucket.setTyped(TypeTime, name, bytes)
+		if fieldBytes, err := value.UTC().MarshalBinary(); err == nil {
+			bucket.setTyped(TypeTime, name, fieldBytes)
 		} else {
 			bucket.Err = err
 		}
@@ -557,8 +557,8 @@ func (bucket *TypedBucket) SetTimeP(name string, value *time.Time, fieldChecker 
 	if bucket.ProceedWithSet(name, fieldChecker) {
 		if value == nil {
 			bucket.SetNil(name)
-		} else if bytes, err := value.UTC().MarshalBinary(); err == nil {
-			bucket.setTyped(TypeTime, name, bytes)
+		} else if fieldBytes, err := value.UTC().MarshalBinary(); err == nil {
+			bucket.setTyped(TypeTime, name, fieldBytes)
 		} else {
 			bucket.Err = err
 		}
@@ -791,4 +791,31 @@ func clone(val []byte) []byte {
 	result := make([]byte, len(val))
 	copy(result, val)
 	return result
+}
+
+func (bucket *TypedBucket) Copy(other *TypedBucket, filterF func(path []string) bool) error {
+	return bucket.copyImpl(other, filterF, nil)
+}
+
+func (bucket *TypedBucket) copyImpl(other *TypedBucket, filterF func(path []string) bool, path []string) error {
+	cursor := other.Cursor()
+	for key, value := cursor.First(); key != nil; key, value = cursor.Next() {
+		keyName := string(key)
+		if !filterF(append(path, keyName)) {
+			continue
+		}
+		childBucket := other.Bucket.Bucket(key)
+		if childBucket == nil {
+			if err := bucket.Bucket.Put(key, value); err != nil {
+				return err
+			}
+		} else {
+			otherChild := other.GetBucket(keyName)
+			localChild := bucket.GetOrCreateBucket(keyName)
+			if err := localChild.copyImpl(otherChild, filterF, append(path, keyName)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
