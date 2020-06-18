@@ -19,6 +19,7 @@ package boltz
 import (
 	"github.com/kataras/go-events"
 	"github.com/openziti/foundation/storage/ast"
+	"github.com/openziti/foundation/util/errorz"
 	"github.com/openziti/foundation/validation"
 	"go.etcd.io/bbolt"
 	"io"
@@ -125,6 +126,7 @@ type CrudStore interface {
 	NewStoreEntity() Entity
 
 	AddDeleteHandler(handler EntityChangeHandler)
+	NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext
 	events.EventEmmiter
 }
 

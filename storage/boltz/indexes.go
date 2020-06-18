@@ -36,6 +36,8 @@ type FieldTypeAndValue struct {
 }
 
 type IndexingContext struct {
+	Parent *IndexingContext
+	*Indexer
 	IsCreate   bool
 	Tx         *bbolt.Tx
 	RowId      []byte
@@ -100,36 +102,37 @@ func (indexer *Indexer) addConstraint(constraint Constraint) {
 	indexer.constraints = append(indexer.constraints, constraint)
 }
 
-func (indexer *Indexer) NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext {
-	return &IndexingContext{
-		IsCreate:   isCreate,
-		Tx:         tx,
-		RowId:      []byte(id),
-		ErrHolder:  holder,
-		atomStates: map[Constraint][]byte{},
-		setStates:  map[Constraint][]FieldTypeAndValue{},
+func (ctx *IndexingContext) ProcessBeforeUpdate() {
+	if ctx.Parent != nil {
+		ctx.Parent.ProcessBeforeUpdate()
 	}
-}
 
-func (indexer *Indexer) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		for _, index := range indexer.constraints {
+		for _, index := range ctx.constraints {
 			index.ProcessBeforeUpdate(ctx)
 		}
 	}
 }
 
-func (indexer *Indexer) ProcessAfterUpdate(ctx *IndexingContext) {
+func (ctx *IndexingContext) ProcessAfterUpdate() {
+	if ctx.Parent != nil {
+		ctx.Parent.ProcessAfterUpdate()
+	}
+
 	if !ctx.ErrHolder.HasError() {
-		for _, index := range indexer.constraints {
+		for _, index := range ctx.constraints {
 			index.ProcessAfterUpdate(ctx)
 		}
 	}
 }
 
-func (indexer *Indexer) ProcessDelete(ctx *IndexingContext) {
+func (ctx *IndexingContext) ProcessDelete() {
+	if ctx.Parent != nil {
+		ctx.Parent.ProcessDelete()
+	}
+
 	if !ctx.ErrHolder.HasError() {
-		for _, index := range indexer.constraints {
+		for _, index := range ctx.constraints {
 			index.ProcessDelete(ctx)
 		}
 	}
