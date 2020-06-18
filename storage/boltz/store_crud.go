@@ -94,6 +94,23 @@ func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity En
 	return store.BaseLoadOneById(tx, ids[0], entity)
 }
 
+func (store *BaseStore) NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext {
+	var parentContext *IndexingContext
+	if store.parent != nil {
+		parentContext = store.parent.NewIndexingContext(isCreate, tx, id, holder)
+	}
+	return &IndexingContext{
+		Parent:     parentContext,
+		Indexer:    &store.Indexer,
+		IsCreate:   isCreate,
+		Tx:         tx,
+		RowId:      []byte(id),
+		ErrHolder:  holder,
+		atomStates: map[Constraint][]byte{},
+		setStates:  map[Constraint][]FieldTypeAndValue{},
+	}
+}
+
 func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	if entity == nil {
 		return errors.Errorf("cannot create %v from nil value", store.GetSingularEntityType())
@@ -121,7 +138,7 @@ func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	}
 	entity.SetValues(persistCtx)
 	indexingContext := store.NewIndexingContext(true, ctx.Tx(), entity.GetId(), bucket)
-	store.ProcessAfterUpdate(indexingContext)
+	indexingContext.ProcessAfterUpdate()
 
 	ctx.AddEvent(store, EventCreate, entity)
 	return bucket.Err
@@ -147,7 +164,7 @@ func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldCh
 	}
 
 	indexingContext := store.NewIndexingContext(false, ctx.Tx(), entity.GetId(), bucket)
-	store.ProcessBeforeUpdate(indexingContext) // remove old values, using existing values in store
+	indexingContext.ProcessBeforeUpdate() // remove old values, using existing values in store
 	persistCtx := &PersistContext{
 		Id:           entity.GetId(),
 		Store:        store.impl,
@@ -156,7 +173,7 @@ func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldCh
 		IsCreate:     false,
 	}
 	entity.SetValues(persistCtx)
-	store.ProcessAfterUpdate(indexingContext) // add new values, using updated values in store
+	indexingContext.ProcessAfterUpdate() // add new values, using updated values in store
 
 	ctx.AddEvent(store, EventUpdate, entity)
 	return bucket.Err
@@ -326,7 +343,7 @@ func (store *BaseStore) cleanupLinks(tx *bbolt.Tx, id string, holder errorz.Erro
 func (store *BaseStore) CleanupExternal(ctx MutateContext, id string) error {
 	errHolder := &errorz.ErrorHolderImpl{}
 	indexingContext := store.NewIndexingContext(false, ctx.Tx(), id, errHolder)
-	store.ProcessDelete(indexingContext)
+	indexingContext.ProcessDelete()
 	store.cleanupLinks(ctx.Tx(), id, errHolder)
 	return errHolder.Err
 }
