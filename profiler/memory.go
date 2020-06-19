@@ -102,19 +102,18 @@ func NewMemoryWithShutdown(path string, interval time.Duration, shutdownC chan s
 func (memory *Memory) Run() {
 	log := pfxlog.Logger()
 	log.Infof("memory profiling to [%s]", memory.path)
-	timer := time.NewTimer(memory.interval)
-	defer timer.Stop()
+	tick := time.Tick(memory.interval)
 	for {
-		memory.stats()
-		if err := memory.captureProfile(); err != nil {
-			log.Errorf("error capturing memory profile (%s)", err)
-		}
 		select {
 		case _, ok := <-memory.shutdownC:
 			if !ok {
 				return
 			}
-		case <-timer.C:
+		case <-tick:
+			memory.stats()
+			if err := memory.captureProfile(); err != nil {
+				log.Errorf("error capturing memory profile (%s)", err)
+			}
 		}
 	}
 }
