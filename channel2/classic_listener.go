@@ -62,7 +62,7 @@ func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
 
 func (listener *classicListener) Close() error {
 	close(listener.close)
-	close(listener.created)
+	defer close(listener.created) // don't close created until socket is closed, to ensure we don't write to empty channel
 	if err := listener.socket.Close(); err != nil {
 		return err
 	}
@@ -74,11 +74,14 @@ func (listener *classicListener) Create() (Underlay, error) {
 	if listener.created == nil {
 		return nil, ListenerClosedError
 	}
-	impl := <-listener.created
-	if impl == nil {
-		return nil, ListenerClosedError
+	select {
+	case impl := <-listener.created:
+		if impl != nil {
+			return impl, nil
+		}
+	case <-listener.close:
 	}
-	return impl, nil
+	return nil, ListenerClosedError
 }
 
 func (listener *classicListener) listener(incoming chan transport.Connection) {
