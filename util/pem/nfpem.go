@@ -17,8 +17,10 @@
 package nfpem
 
 import (
+	"crypto/sha1"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 )
 
 // An initial limit of how deep a valid cert chain might be.
@@ -38,6 +40,15 @@ func DecodeAll(pemBytes []byte) []*pem.Block {
 	return blocks
 }
 
+func EncodeToString(cert *x509.Certificate) string {
+	result := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	})
+
+	return string(result)
+}
+
 func PemToX509(pem string) []*x509.Certificate {
 
 	pemBytes := []byte(pem)
@@ -51,3 +62,18 @@ func PemToX509(pem string) []*x509.Certificate {
 	return certs
 }
 
+//Assumes the first PEM block is the target
+func FingerprintFromPem(pem string) string {
+	certs := PemToX509(pem)
+	if len(certs) == 0 {
+		return ""
+	}
+	return FingerprintFromX509(certs[0])
+}
+
+func FingerprintFromX509(cert *x509.Certificate) string {
+	if cert == nil {
+		return ""
+	}
+	return fmt.Sprintf("%x", sha1.Sum(cert.Raw))
+}
