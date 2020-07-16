@@ -499,6 +499,16 @@ func (bl *ToBoltListener) exitBetweenOp() {
 	}
 }
 
+func (bl *ToBoltListener) ExitBinaryLessThanStringOp(c *zitiql.BinaryLessThanStringOpContext) {
+	bl.printDebug(c)
+	bl.ExitBinaryOp()
+}
+
+func (bl *ToBoltListener) ExitBinaryGreaterThanStringOp(c *zitiql.BinaryGreaterThanStringOpContext) {
+	bl.printDebug(c)
+	bl.ExitBinaryOp()
+}
+
 func (bl *ToBoltListener) ExitBinaryLessThanNumberOp(c *zitiql.BinaryLessThanNumberOpContext) {
 	bl.printDebug(c)
 	bl.ExitBinaryOp()

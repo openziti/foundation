@@ -152,6 +152,12 @@ func (s *BaseZitiQlListener) EnterBetweenDateOp(ctx *BetweenDateOpContext) {}
 // ExitBetweenDateOp is called when production BetweenDateOp is exited.
 func (s *BaseZitiQlListener) ExitBetweenDateOp(ctx *BetweenDateOpContext) {}
 
+// EnterBinaryLessThanStringOp is called when production BinaryLessThanStringOp is entered.
+func (s *BaseZitiQlListener) EnterBinaryLessThanStringOp(ctx *BinaryLessThanStringOpContext) {}
+
+// ExitBinaryLessThanStringOp is called when production BinaryLessThanStringOp is exited.
+func (s *BaseZitiQlListener) ExitBinaryLessThanStringOp(ctx *BinaryLessThanStringOpContext) {}
+
 // EnterBinaryLessThanNumberOp is called when production BinaryLessThanNumberOp is entered.
 func (s *BaseZitiQlListener) EnterBinaryLessThanNumberOp(ctx *BinaryLessThanNumberOpContext) {}
 
@@ -163,6 +169,12 @@ func (s *BaseZitiQlListener) EnterBinaryLessThanDatetimeOp(ctx *BinaryLessThanDa
 
 // ExitBinaryLessThanDatetimeOp is called when production BinaryLessThanDatetimeOp is exited.
 func (s *BaseZitiQlListener) ExitBinaryLessThanDatetimeOp(ctx *BinaryLessThanDatetimeOpContext) {}
+
+// EnterBinaryGreaterThanStringOp is called when production BinaryGreaterThanStringOp is entered.
+func (s *BaseZitiQlListener) EnterBinaryGreaterThanStringOp(ctx *BinaryGreaterThanStringOpContext) {}
+
+// ExitBinaryGreaterThanStringOp is called when production BinaryGreaterThanStringOp is exited.
+func (s *BaseZitiQlListener) ExitBinaryGreaterThanStringOp(ctx *BinaryGreaterThanStringOpContext) {}
 
 // EnterBinaryGreaterThanNumberOp is called when production BinaryGreaterThanNumberOp is entered.
 func (s *BaseZitiQlListener) EnterBinaryGreaterThanNumberOp(ctx *BinaryGreaterThanNumberOpContext) {}

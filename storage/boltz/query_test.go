@@ -79,6 +79,10 @@ func (test *boltTest) openBoltDb() {
 	test.NoError(err)
 }
 
+func (test *boltTest) switchTestContext(t *testing.T) {
+	test.Assertions = require.New(t)
+}
+
 func (test *boltTest) cleanup() {
 	if test.db != nil {
 		if err := test.db.Close(); err != nil {
@@ -262,13 +266,16 @@ func TestQuery(t *testing.T) {
 	t.Run("sorting/paging", tests.testSortPage)
 	t.Run("map queries", tests.testMapQueries)
 	t.Run("sub queries", tests.testSubQueries)
+	t.Run("iterate ids", tests.testIterateIds)
+	t.Run("iterate seek ids", tests.testIterateIdsScan)
 }
 
 type boltQueryTests struct {
 	*boltTest
 }
 
-func (test *boltQueryTests) testFirstName(*testing.T) {
+func (test *boltQueryTests) testFirstName(t *testing.T) {
+	test.switchTestContext(t)
 	ids, count := test.query(`firstName = "Alice"`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(10), count)
@@ -286,7 +293,8 @@ func (test *boltQueryTests) testFirstName(*testing.T) {
 	}
 }
 
-func (test *boltQueryTests) testNumbers(*testing.T) {
+func (test *boltQueryTests) testNumbers(t *testing.T) {
+	test.switchTestContext(t)
 	ids, count := test.query(`anyOf(numbers) in [5, 15, 17, 27]`)
 	test.Equal(3, len(ids))
 	test.Equal(int64(3), count)
@@ -296,7 +304,9 @@ func (test *boltQueryTests) testNumbers(*testing.T) {
 	test.Equal(3, len(people))
 }
 
-func (test *boltQueryTests) testPlaceName(*testing.T) {
+func (test *boltQueryTests) testPlaceName(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`anyOf(places.name) = "Alphaville"`)
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
@@ -305,7 +315,9 @@ func (test *boltQueryTests) testPlaceName(*testing.T) {
 	test.Equal(40, len(people))
 }
 
-func (test *boltQueryTests) testPlaceIdsIn(*testing.T) {
+func (test *boltQueryTests) testPlaceIdsIn(t *testing.T) {
+	test.switchTestContext(t)
+
 	var alphaVilleId string
 
 	err := test.db.View(func(tx *bbolt.Tx) error {
@@ -329,7 +341,9 @@ func (test *boltQueryTests) testPlaceIdsIn(*testing.T) {
 	test.Equal(40, len(people))
 }
 
-func (test *boltQueryTests) testPlaceNamesIn(*testing.T) {
+func (test *boltQueryTests) testPlaceNamesIn(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`anyOf(places.name) in ["Alphaville", "Betaville"]`)
 	test.Equal(60, len(ids))
 	test.Equal(int64(60), count)
@@ -338,7 +352,9 @@ func (test *boltQueryTests) testPlaceNamesIn(*testing.T) {
 	test.Equal(60, len(people))
 }
 
-func (test *boltQueryTests) testBusinessEquals(*testing.T) {
+func (test *boltQueryTests) testBusinessEquals(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`anyOf(places.businesses) = "Big Boxes Store"`)
 	test.Equal(60, len(ids))
 	test.Equal(int64(60), count)
@@ -348,6 +364,8 @@ func (test *boltQueryTests) testBusinessEquals(*testing.T) {
 }
 
 func (test *boltQueryTests) testSortPage(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`firstName in ["Alice", "Bob"] SORT BY lastName desc`)
 	test.Equal(20, len(ids))
 	test.Equal(int64(20), count)
@@ -527,7 +545,9 @@ func assertOrderById(t *testing.T, people []*testPerson, prevId *string) {
 	}
 }
 
-func (test *boltQueryTests) testMapQueries(*testing.T) {
+func (test *boltQueryTests) testMapQueries(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`tags.age >= 90`)
 	test.Equal(10, len(ids))
 	test.Equal(int64(10), count)
@@ -541,7 +561,9 @@ func (test *boltQueryTests) testMapQueries(*testing.T) {
 	}
 }
 
-func (test *boltQueryTests) testSubQueries(*testing.T) {
+func (test *boltQueryTests) testSubQueries(t *testing.T) {
+	test.switchTestContext(t)
+
 	ids, count := test.query(`not isEmpty(from places where name = "Alphaville" and anyOf(businesses) = "Big Boxes Store")`)
 	test.Equal(40, len(ids))
 	test.Equal(int64(40), count)
@@ -554,4 +576,65 @@ func (test *boltQueryTests) testSubQueries(*testing.T) {
 	for _, person := range people {
 		test.True(stringz.Contains(person.places, alphavilleId))
 	}
+}
+
+func (test *boltQueryTests) testIterateIds(t *testing.T) {
+	test.switchTestContext(t)
+
+	ids, count := test.query("true")
+
+	iterIdMap := map[string]struct{}{}
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		cursor := test.peopleStore.IterateIds(tx, ast.BoolNodeTrue)
+		test.NotNil(cursor)
+		for ; cursor.IsValid(); cursor.Next() {
+			id := cursor.Current()
+			_, found := iterIdMap[string(id)]
+			test.False(found)
+			iterIdMap[string(id)] = struct{}{}
+		}
+		return nil
+	})
+	test.NoError(err)
+	test.Equal(int(count), len(iterIdMap))
+
+	for _, key := range ids {
+		_, found := iterIdMap[key]
+		test.True(found)
+		delete(iterIdMap, key)
+	}
+	test.Equal(0, len(iterIdMap))
+
+}
+
+func (test *boltQueryTests) testIterateIdsScan(t *testing.T) {
+	test.switchTestContext(t)
+
+	ids, count := test.query("true")
+	middle := ids[len(ids)/2]
+
+	ids, count = test.query(fmt.Sprintf(`id >= "%v"`, middle))
+
+	iterIdMap := map[string]struct{}{}
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		cursor := test.peopleStore.IterateIds(tx, ast.BoolNodeTrue)
+		test.NotNil(cursor)
+		cursor.Seek([]byte(middle))
+		for ; cursor.IsValid(); cursor.Next() {
+			id := cursor.Current()
+			_, found := iterIdMap[string(id)]
+			test.False(found)
+			iterIdMap[string(id)] = struct{}{}
+		}
+		return nil
+	})
+	test.NoError(err)
+	test.Equal(int(count), len(iterIdMap))
+
+	for _, key := range ids {
+		_, found := iterIdMap[key]
+		test.True(found)
+		delete(iterIdMap, key)
+	}
+	test.Equal(0, len(iterIdMap))
 }

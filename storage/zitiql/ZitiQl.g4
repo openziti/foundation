@@ -138,8 +138,10 @@ operation:
   | binaryLhs WS+ IN WS+ datetimeArray #InDatetimeArrayOp
   | binaryLhs WS+ BETWEEN WS+ NUMBER WS+ AND WS+ NUMBER # BetweenNumberOp
   | binaryLhs WS+ BETWEEN WS+ DATETIME WS+ AND WS+ DATETIME # BetweenDateOp
+  | binaryLhs WS* LT WS* STRING # BinaryLessThanStringOp
   | binaryLhs WS* LT WS* NUMBER # BinaryLessThanNumberOp
   | binaryLhs WS* LT WS* DATETIME # BinaryLessThanDatetimeOp
+  | binaryLhs WS* GT WS* STRING # BinaryGreaterThanStringOp
   | binaryLhs WS* GT WS* NUMBER # BinaryGreaterThanNumberOp
   | binaryLhs WS* GT WS* DATETIME# BinaryGreaterThanDatetimeOp
   | binaryLhs WS* EQ WS* STRING #BinaryEqualToStringOp

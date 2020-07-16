@@ -103,6 +103,8 @@ const (
 	SetFunctionIsEmpty
 )
 
+var BoolNodeTrue = NewBoolConstNode(true)
+
 var SetFunctionNames = map[SetFunction]string{
 	SetFunctionAllOf:   "allOf",
 	SetFunctionAnyOf:   "anyOf",
@@ -135,6 +137,11 @@ type SetCursor interface {
 	Next()
 	IsValid() bool
 	Current() []byte
+}
+
+type SeekableSetCursor interface {
+	SetCursor
+	Seek([]byte)
 }
 
 type Node interface {

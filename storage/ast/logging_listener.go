@@ -171,6 +171,22 @@ func (l LoggingListener) EnterBetweenDateOp(c *zitiql.BetweenDateOpContext) {
 	l.printDebug(c)
 }
 
+func (l *LoggingListener) EnterBinaryLessThanStringOp(c *zitiql.BinaryLessThanStringOpContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) EnterBinaryGreaterThanStringOp(c *zitiql.BinaryGreaterThanStringOpContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitBinaryLessThanStringOp(c *zitiql.BinaryLessThanStringOpContext) {
+	l.printDebug(c)
+}
+
+func (l *LoggingListener) ExitBinaryGreaterThanStringOp(c *zitiql.BinaryGreaterThanStringOpContext) {
+	l.printDebug(c)
+}
+
 func (l LoggingListener) EnterBinaryLessThanNumberOp(c *zitiql.BinaryLessThanNumberOpContext) {
 	l.printDebug(c)
 }

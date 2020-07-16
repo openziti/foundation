@@ -73,11 +73,17 @@ type ZitiQlListener interface {
 	// EnterBetweenDateOp is called when entering the BetweenDateOp production.
 	EnterBetweenDateOp(c *BetweenDateOpContext)
 
+	// EnterBinaryLessThanStringOp is called when entering the BinaryLessThanStringOp production.
+	EnterBinaryLessThanStringOp(c *BinaryLessThanStringOpContext)
+
 	// EnterBinaryLessThanNumberOp is called when entering the BinaryLessThanNumberOp production.
 	EnterBinaryLessThanNumberOp(c *BinaryLessThanNumberOpContext)
 
 	// EnterBinaryLessThanDatetimeOp is called when entering the BinaryLessThanDatetimeOp production.
 	EnterBinaryLessThanDatetimeOp(c *BinaryLessThanDatetimeOpContext)
+
+	// EnterBinaryGreaterThanStringOp is called when entering the BinaryGreaterThanStringOp production.
+	EnterBinaryGreaterThanStringOp(c *BinaryGreaterThanStringOpContext)
 
 	// EnterBinaryGreaterThanNumberOp is called when entering the BinaryGreaterThanNumberOp production.
 	EnterBinaryGreaterThanNumberOp(c *BinaryGreaterThanNumberOpContext)
@@ -181,11 +187,17 @@ type ZitiQlListener interface {
 	// ExitBetweenDateOp is called when exiting the BetweenDateOp production.
 	ExitBetweenDateOp(c *BetweenDateOpContext)
 
+	// ExitBinaryLessThanStringOp is called when exiting the BinaryLessThanStringOp production.
+	ExitBinaryLessThanStringOp(c *BinaryLessThanStringOpContext)
+
 	// ExitBinaryLessThanNumberOp is called when exiting the BinaryLessThanNumberOp production.
 	ExitBinaryLessThanNumberOp(c *BinaryLessThanNumberOpContext)
 
 	// ExitBinaryLessThanDatetimeOp is called when exiting the BinaryLessThanDatetimeOp production.
 	ExitBinaryLessThanDatetimeOp(c *BinaryLessThanDatetimeOpContext)
+
+	// ExitBinaryGreaterThanStringOp is called when exiting the BinaryGreaterThanStringOp production.
+	ExitBinaryGreaterThanStringOp(c *BinaryGreaterThanStringOpContext)
 
 	// ExitBinaryGreaterThanNumberOp is called when exiting the BinaryGreaterThanNumberOp production.
 	ExitBinaryGreaterThanNumberOp(c *BinaryGreaterThanNumberOpContext)

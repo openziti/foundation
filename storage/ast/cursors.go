@@ -6,6 +6,8 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+var EmptyCursor emptyCursor
+
 type emptyCursor struct{}
 
 func (e emptyCursor) Next() {}
@@ -17,6 +19,8 @@ func (e emptyCursor) IsValid() bool {
 func (e emptyCursor) Current() []byte {
 	return nil
 }
+
+func (e emptyCursor) Seek([]byte) {}
 
 func NewEmptyCursor() SetCursor {
 	return emptyCursor{}

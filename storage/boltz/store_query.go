@@ -364,6 +364,14 @@ func (store *BaseStore) QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int6
 	return scanner.Scan(tx, query)
 }
 
+func (store *BaseStore) IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SeekableSetCursor {
+	entitiesBucket := store.GetEntitiesBucket(tx)
+	if entitiesBucket == nil {
+		return ast.EmptyCursor
+	}
+	return newFilteredCursor(tx, store, entitiesBucket.OpenSeekableCursor(), filter)
+}
+
 func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error) {
 	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.ScanCursor(tx, cursorProvider, query)

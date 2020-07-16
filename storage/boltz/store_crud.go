@@ -38,8 +38,21 @@ func (store *BaseStore) AddLinkCollection(local EntitySymbol, remote EntitySymbo
 	return result
 }
 
+func (store *BaseStore) AddRefCountedLinkCollection(local EntitySymbol, remote EntitySymbol) RefCountedLinkCollection {
+	result := &rcLinkCollectionImpl{
+		field:      local,
+		otherField: &RefCountedLinkedSetSymbol{EntitySymbol: remote},
+	}
+	store.refCountedLinks[local.GetName()] = result
+	return result
+}
+
 func (store *BaseStore) GetLinkCollection(name string) LinkCollection {
 	return store.links[name]
+}
+
+func (store *BaseStore) GetRefCountedLinkCollection(name string) RefCountedLinkCollection {
+	return store.refCountedLinks[name]
 }
 
 func (store *BaseStore) BaseLoadOneById(tx *bbolt.Tx, id string, entity Entity) (bool, error) {
@@ -334,6 +347,12 @@ func (store *BaseStore) IsEntityPresent(tx *bbolt.Tx, id string) bool {
 func (store *BaseStore) cleanupLinks(tx *bbolt.Tx, id string, holder errorz.ErrorHolder) {
 	// cascade delete n-n links
 	for _, val := range store.links {
+		if !holder.HasError() {
+			holder.SetError(val.EntityDeleted(tx, id))
+		}
+	}
+
+	for _, val := range store.refCountedLinks {
 		if !holder.HasError() {
 			holder.SetError(val.EntityDeleted(tx, id))
 		}
