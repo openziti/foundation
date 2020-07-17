@@ -85,6 +85,10 @@ func (node *UntypedSymbolNode) Symbol() string {
 	return node.symbol
 }
 
+func (node *UntypedSymbolNode) IsConst() bool {
+	return false
+}
+
 // BoolSymbolNode implements lookup of symbol values of type bool
 type BoolSymbolNode struct {
 	symbol string
@@ -112,6 +116,10 @@ func (node *BoolSymbolNode) Symbol() string {
 	return node.symbol
 }
 
+func (node *BoolSymbolNode) IsConst() bool {
+	return false
+}
+
 // DatetimeSymbolNode implements lookup of symbol values of type datetime
 type DatetimeSymbolNode struct {
 	symbol string
@@ -136,6 +144,10 @@ func (node *DatetimeSymbolNode) String() string {
 
 func (node *DatetimeSymbolNode) Symbol() string {
 	return node.symbol
+}
+
+func (node *DatetimeSymbolNode) IsConst() bool {
+	return false
 }
 
 // Float64SymbolNode implements lookup of symbol values of type float64
@@ -171,6 +183,10 @@ func (node *Float64SymbolNode) String() string {
 
 func (node *Float64SymbolNode) Symbol() string {
 	return node.symbol
+}
+
+func (node *Float64SymbolNode) IsConst() bool {
+	return false
 }
 
 // Int64SymbolNode implements lookup of symbol values of type int64
@@ -212,6 +228,10 @@ func (node *Int64SymbolNode) Symbol() string {
 	return node.symbol
 }
 
+func (node *Int64SymbolNode) IsConst() bool {
+	return false
+}
+
 // StringSymbolNode implements lookup of symbol values of type string
 type StringSymbolNode struct {
 	symbol string
@@ -236,6 +256,10 @@ func (node *StringSymbolNode) String() string {
 
 func (node *StringSymbolNode) Symbol() string {
 	return node.symbol
+}
+
+func (node *StringSymbolNode) IsConst() bool {
+	return false
 }
 
 // AnyTypeSymbolNode implements lookup of symbol values of any, meaning they can have any value type
@@ -283,6 +307,10 @@ func (node *AnyTypeSymbolNode) String() string {
 
 func (node *AnyTypeSymbolNode) Symbol() string {
 	return node.symbol
+}
+
+func (node *AnyTypeSymbolNode) IsConst() bool {
+	return false
 }
 
 type UnknownSymbolError struct {

@@ -144,10 +144,16 @@ type SeekableSetCursor interface {
 	Seek([]byte)
 }
 
+type TypeSeekableSetCursor interface {
+	SeekableSetCursor
+	SeekToString(val string)
+}
+
 type Node interface {
 	fmt.Stringer
 	GetType() NodeType
 	Accept(visitor Visitor)
+	IsConst() bool
 }
 
 type TypeTransformable interface {

@@ -255,6 +255,19 @@ func (symbol *entitySetSymbolRuntime) Next() {
 	}
 }
 
+func (symbol *entitySetSymbolRuntime) Seek(val []byte) {
+	if symbol.cursor != nil {
+		symbol.value, _ = symbol.cursor.Seek(val)
+	}
+}
+
+func (symbol *entitySetSymbolRuntime) SeekToString(val string) {
+	if symbol.cursor != nil {
+		seekVal := PrependFieldType(TypeString, []byte(val))
+		symbol.value, _ = symbol.cursor.Seek(seekVal)
+	}
+}
+
 func (symbol *entitySetSymbolRuntime) IsValid() bool {
 	return symbol.value != nil
 }

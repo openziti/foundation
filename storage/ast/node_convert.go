@@ -131,6 +131,10 @@ func (node *BooleanLogicExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, er
 	return node, errors.Errorf("unsupported boolean logic expression operation %v", node.op)
 }
 
+func (node *BooleanLogicExprNode) IsConst() bool {
+	return false
+}
+
 type BinaryExprNode struct {
 	left  Node
 	right Node
@@ -307,6 +311,10 @@ func (node *BinaryExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
 }
 
+func (node *BinaryExprNode) IsConst() bool {
+	return false
+}
+
 type Int64ToFloat64Node struct {
 	wrapped Int64Node
 }
@@ -336,6 +344,10 @@ func (node *Int64ToFloat64Node) EvalString(s Symbols) *string {
 
 func (node *Int64ToFloat64Node) String() string {
 	return fmt.Sprintf("float64(%v)", node.wrapped)
+}
+
+func (node *Int64ToFloat64Node) IsConst() bool {
+	return node.wrapped.IsConst()
 }
 
 func NewInArrayExprNode(left, right Node) *InArrayExprNode {
@@ -429,6 +441,10 @@ func (node *InArrayExprNode) getTypedExpr() (BoolNode, error) {
 		node, nodeTypeNames[node.left.GetType()], nodeTypeNames[node.right.GetType()])
 }
 
+func (node *InArrayExprNode) IsConst() bool {
+	return false
+}
+
 // BetweenExprNode is transitory node that handles conversion from untyped to typed BETWEEN nodes
 type BetweenExprNode struct {
 	left  Node
@@ -496,6 +512,10 @@ func (node *BetweenExprNode) getTypedExpr() (BoolNode, error) {
 
 	return node, errors.Errorf("operation between is not supported with operands types %v, %v, %v",
 		reflect.TypeOf(node.left), reflect.TypeOf(node.lower), reflect.TypeOf(node.lower))
+}
+
+func (node *BetweenExprNode) IsConst() bool {
+	return false
 }
 
 type SetFunctionNode struct {
@@ -574,10 +594,25 @@ func (node *SetFunctionNode) MoveUpTree(boolNode BoolNode) (BoolNode, error) {
 	case SetFunctionAllOf:
 		return &AllOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
 	case SetFunctionAnyOf:
-		return &AnyOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
+		return node.specializeSetAnyOf(boolNode)
 	default:
 		return nil, errors.Errorf("unhandled set function %v", node.setFunction)
 	}
+}
+
+func (node *SetFunctionNode) specializeSetAnyOf(boolNode BoolNode) (BoolNode, error) {
+	if seekOptimizable, ok := boolNode.(SeekOptimizableBoolNode); ok && seekOptimizable.IsSeekable() {
+		return &AnyOfSetExprNode{
+			name:              node.symbol.Symbol(),
+			predicate:         boolNode,
+			seekablePredicate: seekOptimizable,
+		}, nil
+	}
+	return &AnyOfSetExprNode{name: node.symbol.Symbol(), predicate: boolNode}, nil
+}
+
+func (node *SetFunctionNode) IsConst() bool {
+	return false
 }
 
 type UntypedNotExprNode struct {
@@ -614,4 +649,8 @@ func (node *UntypedNotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, erro
 	}
 
 	return &NotExprNode{expr: boolNode}, nil
+}
+
+func (node *UntypedNotExprNode) IsConst() bool {
+	return node.expr.IsConst()
 }
