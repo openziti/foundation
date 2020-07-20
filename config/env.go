@@ -24,6 +24,20 @@ func InjectEnv(config map[interface{}]interface{}) {
 			config[key] = os.ExpandEnv(str)
 		} else if m, ok := v.(map[interface{}]interface{}); ok {
 			InjectEnv(m)
+		} else if s, ok := v.([]interface{}); ok {
+			InjectEnvSlice(s)
+		}
+	}
+}
+
+func InjectEnvSlice(slice []interface{}) {
+	for idx, v := range slice {
+		if str, ok := v.(string); ok {
+			slice[idx] = os.ExpandEnv(str)
+		} else if m, ok := v.(map[interface{}]interface{}); ok {
+			InjectEnv(m)
+		} else if s, ok := v.([]interface{}); ok {
+			InjectEnvSlice(s)
 		}
 	}
 }
