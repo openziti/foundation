@@ -26,6 +26,7 @@ type RefCountedLinkCollection interface {
 	IncrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error)
 	DecrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error)
 	GetLinkCount(tx *bbolt.Tx, id []byte, relatedId []byte) *int32
+	SetLinkCount(tx *bbolt.Tx, id []byte, key []byte, count int) (*int32, *int32, error)
 	EntityDeleted(tx *bbolt.Tx, id string) error
 	IterateLinks(tx *bbolt.Tx, id []byte) ast.SeekableSetCursor
 	GetFieldSymbol() EntitySymbol
@@ -51,6 +52,14 @@ func (collection *rcLinkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id []byte) 
 		return ErrBucket(errors.Errorf("%v not found with id %v", collection.field.GetStore().GetEntityType(), string(id)))
 	}
 	return entityBucket.GetOrCreatePath(collection.field.GetPath()...)
+}
+
+func (collection *rcLinkCollectionImpl) SetLinkCount(tx *bbolt.Tx, id []byte, key []byte, count int) (*int32, *int32, error) {
+	fieldBucket := collection.getFieldBucket(tx, id)
+	if fieldBucket.HasError() {
+		return nil, nil, fieldBucket.GetError()
+	}
+	return collection.setLinkCount(tx, fieldBucket, id, key, count)
 }
 
 func (collection *rcLinkCollectionImpl) IncrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error) {
@@ -102,12 +111,27 @@ func (collection *rcLinkCollectionImpl) IterateLinks(tx *bbolt.Tx, id []byte) as
 	return nil
 }
 
+func (collection *rcLinkCollectionImpl) setLinkCount(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte, value int) (*int32, *int32, error) {
+	oldVal, err := fieldBucket.SetLinkCount(TypeString, associatedId, value)
+	if err != nil {
+		return nil, nil, err
+	}
+	otherOldVal, err := collection.otherField.setLinkCount(tx, associatedId, id, value)
+	if err != nil {
+		return nil, nil, err
+	}
+	return oldVal, otherOldVal, nil
+}
+
 func (collection *rcLinkCollectionImpl) incrementLinkCount(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) (int, error) {
 	newVal, err := fieldBucket.IncrementLinkCount(TypeString, associatedId)
 	if err != nil {
 		return 0, err
 	}
 	otherNewVal, err := collection.otherField.incrementLinkCount(tx, associatedId, id)
+	if err != nil {
+		return 0, err
+	}
 	if newVal != otherNewVal {
 		return 0, errors.Errorf("unexpected mismatch when incrementing reference counts from %v %v (%v) <-> %v %v (%v)",
 			collection.field.GetStore().GetSingularEntityType(), string(id), newVal,
@@ -123,6 +147,9 @@ func (collection *rcLinkCollectionImpl) decrementLinkCount(tx *bbolt.Tx, fieldBu
 		return 0, err
 	}
 	otherNewVal, err := collection.otherField.decrementLinkCount(tx, associatedId, id)
+	if err != nil {
+		return 0, err
+	}
 	if newVal != otherNewVal {
 		return 0, errors.Errorf("unexpected mismatch when decrementing reference counts from %v %v (%v) <-> %v %v (%v)",
 			collection.field.GetStore().GetSingularEntityType(), string(id), newVal,
@@ -141,6 +168,15 @@ func (collection *rcLinkCollectionImpl) unlinkCursor(tx *bbolt.Tx, cursor *bbolt
 
 type RefCountedLinkedSetSymbol struct {
 	EntitySymbol
+}
+
+func (symbol *RefCountedLinkedSetSymbol) setLinkCount(tx *bbolt.Tx, id []byte, link []byte, count int) (*int32, error) {
+	entityBucket := symbol.GetStore().GetEntityBucket(tx, id)
+	if entityBucket == nil {
+		return nil, NewNotFoundError(symbol.GetStore().GetSingularEntityType(), "id", string(id))
+	}
+	fieldBucket := entityBucket.GetOrCreatePath(symbol.GetPath()...)
+	return fieldBucket.SetLinkCount(TypeString, link, count)
 }
 
 func (symbol *RefCountedLinkedSetSymbol) incrementLinkCount(tx *bbolt.Tx, id []byte, link []byte) (int, error) {

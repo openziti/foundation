@@ -657,6 +657,23 @@ func (bucket *TypedBucket) CheckAndSetListEntry(fieldType FieldType, value []byt
 	return false, bucket.GetError()
 }
 
+func (bucket *TypedBucket) SetLinkCount(fieldType FieldType, value []byte, count int) (*int32, error) {
+	if !bucket.HasError() {
+		key := string(PrependFieldType(fieldType, value))
+		current := bucket.GetInt32(key)
+		if current == nil && count == 0 {
+			return nil, nil
+		}
+		if current != nil && count == 0 {
+			err := bucket.Delete([]byte(key))
+			return current, err
+		}
+		bucket.SetInt32(key, int32(count), nil)
+		return current, nil
+	}
+	return nil, bucket.GetError()
+}
+
 func (bucket *TypedBucket) IncrementLinkCount(fieldType FieldType, value []byte) (int, error) {
 	result := 0
 	if !bucket.HasError() {
