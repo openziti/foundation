@@ -274,9 +274,9 @@ func (index *setIndex) OpenValueCursor(tx *bbolt.Tx, key []byte, forward bool) a
 	}
 	cursor := indexBucket.Cursor()
 	if forward {
-		return NewTypedForwardBoltCursor(cursor)
+		return NewTypedForwardBoltCursor(cursor, TypeString)
 	}
-	return NewTypedReverseBoltCursor(cursor)
+	return NewTypedReverseBoltCursor(cursor, TypeString)
 }
 
 func (index *setIndex) Read(tx *bbolt.Tx, key []byte, f func(val []byte)) {

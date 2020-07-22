@@ -32,7 +32,7 @@ func Parse(symbolTypes SymbolTypes, query string) (Query, error) {
 
 	if query == "" {
 		return &queryNode{
-			Predicate: &BoolConstNode{value: true},
+			Predicate: BoolNodeTrue,
 			SortBy:    &SortByNode{},
 		}, nil
 	}

@@ -100,6 +100,8 @@ type ListStore interface {
 	QueryIdsC(tx *bbolt.Tx, query ast.Query) ([]string, int64, error)
 
 	QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error)
+
+	IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SeekableSetCursor
 }
 
 type CrudStore interface {
@@ -107,7 +109,9 @@ type CrudStore interface {
 
 	GetParentStore() CrudStore
 	AddLinkCollection(local EntitySymbol, remove EntitySymbol) LinkCollection
+	AddRefCountedLinkCollection(local EntitySymbol, remove EntitySymbol) RefCountedLinkCollection
 	GetLinkCollection(name string) LinkCollection
+	GetRefCountedLinkCollection(name string) RefCountedLinkCollection
 
 	Create(ctx MutateContext, entity Entity) error
 	Update(ctx MutateContext, entity Entity, checker FieldChecker) error
@@ -209,8 +213,8 @@ func (ctx *PersistContext) GetAndSetStringList(field string, value []string) ([]
 
 func (ctx *PersistContext) SetLinkedIds(field string, value []string) {
 	if ctx.ProceedWithSet(field) {
-		serviceLinks := ctx.Store.GetLinkCollection(field)
-		ctx.Bucket.SetError(serviceLinks.SetLinks(ctx.Bucket.Tx(), ctx.Id, value))
+		collection := ctx.Store.GetLinkCollection(field)
+		ctx.Bucket.SetError(collection.SetLinks(ctx.Bucket.Tx(), ctx.Id, value))
 	}
 }
 

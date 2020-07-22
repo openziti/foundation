@@ -590,6 +590,10 @@ func (bucket *TypedBucket) ReadStringList() []string {
 	return result
 }
 
+func (bucket *TypedBucket) IterateStringList() ast.SeekableSetCursor {
+	return NewTypedForwardBoltCursor(bucket.Cursor(), TypeString)
+}
+
 func (bucket *TypedBucket) IsStringListEmpty(name string) bool {
 	listBucket := bucket.GetBucket(name)
 	if listBucket == nil {
@@ -640,11 +644,92 @@ func (bucket *TypedBucket) SetStringList(name string, value []string, fieldCheck
 	return bucket
 }
 
+func (bucket *TypedBucket) CheckAndSetListEntry(fieldType FieldType, value []byte) (bool, error) {
+	if !bucket.HasError() {
+		key := PrependFieldType(fieldType, value)
+		if !bucket.IsKeyPresent(key) {
+			if bucket.SetError(bucket.Put(key, nil)) {
+				return false, bucket.Err
+			}
+			return true, nil
+		}
+	}
+	return false, bucket.GetError()
+}
+
+func (bucket *TypedBucket) SetLinkCount(fieldType FieldType, value []byte, count int) (*int32, error) {
+	if !bucket.HasError() {
+		key := string(PrependFieldType(fieldType, value))
+		current := bucket.GetInt32(key)
+		if current == nil && count == 0 {
+			return nil, nil
+		}
+		if current != nil && count == 0 {
+			err := bucket.Delete([]byte(key))
+			return current, err
+		}
+		bucket.SetInt32(key, int32(count), nil)
+		return current, nil
+	}
+	return nil, bucket.GetError()
+}
+
+func (bucket *TypedBucket) IncrementLinkCount(fieldType FieldType, value []byte) (int, error) {
+	result := 0
+	if !bucket.HasError() {
+		key := string(PrependFieldType(fieldType, value))
+		next := int32(1)
+		if current := bucket.GetInt32(key); current != nil {
+			next = *current + 1
+		}
+		bucket.SetInt32(key, next, nil)
+		result = int(next)
+	}
+	return result, bucket.GetError()
+}
+
+func (bucket *TypedBucket) DecrementLinkCount(fieldType FieldType, value []byte) (int, error) {
+	result := -1
+	if !bucket.HasError() {
+		key := string(PrependFieldType(fieldType, value))
+		if current := bucket.GetInt32(key); current != nil {
+			next := *current - 1
+			if next > 0 {
+				bucket.SetInt32(key, next, nil)
+			} else {
+				bucket.SetError(bucket.Delete([]byte(key)))
+			}
+			result = int(next)
+		}
+	}
+	return result, bucket.GetError()
+}
+
+func (bucket *TypedBucket) GetLinkCount(fieldType FieldType, value []byte) *int32 {
+	if bucket.HasError() {
+		return nil
+	}
+	return bucket.GetInt32(string(PrependFieldType(fieldType, value)))
+}
+
 func (bucket *TypedBucket) SetListEntry(fieldType FieldType, value []byte) *TypedBucket {
 	if !bucket.HasError() {
 		bucket.SetError(bucket.Put(PrependFieldType(fieldType, value), nil))
 	}
 	return bucket
+}
+
+func (bucket *TypedBucket) CheckAndDeleteListEntry(fieldType FieldType, value []byte) (bool, error) {
+	if !bucket.HasError() {
+		key := PrependFieldType(fieldType, value)
+		if bucket.IsKeyPresent(key) {
+			if bucket.SetError(bucket.Delete(key)) {
+				return false, bucket.Err
+			}
+			return true, nil
+		}
+	}
+	return false, bucket.GetError()
 }
 
 func (bucket *TypedBucket) DeleteListEntry(fieldType FieldType, value []byte) *TypedBucket {
@@ -768,15 +853,19 @@ func (bucket *TypedBucket) ProceedWithSet(name string, checker FieldChecker) boo
 	return bucket.Err == nil && (checker == nil || checker.IsUpdated(name))
 }
 
+func (bucket *TypedBucket) OpenSeekableCursor() ast.SeekableSetCursor {
+	return NewForwardBoltCursor(bucket.Cursor())
+}
+
 func (bucket *TypedBucket) OpenCursor(_ *bbolt.Tx, forward bool) ast.SetCursor {
 	return NewBoltCursor(bucket.Cursor(), forward)
 }
 
 func (bucket *TypedBucket) OpenTypedCursor(_ *bbolt.Tx, forward bool) ast.SetCursor {
 	if forward {
-		return NewTypedForwardBoltCursor(bucket.Cursor())
+		return NewTypedForwardBoltCursor(bucket.Cursor(), TypeString)
 	}
-	return NewTypedReverseBoltCursor(bucket.Cursor())
+	return NewTypedReverseBoltCursor(bucket.Cursor(), TypeString)
 }
 
 func (bucket *TypedBucket) IsKeyPresent(key []byte) bool {

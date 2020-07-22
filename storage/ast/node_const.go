@@ -53,6 +53,10 @@ func (node *BoolConstNode) String() string {
 	return fmt.Sprintf("%v", node.value)
 }
 
+func (node *BoolConstNode) IsConst() bool {
+	return true
+}
+
 // DatetimeConstNode wraps a datetime constant expression
 type DatetimeConstNode struct {
 	value time.Time
@@ -72,6 +76,10 @@ func (node *DatetimeConstNode) EvalDatetime(_ Symbols) *time.Time {
 
 func (node *DatetimeConstNode) String() string {
 	return fmt.Sprintf("%v", node.value)
+}
+
+func (node *DatetimeConstNode) IsConst() bool {
+	return true
 }
 
 // Float64ConstNode wraps a float64 constant expression
@@ -98,6 +106,10 @@ func (node *Float64ConstNode) EvalString(_ Symbols) *string {
 
 func (node *Float64ConstNode) String() string {
 	return fmt.Sprintf("%v", node.value)
+}
+
+func (node *Float64ConstNode) IsConst() bool {
+	return true
 }
 
 // Int64ConstNode wraps an int64 constant expression
@@ -130,6 +142,10 @@ func (node *Int64ConstNode) String() string {
 	return strconv.FormatInt(node.value, 10)
 }
 
+func (node *Int64ConstNode) IsConst() bool {
+	return true
+}
+
 // StringConstNode wraps a string constant expression
 type StringConstNode struct {
 	value string
@@ -151,6 +167,12 @@ func (node *StringConstNode) String() string {
 	return fmt.Sprintf(`"%v"`, node.value)
 }
 
+func (node *StringConstNode) IsConst() bool {
+	return true
+}
+
+var _ Node = (*NullConstNode)(nil)
+
 // NullNode wraps a null constant expression
 type NullConstNode struct{}
 
@@ -164,4 +186,8 @@ func (NullConstNode) GetType() NodeType {
 
 func (NullConstNode) String() string {
 	return "null"
+}
+
+func (node NullConstNode) IsConst() bool {
+	return true
 }

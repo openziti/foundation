@@ -56,9 +56,14 @@ func (node *AllOfSetExprNode) EvalBool(s Symbols) bool {
 	return true
 }
 
+func (node *AllOfSetExprNode) IsConst() bool {
+	return false
+}
+
 type AnyOfSetExprNode struct {
-	name      string
-	predicate BoolNode
+	name              string
+	predicate         BoolNode
+	seekablePredicate SeekOptimizableBoolNode
 }
 
 func (node *AnyOfSetExprNode) Symbol() string {
@@ -82,12 +87,22 @@ func (node *AnyOfSetExprNode) Accept(visitor Visitor) {
 func (node *AnyOfSetExprNode) EvalBool(s Symbols) bool {
 	cursor := s.OpenSetCursor(node.name)
 
+	if node.seekablePredicate != nil {
+		if seekableCursor, ok := cursor.(TypeSeekableSetCursor); ok {
+			return node.seekablePredicate.EvalBoolWithSeek(s, seekableCursor)
+		}
+	}
+
 	for cursor.IsValid() {
 		if node.predicate.EvalBool(s) {
 			return true
 		}
 		cursor.Next()
 	}
+	return false
+}
+
+func (node *AnyOfSetExprNode) IsConst() bool {
 	return false
 }
 
@@ -147,6 +162,10 @@ func (node *CountSetExprNode) ToFloat64() Float64Node {
 	return &Int64ToFloat64Node{node}
 }
 
+func (node *CountSetExprNode) IsConst() bool {
+	return false
+}
+
 type IsEmptySetExprNode struct {
 	symbol SymbolNode
 	query  Query
@@ -182,4 +201,8 @@ func (node *IsEmptySetExprNode) EvalBool(s Symbols) bool {
 		cursor = s.OpenSetCursorForQuery(node.Symbol(), node.query)
 	}
 	return !cursor.IsValid()
+}
+
+func (node *IsEmptySetExprNode) IsConst() bool {
+	return false
 }

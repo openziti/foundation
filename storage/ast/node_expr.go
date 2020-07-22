@@ -51,6 +51,10 @@ func (node *NotExprNode) TypeTransformBool(s SymbolTypes) (BoolNode, error) {
 	return node, transformBools(s, &node.expr)
 }
 
+func (node *NotExprNode) IsConst() bool {
+	return node.expr.IsConst()
+}
+
 func NewAndExprNode(left, right BoolNode) *AndExprNode {
 	return &AndExprNode{
 		left:  left,
@@ -90,6 +94,10 @@ func (node *AndExprNode) String() string {
 	return fmt.Sprintf("%v && %v", node.left, node.right)
 }
 
+func (node *AndExprNode) IsConst() bool {
+	return false
+}
+
 // OrExprNode implements logical OR on two wrapped boolean expressions
 type OrExprNode struct {
 	left  BoolNode
@@ -121,6 +129,15 @@ func (node *OrExprNode) EvalBool(s Symbols) bool {
 
 func (node *OrExprNode) String() string {
 	return fmt.Sprintf("%v || %v", node.left, node.right)
+}
+
+func (node *OrExprNode) IsConst() bool {
+	return false
+}
+
+type SeekOptimizableBoolNode interface {
+	IsSeekable() bool
+	EvalBoolWithSeek(s Symbols, cursor TypeSeekableSetCursor) bool
 }
 
 type BinaryBoolExprNode struct {
@@ -157,6 +174,10 @@ func (node *BinaryBoolExprNode) EvalBool(s Symbols) bool {
 
 func (node *BinaryBoolExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
+}
+
+func (node *BinaryBoolExprNode) IsConst() bool {
+	return false
 }
 
 type BinaryDatetimeExprNode struct {
@@ -207,6 +228,10 @@ func (node *BinaryDatetimeExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
 }
 
+func (node *BinaryDatetimeExprNode) IsConst() bool {
+	return false
+}
+
 type BinaryFloat64ExprNode struct {
 	left  Float64Node
 	right Float64Node
@@ -253,6 +278,10 @@ func (node *BinaryFloat64ExprNode) EvalBool(s Symbols) bool {
 
 func (node *BinaryFloat64ExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
+}
+
+func (node *BinaryFloat64ExprNode) IsConst() bool {
+	return false
 }
 
 type BinaryInt64ExprNode struct {
@@ -303,6 +332,10 @@ func (node *BinaryInt64ExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
 }
 
+func (node *BinaryInt64ExprNode) IsConst() bool {
+	return false
+}
+
 type BinaryStringExprNode struct {
 	left  StringNode
 	right StringNode
@@ -318,6 +351,21 @@ func (node *BinaryStringExprNode) Accept(visitor Visitor) {
 
 func (*BinaryStringExprNode) GetType() NodeType {
 	return NodeTypeBool
+}
+
+func (node *BinaryStringExprNode) IsSeekable() bool {
+	return (node.op == BinaryOpEQ || node.op == BinaryOpNEQ) &&
+		(node.left.IsConst() || node.right.IsConst())
+}
+
+func (node *BinaryStringExprNode) EvalBoolWithSeek(s Symbols, cursor TypeSeekableSetCursor) bool {
+	if rightResult := node.right.EvalString(s); rightResult != nil {
+		cursor.SeekToString(*rightResult)
+		if cursor.IsValid() {
+			return node.EvalBool(s)
+		}
+	}
+	return false
 }
 
 func (node *BinaryStringExprNode) EvalBool(s Symbols) bool {
@@ -355,6 +403,10 @@ func (node *BinaryStringExprNode) String() string {
 	return fmt.Sprintf("%v %v %v", node.left, binaryOpNames[node.op], node.right)
 }
 
+func (node *BinaryStringExprNode) IsConst() bool {
+	return false
+}
+
 type IsNilExprNode struct {
 	symbol SymbolNode
 	op     BinaryOp
@@ -386,6 +438,10 @@ func (node *IsNilExprNode) EvalBool(s Symbols) bool {
 
 func (node *IsNilExprNode) String() string {
 	return fmt.Sprintf("%v %v null", node.symbol, binaryOpNames[node.op])
+}
+
+func (node *IsNilExprNode) IsConst() bool {
+	return false
 }
 
 func NewInt64BetweenOp(nodes []Int64Node) (*Int64BetweenExprNode, error) {
@@ -441,6 +497,10 @@ func (node *Int64BetweenExprNode) String() string {
 	return fmt.Sprintf("%v between %v and %v", node.left, node.lower, node.upper)
 }
 
+func (node *Int64BetweenExprNode) IsConst() bool {
+	return false
+}
+
 func NewFloat64BetweenOp(nodes []Float64Node) (*Float64BetweenExprNode, error) {
 	if len(nodes) != 3 {
 		return nil, errors.Errorf("incorrect number of values provided to Float64BetweenExprNode: %v", len(nodes))
@@ -493,6 +553,10 @@ func (node *Float64BetweenExprNode) String() string {
 	return fmt.Sprintf("%v between %v and %v", node.left, node.lower, node.upper)
 }
 
+func (node *Float64BetweenExprNode) IsConst() bool {
+	return false
+}
+
 type DatetimeBetweenExprNode struct {
 	left  DatetimeNode
 	lower DatetimeNode
@@ -533,4 +597,8 @@ func (node *DatetimeBetweenExprNode) EvalBool(s Symbols) bool {
 
 func (node *DatetimeBetweenExprNode) String() string {
 	return fmt.Sprintf("%v between %v and %v", node.left, node.lower, node.upper)
+}
+
+func (node *DatetimeBetweenExprNode) IsConst() bool {
+	return false
 }

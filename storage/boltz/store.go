@@ -44,6 +44,7 @@ func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id s
 
 		Indexer:         *NewIndexer(RootBucket, IndexesBucket),
 		links:           map[string]LinkCollection{},
+		refCountedLinks: map[string]RefCountedLinkCollection{},
 		entityNotFoundF: entityNotFoundF,
 		EventEmmiter:    events.New(),
 	}
@@ -71,6 +72,7 @@ type BaseStore struct {
 	isExtended    bool
 	Indexer
 	links           map[string]LinkCollection
+	refCountedLinks map[string]RefCountedLinkCollection
 	entityNotFoundF func(id string) error
 	deleteHandlers  EntityChangeHandlers
 	events.EventEmmiter

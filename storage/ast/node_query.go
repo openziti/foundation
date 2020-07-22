@@ -75,6 +75,10 @@ func (node *untypedQueryNode) TypeTransformBool(s SymbolTypes) (BoolNode, error)
 	}, nil
 }
 
+func (node *untypedQueryNode) IsConst() bool {
+	return node.predicate.IsConst()
+}
+
 type queryNode struct {
 	Predicate BoolNode
 	SortBy    *SortByNode
@@ -166,6 +170,10 @@ func (node *queryNode) Accept(visitor Visitor) {
 	visitor.VisitQueryNodeEnd(node)
 }
 
+func (node *queryNode) IsConst() bool {
+	return node.Predicate.IsConst()
+}
+
 type SortByNode struct {
 	SortFields []*SortFieldNode
 }
@@ -220,6 +228,10 @@ func (node *SortByNode) Accept(visitor Visitor) {
 	}
 }
 
+func (node *SortByNode) IsConst() bool {
+	return false
+}
+
 type SortFieldNode struct {
 	symbol      SymbolNode
 	isAscending bool
@@ -254,6 +266,10 @@ func (node *SortFieldNode) GetType() NodeType {
 func (node *SortFieldNode) Accept(visitor Visitor) {
 	node.symbol.Accept(visitor)
 	visitor.VisitSortFieldNode(node)
+}
+
+func (node *SortFieldNode) IsConst() bool {
+	return false
 }
 
 type SortDirection bool
@@ -352,6 +368,10 @@ func (node *UntypedSubQueryNode) GetType() NodeType {
 	return NodeTypeOther
 }
 
+func (node *UntypedSubQueryNode) IsConst() bool {
+	return node.query.IsConst()
+}
+
 type subQueryNode struct {
 	symbol SymbolNode
 	query  Query
@@ -374,4 +394,8 @@ func (node *subQueryNode) String() string {
 
 func (node *subQueryNode) GetType() NodeType {
 	return NodeTypeOther
+}
+
+func (node *subQueryNode) IsConst() bool {
+	return node.query.IsConst()
 }

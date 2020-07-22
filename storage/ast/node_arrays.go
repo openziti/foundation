@@ -64,6 +64,10 @@ func (node *StringArrayNode) AsStringArray() *StringArrayNode {
 	return node
 }
 
+func (node *StringArrayNode) IsConst() bool {
+	return true
+}
+
 // Float64ArrayNode encapsulates a float64 array
 type Float64ArrayNode struct {
 	values []Float64Node
@@ -101,6 +105,10 @@ func (node *Float64ArrayNode) AsStringArray() *StringArrayNode {
 		result.values = append(result.values, child)
 	}
 	return result
+}
+
+func (node *Float64ArrayNode) IsConst() bool {
+	return true
 }
 
 // Int64ArrayNode encapsulates an int64 array
@@ -150,6 +158,10 @@ func (node *Int64ArrayNode) AsStringArray() *StringArrayNode {
 	return result
 }
 
+func (node *Int64ArrayNode) IsConst() bool {
+	return true
+}
+
 // DatetimeArrayNode encapsulates a datetime array
 type DatetimeArrayNode struct {
 	values []DatetimeNode
@@ -179,6 +191,10 @@ func (node *DatetimeArrayNode) Accept(visitor Visitor) {
 		child.Accept(visitor)
 	}
 	visitor.VisitDatetimeArrayNodeEnd(node)
+}
+
+func (node *DatetimeArrayNode) IsConst() bool {
+	return true
 }
 
 type InStringArrayExprNode struct {
@@ -215,6 +231,10 @@ func (node *InStringArrayExprNode) Accept(visitor Visitor) {
 	visitor.VisitInStringArrayExprNodeEnd(node)
 }
 
+func (node *InStringArrayExprNode) IsConst() bool {
+	return false
+}
+
 type InInt64ArrayExprNode struct {
 	left  Int64Node
 	right *Int64ArrayNode
@@ -247,6 +267,10 @@ func (node *InInt64ArrayExprNode) Accept(visitor Visitor) {
 	node.left.Accept(visitor)
 	node.right.Accept(visitor)
 	visitor.VisitInInt64ArrayExprNodeEnd(node)
+}
+
+func (node *InInt64ArrayExprNode) IsConst() bool {
+	return false
 }
 
 type InFloat64ArrayExprNode struct {
@@ -283,6 +307,10 @@ func (node *InFloat64ArrayExprNode) Accept(visitor Visitor) {
 	visitor.VisitInFloat64ArrayExprNodeEnd(node)
 }
 
+func (node *InFloat64ArrayExprNode) IsConst() bool {
+	return false
+}
+
 type InDatetimeArrayExprNode struct {
 	left  DatetimeNode
 	right *DatetimeArrayNode
@@ -315,4 +343,8 @@ func (node *InDatetimeArrayExprNode) Accept(visitor Visitor) {
 	node.left.Accept(visitor)
 	node.right.Accept(visitor)
 	visitor.VisitInDatetimeArrayExprNodeEnd(node)
+}
+
+func (node *InDatetimeArrayExprNode) IsConst() bool {
+	return false
 }

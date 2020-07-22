@@ -69,6 +69,22 @@ func newCursorScanner(tx *bbolt.Tx, store ListStore, cursor ast.SetCursor, query
 	return result
 }
 
+func newFilteredCursor(tx *bbolt.Tx, store ListStore, cursor ast.SeekableSetCursor, filter ast.BoolNode) ast.SeekableSetCursor {
+	result := &uniqueIndexScanner{
+		scanner: scanner{
+			targetOffset: 0,
+			targetLimit:  math.MaxInt64,
+		},
+		store:     store,
+		forward:   true,
+		cursor:    cursor,
+		rowCursor: newRowCursor(store, tx),
+		filter:    filter,
+	}
+	result.Next()
+	return result
+}
+
 func (scanner *uniqueIndexScanner) Scan(tx *bbolt.Tx, query ast.Query) ([]string, int64, error) {
 	entityBucket := scanner.store.GetEntitiesBucket(tx)
 	if entityBucket == nil {
@@ -132,6 +148,18 @@ func (scanner *uniqueIndexScanner) Next() {
 		match := scanner.filter.EvalBool(rowCursor)
 		if match {
 			return
+		}
+	}
+}
+
+func (scanner *uniqueIndexScanner) Seek(val []byte) {
+	cursor := scanner.cursor
+	if seekableCursor, ok := cursor.(ast.SeekableSetCursor); ok {
+		seekableCursor.Seek(val)
+		scanner.Next()
+	} else {
+		for scanner.IsValid() && string(scanner.current) < string(val) {
+			scanner.Next()
 		}
 	}
 }

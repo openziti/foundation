@@ -17,6 +17,7 @@
 package boltz
 
 import (
+	"github.com/openziti/foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 	"sort"
@@ -24,9 +25,12 @@ import (
 
 type LinkCollection interface {
 	AddLinks(tx *bbolt.Tx, id string, keys ...string) error
+	AddLink(tx *bbolt.Tx, id []byte, key []byte) (bool, error)
 	RemoveLinks(tx *bbolt.Tx, id string, keys ...string) error
+	RemoveLink(tx *bbolt.Tx, id []byte, keys []byte) (bool, error)
 	SetLinks(tx *bbolt.Tx, id string, keys []string) error
 	GetLinks(tx *bbolt.Tx, id string) []string
+	IterateLinks(tx *bbolt.Tx, id []byte) ast.SeekableSetCursor
 	EntityDeleted(tx *bbolt.Tx, id string) error
 	GetFieldSymbol() EntitySymbol
 	GetLinkedSymbol() EntitySymbol
@@ -45,8 +49,12 @@ func (collection *linkCollectionImpl) GetLinkedSymbol() EntitySymbol {
 	return collection.otherField
 }
 
-func (collection *linkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id string) *TypedBucket {
-	entityBucket := collection.field.GetStore().GetEntityBucket(tx, []byte(id))
+func (collection *linkCollectionImpl) getFieldBucketForStringId(tx *bbolt.Tx, id string) *TypedBucket {
+	return collection.getFieldBucket(tx, []byte(id))
+}
+
+func (collection *linkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id []byte) *TypedBucket {
+	entityBucket := collection.field.GetStore().GetEntityBucket(tx, id)
 	if entityBucket == nil {
 		return ErrBucket(errors.Errorf("%v not found with id %v", collection.field.GetStore().GetEntityType(), id))
 	}
@@ -54,7 +62,7 @@ func (collection *linkCollectionImpl) getFieldBucket(tx *bbolt.Tx, id string) *T
 }
 
 func (collection *linkCollectionImpl) AddLinks(tx *bbolt.Tx, id string, keys ...string) error {
-	fieldBucket := collection.getFieldBucket(tx, id)
+	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 	if !fieldBucket.HasError() {
 		byteId := []byte(id)
 		for _, key := range keys {
@@ -66,8 +74,16 @@ func (collection *linkCollectionImpl) AddLinks(tx *bbolt.Tx, id string, keys ...
 	return fieldBucket.Err
 }
 
-func (collection *linkCollectionImpl) RemoveLinks(tx *bbolt.Tx, id string, keys ...string) error {
+func (collection *linkCollectionImpl) AddLink(tx *bbolt.Tx, id []byte, key []byte) (bool, error) {
 	fieldBucket := collection.getFieldBucket(tx, id)
+	if !fieldBucket.HasError() {
+		return collection.checkAndLink(tx, fieldBucket, id, key)
+	}
+	return false, fieldBucket.Err
+}
+
+func (collection *linkCollectionImpl) RemoveLinks(tx *bbolt.Tx, id string, keys ...string) error {
+	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 	if !fieldBucket.HasError() {
 		byteId := []byte(id)
 		for _, key := range keys {
@@ -79,10 +95,18 @@ func (collection *linkCollectionImpl) RemoveLinks(tx *bbolt.Tx, id string, keys 
 	return fieldBucket.Err
 }
 
+func (collection *linkCollectionImpl) RemoveLink(tx *bbolt.Tx, id []byte, key []byte) (bool, error) {
+	fieldBucket := collection.getFieldBucket(tx, id)
+	if !fieldBucket.HasError() {
+		return collection.checkAndUnlink(tx, fieldBucket, id, key)
+	}
+	return false, fieldBucket.Err
+}
+
 func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []string) error {
 	sort.Strings(keys)
 	bId := []byte(id)
-	fieldBucket := collection.getFieldBucket(tx, id)
+	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 
 	var toAdd []string
 
@@ -132,7 +156,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 
 func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) error {
 	bId := []byte(id)
-	fieldBucket := collection.getFieldBucket(tx, id)
+	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
@@ -148,11 +172,27 @@ func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) err
 }
 
 func (collection *linkCollectionImpl) GetLinks(tx *bbolt.Tx, id string) []string {
-	fieldBucket := collection.getFieldBucket(tx, id)
+	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 	if !fieldBucket.HasError() {
 		return fieldBucket.ReadStringList()
 	}
 	return nil
+}
+
+func (collection *linkCollectionImpl) IterateLinks(tx *bbolt.Tx, id []byte) ast.SeekableSetCursor {
+	fieldBucket := collection.getFieldBucket(tx, id)
+	if !fieldBucket.HasError() {
+		return fieldBucket.IterateStringList()
+	}
+	return ast.EmptyCursor
+}
+
+func (collection *linkCollectionImpl) checkAndLink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) (bool, error) {
+	changed, err := fieldBucket.CheckAndSetListEntry(TypeString, associatedId)
+	if err != nil {
+		return false, err
+	}
+	return changed, collection.otherField.AddLink(tx, associatedId, id)
 }
 
 func (collection *linkCollectionImpl) link(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) error {
@@ -160,6 +200,14 @@ func (collection *linkCollectionImpl) link(tx *bbolt.Tx, fieldBucket *TypedBucke
 		return fieldBucket.Err
 	}
 	return collection.otherField.AddLink(tx, associatedId, id)
+}
+
+func (collection *linkCollectionImpl) checkAndUnlink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) (bool, error) {
+	changed, err := fieldBucket.CheckAndDeleteListEntry(TypeString, associatedId)
+	if err != nil {
+		return false, err
+	}
+	return changed, collection.otherField.RemoveLink(tx, associatedId, id)
 }
 
 func (collection *linkCollectionImpl) unlink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) error {
