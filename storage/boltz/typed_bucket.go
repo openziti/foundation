@@ -400,11 +400,11 @@ func BytesToInt64(buf []byte) *int64 {
 func FieldToInt64(fieldType FieldType, value []byte) *int64 {
 	switch fieldType {
 	case TypeInt32:
-		uint16val := BytesToInt32(value)
-		if uint16val == nil {
+		int32val := BytesToInt32(value)
+		if int32val == nil {
 			return nil
 		}
-		result := int64(*uint16val)
+		result := int64(*int32val)
 		return &result
 	case TypeInt64:
 		return BytesToInt64(value)
@@ -479,6 +479,14 @@ func BytesToInt32(buf []byte) *int32 {
 	}
 	result := int32(binary.LittleEndian.Uint32(buf))
 	return &result
+}
+
+func FieldToInt32(fieldType FieldType, value []byte) *int32 {
+	switch fieldType {
+	case TypeInt32:
+		return BytesToInt32(value)
+	}
+	return nil
 }
 
 func (bucket *TypedBucket) GetInt32(name string) *int32 {

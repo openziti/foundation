@@ -26,6 +26,7 @@ type RefCountedLinkCollection interface {
 	IncrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error)
 	DecrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error)
 	GetLinkCount(tx *bbolt.Tx, id []byte, relatedId []byte) *int32
+	GetLinkCounts(tx *bbolt.Tx, id []byte, relatedId []byte) (*int32, *int32)
 	SetLinkCount(tx *bbolt.Tx, id []byte, key []byte, count int) (*int32, *int32, error)
 	EntityDeleted(tx *bbolt.Tx, id string) error
 	IterateLinks(tx *bbolt.Tx, id []byte) ast.SeekableSetCursor
@@ -60,6 +61,23 @@ func (collection *rcLinkCollectionImpl) SetLinkCount(tx *bbolt.Tx, id []byte, ke
 		return nil, nil, fieldBucket.GetError()
 	}
 	return collection.setLinkCount(tx, fieldBucket, id, key, count)
+}
+
+func (collection *rcLinkCollectionImpl) GetLinkCounts(tx *bbolt.Tx, id []byte, key []byte) (*int32, *int32) {
+	var sourceVal, targetVal *int32
+	if entityBucket := collection.field.GetStore().GetEntityBucket(tx, id); entityBucket != nil {
+		if fieldBucket := entityBucket.GetPath(collection.field.GetPath()...); fieldBucket != nil {
+			sourceVal = fieldBucket.GetLinkCount(TypeString, key)
+		}
+	}
+
+	if entityBucket := collection.otherField.GetStore().GetEntityBucket(tx, key); entityBucket != nil {
+		if fieldBucket := entityBucket.GetPath(collection.otherField.GetPath()...); fieldBucket != nil {
+			targetVal = fieldBucket.GetLinkCount(TypeString, id)
+		}
+	}
+
+	return sourceVal, targetVal
 }
 
 func (collection *rcLinkCollectionImpl) IncrementLinkCount(tx *bbolt.Tx, id []byte, key []byte) (int, error) {
