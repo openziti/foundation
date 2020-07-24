@@ -173,6 +173,7 @@ type Constraint interface {
 	ProcessAfterUpdate(ctx *IndexingContext)
 	ProcessDelete(ctx *IndexingContext)
 	Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder)
+	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 }
 
 type uniqueIndex struct {
@@ -240,6 +241,12 @@ func (index *uniqueIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	}
 }
 
+func (index *uniqueIndex) processIntegrityFix(ctx *IndexingContext) error {
+	ctx.ErrHolder = &errorz.ErrorHolderImpl{}
+	index.ProcessAfterUpdate(ctx)
+	return ctx.ErrHolder.GetError()
+}
+
 func (index *uniqueIndex) ProcessDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		if _, value := index.symbol.Eval(ctx.Tx, ctx.RowId); len(value) > 0 {
@@ -247,6 +254,62 @@ func (index *uniqueIndex) ProcessDelete(ctx *IndexingContext) {
 			ctx.ErrHolder.SetError(indexBucket.DeleteValue(value).Err)
 		}
 	}
+}
+
+func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	indexBucket := index.getIndexBucket(tx)
+	cursor := indexBucket.Cursor()
+	store := index.symbol.GetStore()
+	for key, val := cursor.First(); key != nil; key, val = cursor.Next() {
+		if !store.IsEntityPresent(tx, string(val)) {
+			if fix {
+				if err := cursor.Delete(); err != nil {
+					return err
+				}
+			}
+			errorSink(errors.Errorf("unique index %v.%v references %v for value %v which doesn't exist",
+				store.GetEntityType(), index.symbol.GetName(), string(val), string(key)), fix)
+		} else {
+			_, fieldVal := index.symbol.Eval(tx, val)
+			if !bytes.Equal(key, fieldVal) {
+				if fix {
+					ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(val), nil)
+					ctx.atomStates[index] = key
+					if err := index.processIntegrityFix(ctx); err != nil {
+						return err
+					}
+				}
+
+				errorSink(errors.Errorf("unique index %v.%v references %v for value %v which should be %v",
+					store.GetEntityType(), index.symbol.GetName(), string(val), string(key), string(fieldVal)), fix)
+			}
+		}
+	}
+
+	for entityCursor := index.symbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); entityCursor.IsValid(); entityCursor.Next() {
+		id := entityCursor.Current()
+		_, fieldVal := index.symbol.Eval(tx, id)
+		idxId := index.Read(tx, fieldVal)
+
+		if idxId == nil {
+			if fix {
+				ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(idxId), nil)
+				if err := index.processIntegrityFix(ctx); err != nil {
+					return err
+				}
+			}
+
+			errorSink(errors.Errorf("unique index %v.%v missing value %v for id %v",
+				store.GetEntityType(), index.symbol.GetName(), string(fieldVal), string(id)), fix)
+
+		} else if !bytes.Equal(idxId, id) {
+			// We've already verify above that all index values are pointing to entities with the correct field value
+			// so this means we've got a uniqueness contraint violation, which we can't fix
+			errorSink(errors.Errorf("uniqueness constraint violatition on index %v.%v. Both %v and %v have value %v. Unable to fix",
+				store.GetEntityType(), index.symbol.GetName(), string(idxId), string(id), string(fieldVal)), false)
+		}
+	}
+	return nil
 }
 
 type setIndex struct {
@@ -414,6 +477,60 @@ func (index *setIndex) deleteIndexKey(tx *bbolt.Tx, key []byte) error {
 	return indexBucket.DeleteBucket(key)
 }
 
+func (index *setIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	if indexBaseBucket := Path(tx, index.indexPath...); indexBaseBucket != nil {
+		cursor := indexBaseBucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if indexBucket := indexBaseBucket.Bucket.Bucket(key); indexBucket != nil {
+				idsCursor := indexBucket.Cursor()
+				for val, _ := idsCursor.First(); val != nil; val, _ = idsCursor.Next() {
+					_, id := GetTypeAndValue(val)
+					if !index.symbol.GetStore().IsEntityPresent(tx, string(id)) {
+						// entry has been deleted, remove
+						if fix {
+							if err := idsCursor.Delete(); err != nil {
+								return err
+							}
+						}
+						errorSink(errors.Errorf("for index on %v.%v, val %v referenced id %v, which no longer exists",
+							index.symbol.GetStore().GetEntityType(), index.GetSymbol().GetName(),
+							string(key), string(id)), fix)
+					} else {
+						rtSymbol := index.symbol.GetRuntimeSymbol()
+						found := false
+						for setCursor := rtSymbol.OpenCursor(tx, id); setCursor.IsValid(); setCursor.Next() {
+							_, value := rtSymbol.Eval(tx, id)
+							if bytes.Equal(value, key) {
+								found = true
+								break
+							}
+						}
+						if !found {
+							if fix {
+								if err := idsCursor.Delete(); err != nil {
+									return err
+								}
+							}
+							errorSink(errors.Errorf("for index on %v.%v, val %v referenced id %v, which doesn't contain the value",
+								index.symbol.GetStore().GetEntityType(), index.GetSymbol().GetName(),
+								string(key), string(id)), false)
+						}
+					}
+				}
+			} else {
+				// If key has no values, delete the key
+				if err := cursor.Delete(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// TODO: iterate over index.symbol.store ids and verify that index is correct from the other side
+
+	return nil
+}
+
 type fkIndex struct {
 	symbol   EntitySymbol
 	fkSymbol EntitySymbol
@@ -469,8 +586,97 @@ func (index *fkIndex) getIndexBucket(tx *bbolt.Tx, fkId []byte) *TypedBucket {
 	return entityBucket.GetOrCreatePath(index.fkSymbol.GetPath()...)
 }
 
+func (index *fkIndex) getIndexBucketReadOnly(tx *bbolt.Tx, fkId []byte) *TypedBucket {
+	fkStore := index.fkSymbol.GetStore()
+	entityBucket := fkStore.GetEntityBucket(tx, fkId)
+	if entityBucket == nil {
+		return nil
+	}
+	return entityBucket.GetPath(index.fkSymbol.GetPath()...)
+}
+
 func (index *fkIndex) Initialize(_ *bbolt.Tx, _ errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
+}
+
+func (index *fkIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	for idsCursor := index.fkSymbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+		id := idsCursor.Current()
+		entityBucket := index.fkSymbol.GetStore().GetEntityBucket(tx, id)
+		setBucket := entityBucket.GetPath(index.fkSymbol.GetPath()...)
+		if setBucket == nil {
+			continue
+		}
+		fkCursor := setBucket.Cursor()
+		for val, _ := fkCursor.First(); val != nil; val, _ = fkCursor.Next() {
+			_, fkId := GetTypeAndValue(val)
+			if !index.symbol.GetStore().IsEntityPresent(tx, string(fkId)) {
+				if fix {
+					if err := fkCursor.Delete(); err != nil {
+						return err
+					}
+				}
+				errorSink(errors.Errorf("for fk %v.%v, %v %v references %v %v, which doesn't exist",
+					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+					index.fkSymbol.GetStore().GetSingularEntityType(), string(id),
+					index.symbol.GetStore().GetSingularEntityType(), string(fkId)), fix)
+			} else {
+				_, key := index.symbol.Eval(tx, fkId)
+				if key == nil || !bytes.Equal(key, id) {
+					if fix {
+						if err := fkCursor.Delete(); err != nil {
+							return err
+						}
+					}
+
+					logVal := string(key)
+					if key == nil {
+						logVal = "(nil)"
+					}
+
+					errorSink(errors.Errorf("for fk %v.%v, %v %v references %v %v, which has non-matching value %v",
+						index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+						index.fkSymbol.GetStore().GetSingularEntityType(), string(id),
+						index.symbol.GetStore().GetSingularEntityType(), string(fkId), string(logVal)), fix)
+				}
+			}
+		}
+	}
+
+	for idsCursor := index.symbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+		id := idsCursor.Current()
+		_, key := index.symbol.Eval(tx, id)
+		if key == nil {
+			if !index.nullable {
+				errorSink(errors.Errorf("%v.%v is non-nillable, but %v with id %v has nil value",
+					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+					index.symbol.GetStore().GetSingularEntityType(), string(id)), false)
+			}
+		} else {
+			if !index.fkSymbol.GetStore().IsEntityPresent(tx, string(key)) {
+				errorSink(errors.Errorf("%v.%v has invalid value for %v %v, which references invalid %v %v",
+					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+					index.symbol.GetStore().GetSingularEntityType(), string(id),
+					index.fkSymbol.GetStore().GetSingularEntityType(), string(key)), false)
+			} else {
+				indexBucket := index.getIndexBucketReadOnly(tx, key)
+				typedKey := PrependFieldType(TypeString, id)
+				if indexBucket == nil || !indexBucket.IsKeyPresent(typedKey) {
+					if fix {
+						indexBucket := index.getIndexBucket(tx, key)
+						indexBucket.SetListEntry(TypeString, id)
+						if indexBucket.HasError() {
+							return indexBucket.GetError()
+						}
+					}
+					errorSink(errors.Errorf("for %v %v field %v references %v %v, but no back-reference exists",
+						index.symbol.GetStore().GetSingularEntityType(), string(id), index.symbol.GetName(),
+						index.fkSymbol.GetStore().GetSingularEntityType(), string(key)), fix)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 type fkDeleteConstraint struct {
@@ -498,4 +704,8 @@ func (index *fkDeleteConstraint) ProcessDelete(ctx *IndexingContext) {
 
 func (index *fkDeleteConstraint) Initialize(_ *bbolt.Tx, _ errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
+}
+
+func (index *fkDeleteConstraint) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	return nil
 }

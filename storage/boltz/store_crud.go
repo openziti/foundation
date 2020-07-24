@@ -507,3 +507,17 @@ func (*BaseStore) IteratorMatchingAnyOf(readIndex SetReadIndex, values []string)
 		return set.ToCursor()
 	}
 }
+
+func (store *BaseStore) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error {
+	for _, linkCollection := range store.links {
+		if err := linkCollection.CheckIntegrity(tx, fix, errorSink); err != nil {
+			return err
+		}
+	}
+	for _, constraint := range store.Indexer.constraints {
+		if err := constraint.CheckIntegrity(tx, fix, errorSink); err != nil {
+			return err
+		}
+	}
+	return nil
+}
