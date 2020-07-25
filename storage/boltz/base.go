@@ -131,6 +131,9 @@ type CrudStore interface {
 
 	AddDeleteHandler(handler EntityChangeHandler)
 	NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext
+
+	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
+
 	events.EventEmmiter
 }
 

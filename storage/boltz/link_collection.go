@@ -34,6 +34,7 @@ type LinkCollection interface {
 	EntityDeleted(tx *bbolt.Tx, id string) error
 	GetFieldSymbol() EntitySymbol
 	GetLinkedSymbol() EntitySymbol
+	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 }
 
 type linkCollectionImpl struct {
@@ -187,6 +188,38 @@ func (collection *linkCollectionImpl) IterateLinks(tx *bbolt.Tx, id []byte) ast.
 	return ast.EmptyCursor
 }
 
+func (collection *linkCollectionImpl) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error {
+	for idCursor := collection.field.GetStore().IterateIds(tx, ast.BoolNodeTrue); idCursor.IsValid(); idCursor.Next() {
+		id := idCursor.Current()
+		for linkCursor := collection.IterateLinks(tx, id); linkCursor.IsValid(); linkCursor.Next() {
+			linkId := linkCursor.Current()
+			linkValid := collection.otherField.GetStore().IsEntityPresent(tx, string(linkId))
+			if !linkValid {
+				if fix {
+					if _, err := collection.RemoveLink(tx, id, linkId); err != nil {
+						return err
+					}
+				}
+				err := errors.Errorf("%v %v references %v %v, which doesn't exist",
+					collection.field.GetStore().GetSingularEntityType(), string(id),
+					collection.otherField.GetStore().GetSingularEntityType(), string(linkId))
+				errorSink(err, fix)
+			} else if !collection.otherField.IsLinked(tx, linkId, id) {
+				if fix {
+					if err := collection.otherField.AddLink(tx, linkId, id); err != nil {
+						return err
+					}
+				}
+				err := errors.Errorf("%v %v references %v %v, but reverse link is missing",
+					collection.field.GetStore().GetSingularEntityType(), string(id),
+					collection.otherField.GetStore().GetSingularEntityType(), string(linkId))
+				errorSink(err, fix)
+			}
+		}
+	}
+	return nil
+}
+
 func (collection *linkCollectionImpl) checkAndLink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) (bool, error) {
 	changed, err := fieldBucket.CheckAndSetListEntry(TypeString, associatedId)
 	if err != nil {
@@ -271,4 +304,17 @@ func (symbol *LinkedSetSymbol) RemoveLink(tx *bbolt.Tx, id []byte, link []byte) 
 		return nil
 	}
 	return fieldBucket.DeleteListEntry(TypeString, link).Err
+}
+
+func (symbol *LinkedSetSymbol) IsLinked(tx *bbolt.Tx, id []byte, link []byte) bool {
+	entityBucket := symbol.GetStore().GetEntityBucket(tx, id)
+	if entityBucket == nil {
+		return false
+	}
+	fieldBucket := entityBucket.GetPath(symbol.GetPath()...)
+	if fieldBucket == nil {
+		return false
+	}
+	key := PrependFieldType(TypeString, link)
+	return fieldBucket.IsKeyPresent(key)
 }
