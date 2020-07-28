@@ -47,7 +47,6 @@ func (self address) Listen(name string, _ *identity.TokenId, incoming chan trans
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
 	}
-
 	return Listen(bind, name, incoming)
 }
 

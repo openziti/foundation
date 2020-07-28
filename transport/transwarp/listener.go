@@ -28,7 +28,14 @@ import (
 func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection) (io.Closer, error) {
 	log := pfxlog.ContextLogger(name + "/transwarp:" + bind.String())
 
-	listener, err := westworld2.Listen(bind, westworld2.NewDefaultConfig())
+	cfg := westworld2.NewDefaultConfig()
+	/*
+	if err := cfg.Load(map[interface{}]interface{} {"instrument": map[string]interface{}{"name": "trace"}}); err != nil {
+		return nil, err
+	}
+	*/
+	logrus.Infof(cfg.Dump())
+	listener, err := westworld2.Listen(bind, cfg)
 	if err != nil {
 		return nil, err
 	}

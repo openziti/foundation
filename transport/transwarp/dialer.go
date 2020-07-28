@@ -20,11 +20,19 @@ import (
 	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
 func Dial(endpoint *net.UDPAddr, name string) (transport.Connection, error) {
-	socket, err := westworld2.Dial(endpoint, westworld2.NewDefaultConfig())
+	cfg := westworld2.NewDefaultConfig()
+	/*
+	if err := cfg.Load(map[interface{}]interface{} {"instrument": map[string]interface{}{"name": "trace"}}); err != nil {
+		return nil, err
+	}
+	*/
+	logrus.Infof(cfg.Dump())
+	socket, err := westworld2.Dial(endpoint, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "dial")
 	}

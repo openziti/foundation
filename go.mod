@@ -1,3 +1,5 @@
+replace github.com/michaelquigley/dilithium => ../../q/research/dilithium
+
 module github.com/openziti/foundation
 
 go 1.14
