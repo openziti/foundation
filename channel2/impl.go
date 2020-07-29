@@ -18,6 +18,7 @@ package channel2
 
 import (
 	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"github.com/openziti/foundation/util/info"
 	"github.com/openziti/foundation/util/sequence"
 	"container/heap"
@@ -65,8 +66,12 @@ func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Op
 
 	heap.Init(impl.outPriority)
 	impl.AddReceiveHandler(&pingHandler{})
-	
-	underlay, err := underlayFactory.Create()
+
+	var c transport.Configuration
+	if options != nil {
+		c = options.TransportCfg
+	}
+	underlay, err := underlayFactory.Create(c)
 	if err != nil {
 		return nil, err
 	}

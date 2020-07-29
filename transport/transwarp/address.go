@@ -34,7 +34,7 @@ type address struct {
 	port     uint16
 }
 
-func (self address) Dial(name string, _ *identity.TokenId) (transport.Connection, error) {
+func (self address) Dial(name string, _ *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
 	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
@@ -42,7 +42,7 @@ func (self address) Dial(name string, _ *identity.TokenId) (transport.Connection
 	return Dial(endpoint, name)
 }
 
-func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection) (io.Closer, error) {
+func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {
 	bind, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
@@ -50,8 +50,8 @@ func (self address) Listen(name string, _ *identity.TokenId, incoming chan trans
 	return Listen(bind, name, incoming)
 }
 
-func (self address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection) io.Closer {
-	closer, err := self.Listen(name, i, incoming)
+func (self address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, c transport.Configuration) io.Closer {
+	closer, err := self.Listen(name, i, incoming, c)
 	if err != nil {
 		panic(err)
 	}

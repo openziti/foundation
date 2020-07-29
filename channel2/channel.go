@@ -19,6 +19,7 @@ package channel2
 import (
 	"crypto/x509"
 	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"io"
 	"time"
 )
@@ -71,7 +72,7 @@ type UnderlayListener interface {
 // UnderlayFactory, to provide instances to Channel.
 //
 type UnderlayFactory interface {
-	Create() (Underlay, error)
+	Create(c transport.Configuration) (Underlay, error)
 }
 
 // Underlay abstracts a physical communications channel, typically sitting on top of 'transport'.

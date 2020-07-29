@@ -17,11 +17,11 @@
 package channel2
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"sync"
 	"time"
 )
@@ -30,6 +30,7 @@ type reconnectingDialer struct {
 	identity      *identity.TokenId
 	endpoint      transport.Address
 	headers       map[int32][]byte
+	c             transport.Configuration
 	reconnectLock sync.Mutex
 }
 
@@ -41,16 +42,18 @@ func NewReconnectingDialer(identity *identity.TokenId, endpoint transport.Addres
 	}
 }
 
-func (dialer *reconnectingDialer) Create() (Underlay, error) {
+func (dialer *reconnectingDialer) Create(c transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
+
+	dialer.c = c
 
 	retryCount := 0
 	version := uint32(2)
 
 	for {
-		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity)
+		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, c)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +85,7 @@ func (dialer *reconnectingDialer) Reconnect(impl *reconnectingImpl) error {
 	if err := impl.pingInstance(); err != nil {
 		log.Errorf("unable to ping (%s)", err)
 		for i := 0; true; i++ {
-			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity)
+			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, dialer.c)
 			if err == nil {
 				impl.peer = peer
 				if err := dialer.sendHello(impl); err == nil {

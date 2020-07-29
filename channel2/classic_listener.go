@@ -32,6 +32,7 @@ type classicListener struct {
 	handlers       []ConnectionHandler
 	created        chan Underlay
 	connectOptions ConnectOptions
+	c              transport.Configuration
 }
 
 func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions) UnderlayListener {
@@ -46,7 +47,7 @@ func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, 
 
 func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
 	incoming := make(chan transport.Connection, listener.connectOptions.MaxQueuedConnects)
-	socket, err := listener.endpoint.Listen("classic", listener.identity, incoming)
+	socket, err := listener.endpoint.Listen("classic", listener.identity, incoming, listener.c)
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,8 @@ func (listener *classicListener) Close() error {
 	return nil
 }
 
-func (listener *classicListener) Create() (Underlay, error) {
+func (listener *classicListener) Create(c transport.Configuration) (Underlay, error) {
+	listener.c = c
 	if listener.created == nil {
 		return nil, ListenerClosedError
 	}

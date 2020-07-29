@@ -17,9 +17,9 @@
 package main
 
 import (
-	"github.com/openziti/foundation/transport/udp"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/util/info"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io"
@@ -99,7 +99,7 @@ func runFunc(cmd *cobra.Command, args []string) {
 }
 
 func Copy(writer io.Writer, reader io.Reader) {
-	buf := make([]byte, udp.MaxPacketSize)
+	buf := make([]byte, info.MaxPacketSize)
 	bytesCopied, err := io.CopyBuffer(writer, reader, buf)
 	pfxlog.Logger().Infof("Copied %v bytes", bytesCopied)
 	if err != nil {
@@ -109,7 +109,7 @@ func Copy(writer io.Writer, reader io.Reader) {
 
 // CopyAndLog does what io.Copy does but with additional logging
 func CopyAndLog(context string, writer io.Writer, reader io.Reader) {
-	buf := make([]byte, udp.MaxPacketSize)
+	buf := make([]byte, info.MaxPacketSize)
 
 	var bytesRead, totalBytesRead, bytesWritten, totalBytesWritten int
 	var readErr, writeErr error

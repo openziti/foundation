@@ -38,7 +38,7 @@ func NewClassicDialer(identity *identity.TokenId, endpoint transport.Address, he
 	}
 }
 
-func (dialer *classicDialer) Create() (Underlay, error) {
+func (dialer *classicDialer) Create(c transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -47,7 +47,7 @@ func (dialer *classicDialer) Create() (Underlay, error) {
 	tryCount := 0
 
 	for {
-		peer, err := dialer.endpoint.Dial("classic", dialer.identity)
+		peer, err := dialer.endpoint.Dial("classic", dialer.identity, c)
 		if err != nil {
 			return nil, err
 		}
