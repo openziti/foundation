@@ -20,20 +20,21 @@ import (
 	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/transport"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
 )
 
-func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection) (io.Closer, error) {
+func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, c transport.Configuration) (io.Closer, error) {
 	log := pfxlog.ContextLogger(name + "/transwarp:" + bind.String())
 
 	cfg := westworld2.NewDefaultConfig()
-	/*
-	if err := cfg.Load(map[interface{}]interface{} {"instrument": map[string]interface{}{"name": "trace"}}); err != nil {
-		return nil, err
+	if c != nil {
+		if err := cfg.Load(c); err != nil {
+			return nil, errors.Wrap(err, "load configuration")
+		}
 	}
-	*/
 	logrus.Infof(cfg.Dump())
 	listener, err := westworld2.Listen(bind, cfg)
 	if err != nil {

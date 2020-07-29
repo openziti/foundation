@@ -5,7 +5,6 @@ module github.com/openziti/foundation
 go 1.14
 
 require (
-	github.com/alangpierce/go-forceexport v0.0.0-20160317203124-8f1d6941cd75 // indirect
 	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
@@ -15,8 +14,6 @@ require (
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20170604004442-17d67be645c3
 	github.com/lucas-clemente/quic-go v0.17.1
-	github.com/marten-seemann/chacha20 v0.2.0 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/michaelquigley/dilithium v0.0.0-20200728175145-5d48f61b629a
 	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
 	github.com/miekg/pkcs11 v1.0.3
@@ -31,5 +28,6 @@ require (
 	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
 	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
 	golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.2.5
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )

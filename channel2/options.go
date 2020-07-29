@@ -19,7 +19,6 @@ package channel2
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/openziti/foundation/transport"
 	"time"
 )
 
@@ -41,7 +40,6 @@ type Options struct {
 	OutQueueSize int
 	BindHandlers []BindHandler
 	PeekHandlers []PeekHandler
-	TransportCfg transport.Configuration
 	ConnectOptions
 }
 

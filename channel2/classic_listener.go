@@ -36,12 +36,17 @@ type classicListener struct {
 }
 
 func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions) UnderlayListener {
+	return NewClassicListenerWithConfiguration(identity, endpoint, connectOptions, nil)
+}
+
+func NewClassicListenerWithConfiguration(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, c transport.Configuration) UnderlayListener {
 	return &classicListener{
 		identity:       identity,
 		endpoint:       endpoint,
 		close:          make(chan struct{}),
 		created:        make(chan Underlay),
 		connectOptions: connectOptions,
+		c:              c,
 	}
 }
 

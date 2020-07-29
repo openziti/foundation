@@ -34,20 +34,36 @@ type address struct {
 	port     uint16
 }
 
-func (self address) Dial(name string, _ *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
+func (self address) Dial(name string, _ *identity.TokenId, c transport.Configuration) (transport.Connection, error) {
 	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
 	}
-	return Dial(endpoint, name)
+	var subc map[interface{}]interface{}
+	if c != nil {
+		if v, found := c["westworld2"]; found {
+			if subv, ok := v.(map[interface{}]interface{}); ok {
+				subc = subv
+			}
+		}
+	}
+	return Dial(endpoint, name, subc)
 }
 
-func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {
+func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, c transport.Configuration) (io.Closer, error) {
 	bind, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
 	}
-	return Listen(bind, name, incoming)
+	var subc map[interface{}]interface{}
+	if c != nil {
+		if v, found := c["westworld2"]; found {
+			if subv, ok := v.(map[interface{}]interface{}); ok {
+				subc = subv
+			}
+		}
+	}
+	return Listen(bind, name, incoming, subc)
 }
 
 func (self address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, c transport.Configuration) io.Closer {

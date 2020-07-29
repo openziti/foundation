@@ -24,13 +24,13 @@ import (
 	"net"
 )
 
-func Dial(endpoint *net.UDPAddr, name string) (transport.Connection, error) {
-	cfg := westworld2.NewDefaultConfig()
-	/*
-	if err := cfg.Load(map[interface{}]interface{} {"instrument": map[string]interface{}{"name": "trace"}}); err != nil {
-		return nil, err
+func Dial(endpoint *net.UDPAddr, name string, c transport.Configuration) (transport.Connection, error) {
+	var cfg = westworld2.NewDefaultConfig()
+	if c != nil {
+		if err := cfg.Load(c); err != nil {
+			return nil, errors.Wrap(err, "load configuration")
+		}
 	}
-	*/
 	logrus.Infof(cfg.Dump())
 	socket, err := westworld2.Dial(endpoint, cfg)
 	if err != nil {

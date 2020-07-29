@@ -54,6 +54,10 @@ type channelImpl struct {
 }
 
 func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Options) (Channel, error) {
+	return NewChannelWithTransportConfig(logicalName, underlayFactory, options, nil)
+}
+
+func NewChannelWithTransportConfig(logicalName string, underlayFactory UnderlayFactory, options *Options, c transport.Configuration) (Channel, error) {
 	impl := &channelImpl{
 		logicalName:     logicalName,
 		underlayFactory: underlayFactory,
@@ -67,10 +71,6 @@ func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Op
 	heap.Init(impl.outPriority)
 	impl.AddReceiveHandler(&pingHandler{})
 
-	var c transport.Configuration
-	if options != nil {
-		c = options.TransportCfg
-	}
 	underlay, err := underlayFactory.Create(c)
 	if err != nil {
 		return nil, err
