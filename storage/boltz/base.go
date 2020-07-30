@@ -102,6 +102,9 @@ type ListStore interface {
 	QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error)
 
 	IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SeekableSetCursor
+
+	// Skips non-present entities in extended stores
+	IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SetCursor
 }
 
 type CrudStore interface {

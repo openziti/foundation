@@ -139,10 +139,17 @@ func (bucket *TypedBucket) GetOrCreateBucket(name string) *TypedBucket {
 }
 
 func (bucket *TypedBucket) GetBucket(name string) *TypedBucket {
+	key := []byte(name)
+	return bucket.GetBucketByKey(key)
+}
+
+func (bucket *TypedBucket) GetBucketByKey(key []byte) *TypedBucket {
 	if bucket == nil {
 		return nil
 	}
-	key := []byte(name)
+	if bucket.HasError() {
+		return bucket
+	}
 	child := bucket.Bucket.Bucket(key)
 	if child == nil {
 		return nil

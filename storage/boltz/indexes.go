@@ -267,15 +267,15 @@ func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(
 					return err
 				}
 			}
-			errorSink(errors.Errorf("unique index %v.%v references %v for value %v which doesn't exist",
+			errorSink(errors.Errorf("unique index %v.%v references %v for value %v, which doesn't exist",
 				store.GetEntityType(), index.symbol.GetName(), string(val), string(key)), fix)
 		} else {
 			_, fieldVal := index.symbol.Eval(tx, val)
 			if !bytes.Equal(key, fieldVal) {
 				if fix {
-					ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(val), nil)
-					ctx.atomStates[index] = key
-					if err := index.processIntegrityFix(ctx); err != nil {
+					// just delete it here. It may be a duplicate. If it's not a duplicate, the correct value
+					// will be created when we scan the other side
+					if err := cursor.Delete(); err != nil {
 						return err
 					}
 				}
@@ -286,14 +286,14 @@ func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(
 		}
 	}
 
-	for entityCursor := index.symbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); entityCursor.IsValid(); entityCursor.Next() {
+	for entityCursor := index.symbol.GetStore().IterateValidIds(tx, ast.BoolNodeTrue); entityCursor.IsValid(); entityCursor.Next() {
 		id := entityCursor.Current()
 		_, fieldVal := index.symbol.Eval(tx, id)
 		idxId := index.Read(tx, fieldVal)
 
 		if idxId == nil {
 			if fix {
-				ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(idxId), nil)
+				ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(id), nil)
 				if err := index.processIntegrityFix(ctx); err != nil {
 					return err
 				}
@@ -305,7 +305,7 @@ func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(
 		} else if !bytes.Equal(idxId, id) {
 			// We've already verify above that all index values are pointing to entities with the correct field value
 			// so this means we've got a uniqueness contraint violation, which we can't fix
-			errorSink(errors.Errorf("uniqueness constraint violatition on index %v.%v. Both %v and %v have value %v. Unable to fix",
+			errorSink(errors.Errorf("unique index %v.%v has constraint violation as both %v and %v have value %v. Unable to fix automatically",
 				store.GetEntityType(), index.symbol.GetName(), string(idxId), string(id), string(fieldVal)), false)
 		}
 	}
@@ -492,7 +492,7 @@ func (index *setIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err
 								return err
 							}
 						}
-						errorSink(errors.Errorf("for index on %v.%v, val %v referenced id %v, which no longer exists",
+						errorSink(errors.Errorf("for index on %v.%v, val %v references id %v, which doesn't exist",
 							index.symbol.GetStore().GetEntityType(), index.GetSymbol().GetName(),
 							string(key), string(id)), fix)
 					} else {
@@ -511,9 +511,9 @@ func (index *setIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err
 									return err
 								}
 							}
-							errorSink(errors.Errorf("for index on %v.%v, val %v referenced id %v, which doesn't contain the value",
+							errorSink(errors.Errorf("for index on %v.%v, val %v references id %v, which doesn't contain the value",
 								index.symbol.GetStore().GetEntityType(), index.GetSymbol().GetName(),
-								string(key), string(id)), false)
+								string(key), string(id)), fix)
 						}
 					}
 				}
@@ -526,7 +526,29 @@ func (index *setIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err
 		}
 	}
 
-	// TODO: iterate over index.symbol.store ids and verify that index is correct from the other side
+	for idsCursor := index.symbol.GetStore().IterateValidIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+		id := idsCursor.Current()
+		entityBucket := index.symbol.GetStore().GetEntityBucket(tx, id)
+		setBucket := entityBucket.GetPath(index.symbol.GetPath()...)
+		if setBucket == nil {
+			continue
+		}
+		valuesCursor := setBucket.Cursor()
+		for val, _ := valuesCursor.First(); val != nil; val, _ = valuesCursor.Next() {
+			_, value := GetTypeAndValue(val)
+			idxBucket := index.getIndexBucket(tx, value)
+			key := PrependFieldType(TypeString, id)
+			if !idxBucket.IsKeyPresent(key) {
+				if fix {
+					if err := idxBucket.Put(key, nil); err != nil {
+						return err
+					}
+				}
+				errorSink(errors.Errorf("for index on %v.%v, id %v has val %v, but is not in the index",
+					index.symbol.GetStore().GetEntityType(), index.GetSymbol().GetName(), string(id), string(value)), fix)
+			}
+		}
+	}
 
 	return nil
 }
@@ -600,7 +622,7 @@ func (index *fkIndex) Initialize(_ *bbolt.Tx, _ errorz.ErrorHolder) {
 }
 
 func (index *fkIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
-	for idsCursor := index.fkSymbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+	for idsCursor := index.fkSymbol.GetStore().IterateValidIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
 		id := idsCursor.Current()
 		entityBucket := index.fkSymbol.GetStore().GetEntityBucket(tx, id)
 		setBucket := entityBucket.GetPath(index.fkSymbol.GetPath()...)
@@ -643,7 +665,7 @@ func (index *fkIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(erro
 		}
 	}
 
-	for idsCursor := index.symbol.GetStore().IterateIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+	for idsCursor := index.symbol.GetStore().IterateValidIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
 		id := idsCursor.Current()
 		_, key := index.symbol.Eval(tx, id)
 		if key == nil {
@@ -654,10 +676,20 @@ func (index *fkIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(erro
 			}
 		} else {
 			if !index.fkSymbol.GetStore().IsEntityPresent(tx, string(key)) {
+				tryFix := index.nullable && fix && len(index.symbol.GetPath()) == 1
+				if tryFix {
+					entityBucket := index.symbol.GetStore().GetEntityBucket(tx, id)
+					if entityBucket.HasError() {
+						return entityBucket.GetError()
+					}
+					if err := entityBucket.Put([]byte(index.symbol.GetPath()[0]), nil); err != nil {
+						return err
+					}
+				}
 				errorSink(errors.Errorf("%v.%v has invalid value for %v %v, which references invalid %v %v",
 					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
 					index.symbol.GetStore().GetSingularEntityType(), string(id),
-					index.fkSymbol.GetStore().GetSingularEntityType(), string(key)), false)
+					index.fkSymbol.GetStore().GetSingularEntityType(), string(key)), tryFix)
 			} else {
 				indexBucket := index.getIndexBucketReadOnly(tx, key)
 				typedKey := PrependFieldType(TypeString, id)
