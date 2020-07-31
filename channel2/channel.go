@@ -72,7 +72,7 @@ type UnderlayListener interface {
 // UnderlayFactory, to provide instances to Channel.
 //
 type UnderlayFactory interface {
-	Create(c transport.Configuration) (Underlay, error)
+	Create(tcfg transport.Configuration) (Underlay, error)
 }
 
 // Underlay abstracts a physical communications channel, typically sitting on top of 'transport'.

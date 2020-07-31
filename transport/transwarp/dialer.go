@@ -24,10 +24,10 @@ import (
 	"net"
 )
 
-func Dial(endpoint *net.UDPAddr, name string, c transport.Configuration) (transport.Connection, error) {
+func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (transport.Connection, error) {
 	var cfg = westworld2.NewDefaultConfig()
-	if c != nil {
-		if err := cfg.Load(c); err != nil {
+	if tcfg != nil {
+		if err := cfg.Load(tcfg); err != nil {
 			return nil, errors.Wrap(err, "load configuration")
 		}
 	}

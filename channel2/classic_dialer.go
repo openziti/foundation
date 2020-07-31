@@ -17,11 +17,11 @@
 package channel2
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 )
 
 type classicDialer struct {
@@ -38,7 +38,7 @@ func NewClassicDialer(identity *identity.TokenId, endpoint transport.Address, he
 	}
 }
 
-func (dialer *classicDialer) Create(c transport.Configuration) (Underlay, error) {
+func (dialer *classicDialer) Create(tcfg transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -47,7 +47,7 @@ func (dialer *classicDialer) Create(c transport.Configuration) (Underlay, error)
 	tryCount := 0
 
 	for {
-		peer, err := dialer.endpoint.Dial("classic", dialer.identity, c)
+		peer, err := dialer.endpoint.Dial("classic", dialer.identity, tcfg)
 		if err != nil {
 			return nil, err
 		}

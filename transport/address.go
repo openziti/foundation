@@ -28,9 +28,9 @@ type Configuration map[interface{}]interface{}
 // Address implements the functionality provided by a generic "address".
 //
 type Address interface {
-	Dial(name string, i *identity.TokenId, c Configuration) (Connection, error)
-	Listen(name string, i *identity.TokenId, incoming chan Connection, c Configuration) (io.Closer, error)
-	MustListen(name string, i *identity.TokenId, incoming chan Connection, c Configuration) io.Closer
+	Dial(name string, i *identity.TokenId, tcfg Configuration) (Connection, error)
+	Listen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) (io.Closer, error)
+	MustListen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) io.Closer
 	String() string
 }
 

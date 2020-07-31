@@ -41,8 +41,8 @@ func (a address) Listen(name string, i *identity.TokenId, incoming chan transpor
 	return Listen(a.bindableAddress(), name, i, incoming)
 }
 
-func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, c transport.Configuration) io.Closer {
-	closer, err := a.Listen(name, i, incoming, c)
+func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
+	closer, err := a.Listen(name, i, incoming, tcfg)
 	if err != nil {
 		panic(err)
 	}

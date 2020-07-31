@@ -26,12 +26,12 @@ import (
 	"net"
 )
 
-func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, c transport.Configuration) (io.Closer, error) {
+func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
 	log := pfxlog.ContextLogger(name + "/transwarp:" + bind.String())
 
 	cfg := westworld2.NewDefaultConfig()
-	if c != nil {
-		if err := cfg.Load(c); err != nil {
+	if tcfg != nil {
+		if err := cfg.Load(tcfg); err != nil {
 			return nil, errors.Wrap(err, "load configuration")
 		}
 	}

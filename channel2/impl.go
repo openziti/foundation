@@ -17,16 +17,16 @@
 package channel2
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
-	"github.com/openziti/foundation/util/info"
-	"github.com/openziti/foundation/util/sequence"
 	"container/heap"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
+	"github.com/openziti/foundation/util/info"
+	"github.com/openziti/foundation/util/sequence"
 	"io"
 	"sync"
 	"time"
@@ -57,7 +57,7 @@ func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Op
 	return NewChannelWithTransportConfig(logicalName, underlayFactory, options, nil)
 }
 
-func NewChannelWithTransportConfig(logicalName string, underlayFactory UnderlayFactory, options *Options, c transport.Configuration) (Channel, error) {
+func NewChannelWithTransportConfig(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
 	impl := &channelImpl{
 		logicalName:     logicalName,
 		underlayFactory: underlayFactory,
@@ -71,7 +71,7 @@ func NewChannelWithTransportConfig(logicalName string, underlayFactory UnderlayF
 	heap.Init(impl.outPriority)
 	impl.AddReceiveHandler(&pingHandler{})
 
-	underlay, err := underlayFactory.Create(c)
+	underlay, err := underlayFactory.Create(tcfg)
 	if err != nil {
 		return nil, err
 	}

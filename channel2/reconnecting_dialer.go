@@ -30,7 +30,7 @@ type reconnectingDialer struct {
 	identity      *identity.TokenId
 	endpoint      transport.Address
 	headers       map[int32][]byte
-	c             transport.Configuration
+	tcfg          transport.Configuration
 	reconnectLock sync.Mutex
 }
 
@@ -42,18 +42,18 @@ func NewReconnectingDialer(identity *identity.TokenId, endpoint transport.Addres
 	}
 }
 
-func (dialer *reconnectingDialer) Create(c transport.Configuration) (Underlay, error) {
+func (dialer *reconnectingDialer) Create(tcfg transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
 
-	dialer.c = c
+	dialer.tcfg = tcfg
 
 	retryCount := 0
 	version := uint32(2)
 
 	for {
-		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, c)
+		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, tcfg)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (dialer *reconnectingDialer) Reconnect(impl *reconnectingImpl) error {
 	if err := impl.pingInstance(); err != nil {
 		log.Errorf("unable to ping (%s)", err)
 		for i := 0; true; i++ {
-			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, dialer.c)
+			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, dialer.tcfg)
 			if err == nil {
 				impl.peer = peer
 				if err := dialer.sendHello(impl); err == nil {
