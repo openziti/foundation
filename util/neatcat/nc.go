@@ -99,7 +99,7 @@ func runFunc(cmd *cobra.Command, args []string) {
 }
 
 func Copy(writer io.Writer, reader io.Reader) {
-	buf := make([]byte, info.MaxPacketSize)
+	buf := make([]byte, info.MaxUdpPacketSize)
 	bytesCopied, err := io.CopyBuffer(writer, reader, buf)
 	pfxlog.Logger().Infof("Copied %v bytes", bytesCopied)
 	if err != nil {
@@ -109,7 +109,7 @@ func Copy(writer io.Writer, reader io.Reader) {
 
 // CopyAndLog does what io.Copy does but with additional logging
 func CopyAndLog(context string, writer io.Writer, reader io.Reader) {
-	buf := make([]byte, info.MaxPacketSize)
+	buf := make([]byte, info.MaxUdpPacketSize)
 
 	var bytesRead, totalBytesRead, bytesWritten, totalBytesWritten int
 	var readErr, writeErr error

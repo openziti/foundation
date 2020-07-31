@@ -57,7 +57,7 @@ func udpEcho(port int) {
 		panic(err)
 	}
 
-	buf := make([]byte, info.MaxPacketSize)
+	buf := make([]byte, info.MaxUdpPacketSize)
 	fmt.Printf("Running on port: %v, Buffer size: %v\n", port, len(buf))
 
 	var bytesReadTotal, bytesWrittenTotal int
@@ -97,7 +97,7 @@ func tcpEcho(port int) {
 
 func echoConn(conn net.Conn) {
 	defer fmt.Printf("exited conn %v", conn.LocalAddr())
-	buf := make([]byte, info.MaxPacketSize)
+	buf := make([]byte, info.MaxUdpPacketSize)
 
 	var bytesReadTotal, bytesWrittenTotal int
 

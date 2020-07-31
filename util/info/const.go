@@ -16,4 +16,4 @@
 
 package info
 
-const MaxPacketSize = 65507
+const MaxUdpPacketSize = 65507
