@@ -54,10 +54,10 @@ type channelImpl struct {
 }
 
 func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Options) (Channel, error) {
-	return NewChannelWithTransportConfig(logicalName, underlayFactory, options, nil)
+	return NewChannelWithTransportConfiguration(logicalName, underlayFactory, options, nil)
 }
 
-func NewChannelWithTransportConfig(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
+func NewChannelWithTransportConfiguration(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
 	impl := &channelImpl{
 		logicalName:     logicalName,
 		underlayFactory: underlayFactory,
