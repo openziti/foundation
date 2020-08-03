@@ -372,7 +372,49 @@ func (store *BaseStore) IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.Seekab
 	return newFilteredCursor(tx, store, entitiesBucket.OpenSeekableCursor(), filter)
 }
 
+func (store *BaseStore) IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SetCursor {
+	var result ast.SetCursor = store.IterateIds(tx, filter)
+	if store.isExtended {
+		validIdsCursor := &ValidIdsCursors{
+			tx:      tx,
+			store:   store,
+			wrapped: result,
+		}
+		if validIdsCursor.IsValid() && !validIdsCursor.IsExtendedDataPresent() {
+			validIdsCursor.Next()
+		}
+		result = validIdsCursor
+	}
+	return result
+}
+
 func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCursorProvider, query ast.Query) ([]string, int64, error) {
 	scanner := store.NewScanner(query.GetSortFields())
 	return scanner.ScanCursor(tx, cursorProvider, query)
+}
+
+type ValidIdsCursors struct {
+	tx      *bbolt.Tx
+	store   *BaseStore
+	wrapped ast.SetCursor
+}
+
+func (cursor *ValidIdsCursors) Next() {
+	cursor.wrapped.Next()
+	for cursor.IsValid() && !cursor.IsExtendedDataPresent() {
+		cursor.wrapped.Next()
+	}
+}
+
+func (cursor *ValidIdsCursors) IsExtendedDataPresent() bool {
+	bucket := cursor.store.GetEntityBucket(cursor.tx, cursor.wrapped.Current())
+	return bucket.Bucket != nil
+}
+
+func (cursor *ValidIdsCursors) IsValid() bool {
+	return cursor.wrapped.IsValid()
+}
+
+func (cursor *ValidIdsCursors) Current() []byte {
+	return cursor.wrapped.Current()
 }

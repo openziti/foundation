@@ -253,6 +253,310 @@ func TestCrud(t *testing.T) {
 	t.Run("composite symbol", test.testCompositeSymbol)
 }
 
+func TestLinkCollectionImpl_CheckIntegrity(t *testing.T) {
+	test := &crudTest{
+		Assertions: require.New(t),
+	}
+	test.init()
+	defer test.cleanup()
+
+	employees, locations := test.initStoresForIntegrityChecks()
+
+	badId := uuid.New().String()
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[0].Id))
+		linksBucket := entityBucket.GetPath(test.empStore.locationsCollection.GetFieldSymbol().GetPath()...)
+		badVal := PrependFieldType(TypeString, []byte(badId))
+		return linksBucket.Put(badVal, nil)
+	})
+	test.NoError(err)
+
+	expectedMsg := fmt.Sprintf("employee %v references location %v, which doesn't exist", employees[0].Id, badId)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.locStore.GetEntityBucket(tx, []byte(locations[0].Id))
+		linksBucket := entityBucket.GetPath(test.empStore.locationsCollection.GetLinkedSymbol().GetPath()...)
+		linksBucket.DeleteListEntry(TypeString, []byte(employees[0].Id))
+		return linksBucket.Err
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("employee %v references location %v, but reverse link is missing", employees[0].Id, locations[0].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+}
+
+func TestFkIndex_CheckIntegrity(t *testing.T) {
+	test := &crudTest{
+		Assertions: require.New(t),
+	}
+	test.init()
+	defer test.cleanup()
+
+	employees, _ := test.initStoresForIntegrityChecks()
+
+	badId := uuid.New().String()
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[0].Id))
+		directReportsBucket := entityBucket.GetPath(fieldDirectReports)
+		return directReportsBucket.Put(PrependFieldType(TypeString, []byte(badId)), nil)
+	})
+	test.NoError(err)
+
+	expectedMsg := fmt.Sprintf("for fk employees.manager, employee %v references employee %v, which doesn't exist", employees[0].Id, badId)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[0].Id))
+		directReportsBucket := entityBucket.GetPath(fieldDirectReports)
+		return directReportsBucket.Put(PrependFieldType(TypeString, []byte(employees[0].Id)), nil)
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("for fk employees.manager, employee %v references employee %v, which has non-matching value (nil)", employees[0].Id, employees[0].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[0].Id))
+		directReportsBucket := entityBucket.GetPath(fieldDirectReports)
+		return directReportsBucket.Delete(PrependFieldType(TypeString, []byte(employees[1].Id)))
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("for employee %v field manager references employee %v, but no back-reference exists", employees[1].Id, employees[0].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	badId = uuid.New().String()
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[1].Id))
+		entityBucket.SetString(fieldManager, badId, nil)
+		return entityBucket.GetError()
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("employees.manager has invalid value for employee %v, which references invalid employee %v", employees[1].Id, badId)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+}
+
+func TestUniqueIndex_CheckIntegrity(t *testing.T) {
+	test := &crudTest{
+		Assertions: require.New(t),
+	}
+	test.init()
+	defer test.cleanup()
+
+	employees, _ := test.initStoresForIntegrityChecks()
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		idx := test.empStore.indexName.(*uniqueIndex)
+		idxBucket := idx.getIndexBucket(tx)
+		return idxBucket.Put([]byte("jojo"), []byte("somebadid"))
+	})
+	test.NoError(err)
+
+	expectedMsg := fmt.Sprintf("unique index employees.name references somebadid for value jojo, which doesn't exist")
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+	test.Nil(test.readEmployeeNameIndex("jojo"))
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		idx := test.empStore.indexName.(*uniqueIndex)
+		idxBucket := idx.getIndexBucket(tx)
+		return idxBucket.Put([]byte("jojo"), []byte(employees[0].Id))
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("unique index employees.name references %v for value jojo which should be %v", employees[0].Id, employees[0].Name)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+	test.Nil(test.readEmployeeNameIndex("jojo"))
+	test.NotNil(test.readEmployeeNameIndex(employees[0].Name))
+	test.NotEqual(employees[0].Id, test.readEmployeeNameIndex(employees[0].Name))
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		idx := test.empStore.indexName.(*uniqueIndex)
+		idxBucket := idx.getIndexBucket(tx)
+		return idxBucket.Delete([]byte(employees[0].Name))
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("unique index employees.name missing value %v for id %v", employees[0].Name, employees[0].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+	test.NotNil(test.readEmployeeNameIndex(employees[0].Name))
+	test.NotEqual(employees[0].Id, test.readEmployeeNameIndex(employees[0].Name))
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		idx := test.empStore.indexName.(*uniqueIndex)
+		idxBucket := idx.getIndexBucket(tx)
+
+		if err := idxBucket.Delete([]byte(employees[1].Name)); err != nil {
+			return err
+		}
+
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[1].Id))
+		entityBucket.SetString(fieldName, employees[0].Name, nil)
+		return entityBucket.GetError()
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("unique index employees.name has constraint violation as both %v and %v have value %v. Unable to fix automatically", employees[0].Id, employees[1].Id, employees[0].Name)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, false)
+}
+
+func TestSetIndex_CheckIntegrity(t *testing.T) {
+	test := &crudTest{
+		Assertions: require.New(t),
+	}
+	test.init()
+	defer test.cleanup()
+
+	employees, _ := test.initStoresForIntegrityChecks()
+	employees[0].RoleAttributes = []string{"foo", "baz"}
+	employees[1].RoleAttributes = []string{"foo", "quux"}
+	employees[2].RoleAttributes = []string{"bar"}
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		ctx := NewMutateContext(tx)
+		if err := test.empStore.Update(ctx, employees[0], nil); err != nil {
+			return err
+		}
+		if err := test.empStore.Update(ctx, employees[1], nil); err != nil {
+			return err
+		}
+		return test.empStore.Update(ctx, employees[2], nil)
+	})
+	test.NoError(err)
+	test.requireNoErrors(test.empStore)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		index := test.empStore.indexRoles.(*setIndex)
+		indexBucket := Path(tx, index.indexPath...)
+		return indexBucket.GetOrCreateBucket(string("bash")).SetListEntry(TypeString, []byte("invalid")).GetError()
+	})
+	test.NoError(err)
+
+	expectedMsg := fmt.Sprintf("for index on employees.roleAttributes, val bash references id invalid, which doesn't exist")
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		index := test.empStore.indexRoles.(*setIndex)
+		indexBucket := Path(tx, index.indexPath...)
+		return indexBucket.GetOrCreateBucket(string("bash")).SetListEntry(TypeString, []byte(employees[0].Id)).GetError()
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("for index on employees.roleAttributes, val bash references id %v, which doesn't contain the value", employees[0].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[3].Id))
+		attrBucket := entityBucket.GetOrCreatePath(fieldRoleAttributes)
+		return attrBucket.SetListEntry(TypeString, []byte("foo")).Err
+	})
+	test.NoError(err)
+
+	expectedMsg = fmt.Sprintf("for index on employees.roleAttributes, id %v has val foo, but is not in the index", employees[3].Id)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+}
+
+func (test *crudTest) initStoresForIntegrityChecks() ([]*Employee, []*Location) {
+	employees := make([]*Employee, 0)
+	for i := 0; i < 10; i++ {
+		employee := &Employee{Id: uuid.New().String(), Name: uuid.New().String()}
+		if i > 0 {
+			employee.ManagerId = &employees[0].Id
+		}
+		employees = append(employees, employee)
+	}
+
+	var locations []*Location
+	for i := 0; i < 10; i++ {
+		locations = append(locations, &Location{Id: uuid.New().String()})
+	}
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		ctx := NewMutateContext(tx)
+		for _, e := range employees {
+			if err := test.empStore.Create(ctx, e); err != nil {
+				return err
+			}
+		}
+
+		for _, e := range locations {
+			if err := test.locStore.Create(ctx, e); err != nil {
+				return err
+			}
+		}
+
+		for idx, e := range employees {
+			locations := []string{locations[idx%len(locations)].Id, locations[(idx+1)%len(locations)].Id}
+			if err := test.empStore.locationsCollection.SetLinks(tx, e.Id, locations); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	test.NoError(err)
+	test.requireNoErrors(test.empStore)
+	return employees, locations
+}
+
+func (test *crudTest) requireNoErrors(store CrudStore) {
+	var validateError error
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		return store.CheckIntegrity(tx, false, func(err error, fixed bool) {
+			validateError = err
+			test.False(fixed)
+		})
+	})
+	test.NoError(err)
+	test.NoError(validateError)
+}
+
+func (test *crudTest) readEmployeeNameIndex(name string) *string {
+	var result *string
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		id := test.empStore.indexName.Read(tx, []byte(name))
+		if id != nil {
+			strVal := string(id)
+			result = &strVal
+		}
+		return nil
+	})
+	test.NoError(err)
+	return result
+}
+
+func (test *crudTest) requireIntegrityError(store CrudStore, errMsg string) {
+	var validateError error
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		return store.CheckIntegrity(tx, false, func(err error, fixed bool) {
+			validateError = err
+			test.False(fixed)
+		})
+	})
+	test.NoError(err)
+	test.EqualError(validateError, errMsg)
+}
+
+func (test *crudTest) requireIntegrityErrorAndFixResult(store CrudStore, errMsg string, shouldFix bool) {
+	test.requireIntegrityError(store, errMsg)
+
+	var validateError error
+	var didFix bool
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		return store.CheckIntegrity(tx, true, func(err error, fixed bool) {
+			validateError = err
+			didFix = fixed
+		})
+	})
+	test.NoError(err)
+	test.EqualError(validateError, errMsg)
+	test.Equal(shouldFix, didFix)
+
+	if shouldFix {
+		test.requireNoErrors(store)
+	}
+}
+
 func (test *crudTest) testUniqueIndex(_ *testing.T) {
 	newEmployee := func(name string, roles ...string) *Employee {
 		return &Employee{
