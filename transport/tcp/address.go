@@ -33,16 +33,16 @@ type address struct {
 	port     uint16
 }
 
-func (a address) Dial(name string, i *identity.TokenId) (transport.Connection, error) {
+func (a address) Dial(name string, i *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
 	return Dial(a.bindableAddress(), name)
 }
 
-func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection) (io.Closer, error) {
+func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {
 	return Listen(a.bindableAddress(), name, incoming)
 }
 
-func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection) io.Closer {
-	closer, err := a.Listen(name, i, incoming)
+func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
+	closer, err := a.Listen(name, i, incoming, tcfg)
 	if err != nil {
 		panic(err)
 	}

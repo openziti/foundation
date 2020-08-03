@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 )
 
 type memoryListener struct {
@@ -48,7 +49,7 @@ func (listener *memoryListener) Close() error {
 	return nil
 }
 
-func (listener *memoryListener) Create() (Underlay, error) {
+func (listener *memoryListener) Create(_ transport.Configuration) (Underlay, error) {
 	impl := <-listener.created
 	if impl == nil {
 		return nil, ListenerClosedError

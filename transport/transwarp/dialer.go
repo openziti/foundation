@@ -14,38 +14,35 @@
 	limitations under the License.
 */
 
-package udp
+package transwarp
 
 import (
-	"fmt"
+	"github.com/michaelquigley/dilithium/protocol/westworld2"
 	"github.com/openziti/foundation/transport"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"net"
 )
 
-// Dial attempts to dial a UDP endpoint and create a connection to it
-func Dial(destination, name string) (transport.Connection, error) {
-	localAddress, err := net.ResolveUDPAddr("udp", ":0")
+func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (transport.Connection, error) {
+	var cfg = westworld2.NewDefaultConfig()
+	if tcfg != nil {
+		if err := cfg.Load(tcfg); err != nil {
+			return nil, errors.Wrap(err, "load configuration")
+		}
+	}
+	logrus.Infof(cfg.Dump())
+	socket, err := westworld2.Dial(endpoint, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("error resolving local address (%w)", err)
+		return nil, errors.Wrap(err, "dial")
 	}
 
-	destinationAddress, err := net.ResolveUDPAddr("udp", destination)
-	if err != nil {
-		return nil, fmt.Errorf("error resolving destination address (%w)", err)
-	}
-
-	socket, err := net.DialUDP("udp", localAddress, destinationAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	return &connection{
+	return &Connection{
 		detail: &transport.ConnectionDetail{
-			Address: "udp:" + destination,
+			Address: "transwarp:" + endpoint.String(),
 			InBound: false,
 			Name:    name,
 		},
-		socket:  socket,
-		fullBuf: make([]byte, MaxPacketSize),
+		socket: socket,
 	}, nil
 }
