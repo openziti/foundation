@@ -160,7 +160,7 @@ func (ctx *BaseTestContext) Update(entity Entity) error {
 	})
 }
 
-func (ctx *BaseTestContext) ValidateBaseline(entity ExtEntity) {
+func (ctx *BaseTestContext) ValidateBaseline(entity ExtEntity, opts ...cmp.Option) {
 	store := ctx.GetStoreForEntity(entity)
 	loaded, ok := store.NewStoreEntity().(ExtEntity)
 	ctx.True(ok, "store entity type does not implement Entity: %v", reflect.TypeOf(store.NewStoreEntity()))
@@ -187,7 +187,7 @@ func (ctx *BaseTestContext) ValidateBaseline(entity ExtEntity) {
 		entity.SetTags(map[string]interface{}{})
 	}
 
-	ctx.True(cmp.Equal(entity, loaded), cmp.Diff(entity, loaded))
+	ctx.True(cmp.Equal(entity, loaded, opts...), cmp.Diff(entity, loaded))
 }
 
 func (ctx *BaseTestContext) ValidateUpdated(entity ExtEntity) {

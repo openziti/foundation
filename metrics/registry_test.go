@@ -20,7 +20,7 @@ func setUpTest(t *testing.T) *testData {
 			metricMap:          cmap.New(),
 			intervalBucketChan: make(chan *bucketEvent, 1),
 		}}
-	td.registry.eventController = td
+	td.registry.eventSink = td
 	return td
 }
 
