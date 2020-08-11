@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20170604004442-17d67be645c3
-	github.com/lucas-clemente/quic-go v0.17.1
+	github.com/lucas-clemente/quic-go v0.17.3
 	github.com/michaelquigley/dilithium v0.2.0
 	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
 	github.com/miekg/pkcs11 v1.0.3
