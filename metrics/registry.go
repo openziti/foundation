@@ -39,16 +39,15 @@ type Registry interface {
 	Timer(name string) Timer
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
 	Each(visitor func(name string, metric Metric))
-	EventController() EventController
 }
 
 // NewRegistry create a new metrics registry instance
-func NewRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, cfg *Config) Registry {
+func NewRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, eventSink Handler) Registry {
 	registry := &registryImpl{
 		sourceId:           sourceId,
 		tags:               tags,
 		metricMap:          cmap.New(),
-		eventController:    NewEventController(cfg),
+		eventSink:          eventSink,
 		intervalBucketChan: make(chan *bucketEvent, 1),
 	}
 
@@ -66,7 +65,7 @@ type registryImpl struct {
 	sourceId           string
 	tags               map[string]string
 	metricMap          cmap.ConcurrentMap
-	eventController    EventController
+	eventSink          Handler
 	intervalBucketChan chan *bucketEvent
 	intervalBuckets    []*bucketEvent
 }
@@ -86,10 +85,6 @@ func (registry *registryImpl) run(reportInterval time.Duration) {
 
 func (registry *registryImpl) dispose(name string) {
 	registry.metricMap.Remove(name)
-}
-
-func (registry *registryImpl) EventController() EventController {
-	return registry.eventController
 }
 
 func (registry *registryImpl) SourceId() string {
@@ -127,7 +122,7 @@ func (registry *registryImpl) Histogram(name string) Histogram {
 	}
 
 	histogram := &histogramImpl{
-		Histogram: metrics.NewHistogram(metrics.Sample(metrics.NewExpDecaySample(128, 0.015))),
+		Histogram: metrics.NewHistogram(metrics.NewExpDecaySample(128, 0.015)),
 		dispose: func() {
 			registry.dispose(name)
 		},
@@ -220,5 +215,5 @@ func (registry *registryImpl) report() {
 	registry.intervalBuckets = nil
 
 	msg := (*metrics_pb.MetricsMessage)(builder)
-	registry.eventController.AcceptMetrics(msg)
+	registry.eventSink.AcceptMetrics(msg)
 }

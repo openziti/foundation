@@ -40,7 +40,7 @@ func main() {
 		serverType = os.Args[2]
 	}
 
-	fmt.Printf("Starting echo server on port %v of type %v", port, serverType)
+	fmt.Printf("Starting echo server on port %v of type %v\n", port, serverType)
 
 	if serverType == "tcp" {
 		tcpEcho(port)
