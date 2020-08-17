@@ -35,7 +35,7 @@ type address struct {
 }
 
 func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Configuration) (transport.Connection, error) {
-	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
+	endpoint, err := net.ResolveUDPAddr("udp", self.BindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
 	}
@@ -51,7 +51,7 @@ func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Config
 }
 
 func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
-	bind, err := net.ResolveUDPAddr("udp", self.bindableAddress())
+	bind, err := net.ResolveUDPAddr("udp", self.BindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
 	}
@@ -75,10 +75,10 @@ func (self address) MustListen(name string, i *identity.TokenId, incoming chan t
 }
 
 func (self address) String() string {
-	return fmt.Sprintf("transwarp:%s", self.bindableAddress())
+	return fmt.Sprintf("transwarp:%s", self.BindableAddress())
 }
 
-func (self address) bindableAddress() string {
+func (self address) BindableAddress() string {
 	return fmt.Sprintf("%s:%d", self.hostname, self.port)
 }
 

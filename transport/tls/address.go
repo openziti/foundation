@@ -17,10 +17,10 @@
 package tls
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"errors"
 	"fmt"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"io"
 	"strconv"
 	"strings"
@@ -34,11 +34,11 @@ type address struct {
 }
 
 func (a address) Dial(name string, i *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
-	return Dial(a.bindableAddress(), name, i)
+	return Dial(a.BindableAddress(), name, i)
 }
 
 func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {
-	return Listen(a.bindableAddress(), name, i, incoming)
+	return Listen(a.BindableAddress(), name, i, incoming)
 }
 
 func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
@@ -50,10 +50,10 @@ func (a address) MustListen(name string, i *identity.TokenId, incoming chan tran
 }
 
 func (a address) String() string {
-	return fmt.Sprintf("tls:%s", a.bindableAddress())
+	return fmt.Sprintf("tls:%s", a.BindableAddress())
 }
 
-func (a address) bindableAddress() string {
+func (a address) BindableAddress() string {
 	return fmt.Sprintf("%s:%d", a.hostname, a.port)
 }
 
