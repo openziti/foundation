@@ -43,13 +43,7 @@ func (t *testData) AcceptMetrics(e *metrics_pb.MetricsMessage) {
 func TestEmpty(t *testing.T) {
 	td := setUpTest(t)
 	td.registry.report()
-	assert.Len(t, td.events, 1)
-	ev := td.events[0]
-
-	assert.Nil(t, ev.FloatValues)
-	assert.Nil(t, ev.Histograms)
-	assert.Nil(t, ev.Meters)
-	assert.Nil(t, ev.IntValues)
+	assert.Len(t, td.events, 0)
 }
 
 func Test_Histogram(t *testing.T) {

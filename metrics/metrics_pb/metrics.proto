@@ -12,7 +12,7 @@ enum ContentType {
 message MetricsMessage {
     string sourceId = 2;
     google.protobuf.Timestamp timestamp = 3;
-    map<string, string> tags = 4; // Unused
+    map<string, string> tags = 4;
     map<string, int64> intValues = 5;
     map<string, double> floatValues = 6;
     map<string, Meter> meters = 7;

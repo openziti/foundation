@@ -26,7 +26,7 @@ import (
 
 type messageBuilder metrics_pb.MetricsMessage
 
-func newMessageBuilder(sourceId string) *messageBuilder {
+func newMessageBuilder(sourceId string, tags map[string]string) *messageBuilder {
 	now := time.Now()
 	nowTS, err := ptypes.TimestampProto(now)
 	if err != nil {
@@ -34,6 +34,7 @@ func newMessageBuilder(sourceId string) *messageBuilder {
 	}
 	builder := &messageBuilder{Timestamp: nowTS}
 	builder.SourceId = sourceId
+	builder.Tags = tags
 
 	return builder
 }

@@ -42,16 +42,19 @@ type Registry interface {
 	EachMetric(visitor func(name string, metric Metric))
 }
 
-// NewRegistry create a new metrics registry instance
-func NewRegistry(sourceId string, config *Config, eventSink Handler) Registry {
-	reportInterval := time.Second * 15
-	if config != nil {
-		reportInterval = config.ReportInterval
+func NewRegistryFromConfig(config *Config) Registry {
+	if config.ReportInterval == 0 {
+		config.ReportInterval = 15 * time.Second
 	}
+	return NewRegistry(config.Source, config.Tags, config.ReportInterval, config.EventSink)
+}
+
+func NewRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, eventSink Handler) Registry {
 	registry := &registryImpl{
 		sourceId:           sourceId,
 		metricMap:          cmap.New(),
 		eventSink:          eventSink,
+		tags:               tags,
 		intervalBucketChan: make(chan *bucketEvent, 1),
 	}
 
@@ -67,6 +70,7 @@ type bucketEvent struct {
 
 type registryImpl struct {
 	sourceId           string
+	tags               map[string]string
 	metricMap          cmap.ConcurrentMap
 	eventSink          Handler
 	intervalBucketChan chan *bucketEvent
@@ -203,7 +207,12 @@ func (registry *registryImpl) reportInterval(counter *intervalCounterImpl, inter
 }
 
 func (registry *registryImpl) report() {
-	builder := newMessageBuilder(registry.sourceId)
+	// If there's nothing to report, skip it
+	if registry.metricMap.Count() == 0 && len(registry.intervalBuckets) == 0 {
+		return
+	}
+
+	builder := newMessageBuilder(registry.sourceId, registry.tags)
 
 	registry.EachMetric(func(name string, i Metric) {
 		switch metric := i.(type) {

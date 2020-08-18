@@ -25,7 +25,10 @@ import (
 
 type Config struct {
 	handlers       map[Handler]Handler
+	Source         string
+	Tags           map[string]string
 	ReportInterval time.Duration
+	EventSink      Handler
 }
 
 func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
@@ -39,23 +42,20 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 	for k, v := range srcmap {
 		if name, ok := k.(string); ok {
 			switch name {
-
-			// testing file output
-			case string(HandlerTypeJSONFile):
-
+			case string(HandlerTypeJSONFile), string(HandlerTypeFile):
 				if submap, ok := v.(map[interface{}]interface{}); ok {
-					if jsonfileConfig, err := LoadJSONFileConfig(submap); err == nil {
-						if jsonFileHandler, err := NewJsonFileMetricsHandler(jsonfileConfig); err == nil {
-							cfg.handlers[jsonFileHandler] = jsonFileHandler
-							pfxlog.Logger().Infof("added JSON File handler")
+					if outputFileConfig, err := LoadOutputFileConfig(submap); err == nil {
+						if outputFileHandler, err := NewOutputFileMetricsHandler(outputFileConfig); err == nil {
+							cfg.handlers[outputFileHandler] = outputFileHandler
+							pfxlog.Logger().Infof("added metrics output file handler")
 						} else {
-							return nil, fmt.Errorf("error creating JSON File handler (%s)", err)
+							return nil, fmt.Errorf("error creating metrics output file handler (%s)", err)
 						}
 					} else {
-						pfxlog.Logger().Warnf("Error loading the JSON File handler: (%s)", err)
+						pfxlog.Logger().Warnf("error loading the metrics output file handler: (%s)", err)
 					}
 				} else {
-					return nil, errors.New("invalid config for JSON File Handler ")
+					return nil, errors.New("invalid config for metrics output file handler ")
 				}
 
 			case string(HandlerTypeInfluxDB):
