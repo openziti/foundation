@@ -20,14 +20,19 @@ import (
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"time"
 )
 
 type Config struct {
-	handlers map[Handler]Handler
+	handlers       map[Handler]Handler
+	ReportInterval time.Duration
 }
 
 func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
-	cfg := &Config{handlers: make(map[Handler]Handler)}
+	cfg := &Config{
+		handlers:       make(map[Handler]Handler),
+		ReportInterval: 15 * time.Second,
+	}
 
 	pfxlog.Logger().Infof("Loading metrics configs")
 
@@ -46,13 +51,12 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 						} else {
 							return nil, fmt.Errorf("error creating JSON File handler (%s)", err)
 						}
-					}else {
+					} else {
 						pfxlog.Logger().Warnf("Error loading the JSON File handler: (%s)", err)
 					}
 				} else {
 					return nil, errors.New("invalid config for JSON File Handler ")
 				}
-
 
 			case string(HandlerTypeInfluxDB):
 				if submap, ok := v.(map[interface{}]interface{}); ok {
@@ -67,6 +71,16 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 				} else {
 					return nil, errors.New("invalid influx stanza")
 				}
+			case "reportInterval":
+				val, ok := v.(string)
+				if !ok {
+					return nil, errors.New("metrics.reportInterval must be a string duration, for example: 15s")
+				}
+				interval, err := time.ParseDuration(val)
+				if err != nil {
+					return nil, err
+				}
+				cfg.ReportInterval = interval
 			}
 		}
 	}

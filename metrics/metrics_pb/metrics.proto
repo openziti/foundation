@@ -12,12 +12,13 @@ enum ContentType {
 message MetricsMessage {
     string sourceId = 2;
     google.protobuf.Timestamp timestamp = 3;
-    map<string, string> tags = 4;
+    map<string, string> tags = 4; // Unused
     map<string, int64> intValues = 5;
     map<string, double> floatValues = 6;
     map<string, Meter> meters = 7;
     map<string, Histogram> histograms = 8;
     map<string, IntervalCounter> intervalCounters = 9;
+    map<string, Timer> timers = 10;
 
     message Meter {
         int64 count = 1;
@@ -40,6 +41,26 @@ message MetricsMessage {
         double p99 = 10;
         double p999 = 11;
         double p9999 = 12;
+    }
+
+    message Timer {
+        int64 count = 1;
+        int64 max = 2;
+        double mean = 3;
+        int64 min = 4;
+        double stdDev = 5;
+        double variance = 6;
+        double p50 = 7;
+        double p75 = 8;
+        double p95 = 9;
+        double p99 = 10;
+        double p999 = 11;
+        double p9999 = 12;
+
+        double m1Rate = 13;
+        double m5Rate = 14;
+        double m15Rate = 15;
+        double meanRate = 16;
     }
 
     message IntervalCounter {

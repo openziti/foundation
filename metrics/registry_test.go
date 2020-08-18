@@ -93,7 +93,7 @@ func Test_Timer(t *testing.T) {
 	assert.Nil(t, ev.Meters)
 	assert.Nil(t, ev.IntValues)
 
-	hm := ev.Histograms["test.timer"]
+	hm := ev.Timers["test.timer"]
 	assert.NotNil(t, hm)
 	assert.Equal(t, int64(2), hm.Count)
 

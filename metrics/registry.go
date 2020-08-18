@@ -21,6 +21,7 @@ import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/metrics/metrics_pb"
 	"github.com/orcaman/concurrent-map"
+	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 	"reflect"
 	"time"
@@ -38,14 +39,17 @@ type Registry interface {
 	Histogram(name string) Histogram
 	Timer(name string) Timer
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
-	Each(visitor func(name string, metric Metric))
+	EachMetric(visitor func(name string, metric Metric))
 }
 
 // NewRegistry create a new metrics registry instance
-func NewRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, eventSink Handler) Registry {
+func NewRegistry(sourceId string, config *Config, eventSink Handler) Registry {
+	reportInterval := time.Second * 15
+	if config != nil {
+		reportInterval = config.ReportInterval
+	}
 	registry := &registryImpl{
 		sourceId:           sourceId,
-		tags:               tags,
 		metricMap:          cmap.New(),
 		eventSink:          eventSink,
 		intervalBucketChan: make(chan *bucketEvent, 1),
@@ -63,7 +67,6 @@ type bucketEvent struct {
 
 type registryImpl struct {
 	sourceId           string
-	tags               map[string]string
 	metricMap          cmap.ConcurrentMap
 	eventSink          Handler
 	intervalBucketChan chan *bucketEvent
@@ -136,7 +139,7 @@ func (registry *registryImpl) Timer(name string) Timer {
 	if present {
 		timer, ok := metric.(Timer)
 		if !ok {
-			panic(fmt.Errorf("metric '%v' already exists and is not a histogram. It is a %v", name, reflect.TypeOf(metric).Name()))
+			panic(fmt.Errorf("metric '%v' already exists and is not a timer. It is a %v", name, reflect.TypeOf(metric).Name()))
 		}
 		return timer
 	}
@@ -168,9 +171,15 @@ func (registry *registryImpl) IntervalCounter(name string, intervalSize time.Dur
 	return intervalCounter
 }
 
-func (registry *registryImpl) Each(visitor func(name string, metric Metric)) {
+func (registry *registryImpl) EachMetric(visitor func(name string, metric Metric)) {
 	for entry := range registry.metricMap.IterBuffered() {
 		visitor(entry.Key, entry.Val.(Metric))
+	}
+}
+
+func (registry *registryImpl) Each(visitor func(string, interface{})) {
+	for entry := range registry.metricMap.IterBuffered() {
+		visitor(entry.Key, entry.Val)
 	}
 }
 
@@ -194,9 +203,9 @@ func (registry *registryImpl) reportInterval(counter *intervalCounterImpl, inter
 }
 
 func (registry *registryImpl) report() {
-	builder := newMessageBuilder(registry.sourceId, registry.tags)
+	builder := newMessageBuilder(registry.sourceId)
 
-	registry.Each(func(name string, i Metric) {
+	registry.EachMetric(func(name string, i Metric) {
 		switch metric := i.(type) {
 		case *meterImpl:
 			builder.addMeter(name, metric.Snapshot())
@@ -216,4 +225,43 @@ func (registry *registryImpl) report() {
 
 	msg := (*metrics_pb.MetricsMessage)(builder)
 	registry.eventSink.AcceptMetrics(msg)
+}
+
+// Provide rest of go-metrics Registry interface, so we can use go-metrics reporters if desired
+func (registry *registryImpl) Get(s string) interface{} {
+	val, _ := registry.metricMap.Get(s)
+	return val
+}
+
+func (registry *registryImpl) GetAll() map[string]map[string]interface{} {
+	return nil
+}
+
+func (registry *registryImpl) GetOrRegister(s string, i interface{}) interface{} {
+	return registry.metricMap.Upsert(s, i, func(exist bool, valueInMap interface{}, newValue interface{}) interface{} {
+		if exist {
+			return valueInMap
+		}
+		return newValue
+	})
+}
+
+func (registry *registryImpl) Register(s string, i interface{}) error {
+	if registry.metricMap.SetIfAbsent(s, i) {
+		return errors.Errorf("duplicate metric %v", s)
+	}
+	return nil
+}
+
+func (registry *registryImpl) RunHealthchecks() {
+}
+
+func (registry *registryImpl) Unregister(s string) {
+	registry.metricMap.Remove(s)
+}
+
+func (registry *registryImpl) UnregisterAll() {
+	for _, key := range registry.metricMap.Keys() {
+		registry.Unregister(key)
+	}
 }

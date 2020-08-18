@@ -26,7 +26,7 @@ import (
 
 type messageBuilder metrics_pb.MetricsMessage
 
-func newMessageBuilder(sourceId string, tags map[string]string) *messageBuilder {
+func newMessageBuilder(sourceId string) *messageBuilder {
 	now := time.Now()
 	nowTS, err := ptypes.TimestampProto(now)
 	if err != nil {
@@ -34,7 +34,6 @@ func newMessageBuilder(sourceId string, tags map[string]string) *messageBuilder 
 	}
 	builder := &messageBuilder{Timestamp: nowTS}
 	builder.SourceId = sourceId
-	builder.Tags = tags
 
 	return builder
 }
@@ -102,28 +101,33 @@ func (builder *messageBuilder) addHistogram(name string, metric metrics.Histogra
 }
 
 func (builder *messageBuilder) addTimer(name string, metric metrics.Timer) {
-	histogram := &metrics_pb.MetricsMessage_Histogram{}
-	histogram.Count = metric.Count()
-	histogram.Max = metric.Max()
-	histogram.Mean = metric.Mean()
-	histogram.Min = metric.Min()
-	histogram.StdDev = metric.StdDev()
-	histogram.Variance = metric.Variance()
+	timer := &metrics_pb.MetricsMessage_Timer{}
+	timer.Count = metric.Count()
+	timer.Max = metric.Max()
+	timer.Mean = metric.Mean()
+	timer.Min = metric.Min()
+	timer.StdDev = metric.StdDev()
+	timer.Variance = metric.Variance()
 
 	ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999, 0.9999})
 
-	histogram.P50 = ps[0]
-	histogram.P75 = ps[1]
-	histogram.P95 = ps[2]
-	histogram.P99 = ps[3]
-	histogram.P999 = ps[4]
-	histogram.P9999 = ps[5]
+	timer.P50 = ps[0]
+	timer.P75 = ps[1]
+	timer.P95 = ps[2]
+	timer.P99 = ps[3]
+	timer.P999 = ps[4]
+	timer.P9999 = ps[5]
 
-	if builder.Histograms == nil {
-		builder.Histograms = make(map[string]*metrics_pb.MetricsMessage_Histogram)
+	timer.M1Rate = metric.Rate1()
+	timer.M5Rate = metric.Rate5()
+	timer.M15Rate = metric.Rate15()
+	timer.MeanRate = metric.RateMean()
+
+	if builder.Timers == nil {
+		builder.Timers = make(map[string]*metrics_pb.MetricsMessage_Timer)
 	}
 
-	builder.Histograms[name] = histogram
+	builder.Timers[name] = timer
 }
 
 func (builder *messageBuilder) addIntervalBucketEvents(events []*bucketEvent) {
