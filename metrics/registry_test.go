@@ -9,15 +9,17 @@ import (
 )
 
 type testData struct {
-	registry *registryImpl
+	registry *usageRegistryImpl
 	events   []*metrics_pb.MetricsMessage
 }
 
 func setUpTest(t *testing.T) *testData {
 	td := &testData{
-		registry: &registryImpl{
-			sourceId:           t.Name(),
-			metricMap:          cmap.New(),
+		registry: &usageRegistryImpl{
+			registryImpl: registryImpl{
+				sourceId:  t.Name(),
+				metricMap: cmap.New(),
+			},
 			intervalBucketChan: make(chan *bucketEvent, 1),
 		}}
 	td.registry.eventSink = td

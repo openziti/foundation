@@ -52,7 +52,7 @@ func (PlainTextFormatter) WriteTo(msg *metrics_pb.MetricsMessage, out io.Writer)
 
 	// timers
 	for name, val := range msg.Timers {
-		w.Printf("meter %s\n", name)
+		w.Printf("timer %s\n", name)
 		w.Printf("  count:       %9d\n", val.Count)
 		w.Printf("  min:         %9d\n", val.Min)
 		w.Printf("  max:         %9d\n", val.Max)
@@ -64,10 +64,10 @@ func (PlainTextFormatter) WriteTo(msg *metrics_pb.MetricsMessage, out io.Writer)
 		w.Printf("  99%%:         %12.2f\n", val.P99)
 		w.Printf("  99.9%%:       %12.2f\n", val.P999)
 		w.Printf("  99.99%%:      %12.2f\n", val.P9999)
-		w.Printf("  1-min rate:   %12.2f\n", val.M1Rate)
-		w.Printf("  5-min rate:   %12.2f\n", val.M5Rate)
-		w.Printf("  15-min rate:  %12.2f\n", val.M15Rate)
-		w.Printf("  mean rate:    %12.2f\n", val.MeanRate)
+		w.Printf("  1-min rate:  %12.2f\n", val.M1Rate)
+		w.Printf("  5-min rate:  %12.2f\n", val.M5Rate)
+		w.Printf("  15-min rate: %12.2f\n", val.M15Rate)
+		w.Printf("  mean rate:   %12.2f\n", val.MeanRate)
 	}
 
 	return w.GetError()
