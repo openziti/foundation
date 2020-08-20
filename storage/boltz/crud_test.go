@@ -102,7 +102,7 @@ func (store *employeeStoreImpl) NewStoreEntity() Entity {
 	return &Employee{}
 }
 
-func (store *employeeStoreImpl) initializeLocal() {
+func (store *employeeStoreImpl) initializeLocal(constraint bool) {
 	store.AddIdSymbol("id", ast.NodeTypeString)
 	symbolName := store.AddSymbol(fieldName, ast.NodeTypeString)
 	store.indexName = store.AddUniqueIndex(symbolName)
@@ -111,10 +111,16 @@ func (store *employeeStoreImpl) initializeLocal() {
 	store.indexRoles = store.AddSetIndex(rolesSymbol)
 
 	managerSymbol := store.AddFkSymbol(fieldManager, store)
+
 	directReportsSymbol := store.AddFkSetSymbol(fieldDirectReports, store)
-	store.AddNullableFkIndex(managerSymbol, directReportsSymbol)
+	if constraint {
+		store.AddFkConstraint(managerSymbol, true, CascadeNone)
+	} else {
+		store.AddNullableFkIndex(managerSymbol, directReportsSymbol)
+	}
 
 	store.symbolLocations = store.AddFkSetSymbol(entityTypeLocation, store.stores.location)
+
 }
 
 func (store *employeeStoreImpl) initializeLinked() {
@@ -192,7 +198,7 @@ type crudTest struct {
 	locStore *locationStoreImpl
 }
 
-func (test *crudTest) init() {
+func (test *crudTest) init(constaint bool) {
 	var err error
 	test.dbFile, err = ioutil.TempFile("", "query-bolt-test-db")
 	test.NoError(err)
@@ -208,7 +214,7 @@ func (test *crudTest) init() {
 	stores.employee.stores = stores
 	stores.location.stores = stores
 
-	stores.employee.initializeLocal()
+	stores.employee.initializeLocal(constaint)
 	stores.location.initializeLocal()
 
 	stores.employee.initializeLinked()
@@ -243,7 +249,7 @@ func TestCrud(t *testing.T) {
 	test := &crudTest{
 		Assertions: require.New(t),
 	}
-	test.init()
+	test.init(false)
 	defer test.cleanup()
 
 	t.Run("unique indexes", test.testUniqueIndex)
@@ -257,7 +263,7 @@ func TestLinkCollectionImpl_CheckIntegrity(t *testing.T) {
 	test := &crudTest{
 		Assertions: require.New(t),
 	}
-	test.init()
+	test.init(false)
 	defer test.cleanup()
 
 	employees, locations := test.initStoresForIntegrityChecks()
@@ -290,7 +296,7 @@ func TestFkIndex_CheckIntegrity(t *testing.T) {
 	test := &crudTest{
 		Assertions: require.New(t),
 	}
-	test.init()
+	test.init(false)
 	defer test.cleanup()
 
 	employees, _ := test.initStoresForIntegrityChecks()
@@ -338,11 +344,32 @@ func TestFkIndex_CheckIntegrity(t *testing.T) {
 	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
 }
 
+func TestFkConstraint_CheckIntegrity(t *testing.T) {
+	test := &crudTest{
+		Assertions: require.New(t),
+	}
+	test.init(true)
+	defer test.cleanup()
+
+	employees, _ := test.initStoresForIntegrityChecks()
+
+	badId := uuid.New().String()
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		entityBucket := test.empStore.GetEntityBucket(tx, []byte(employees[1].Id))
+		entityBucket.SetString(fieldManager, badId, nil)
+		return entityBucket.GetError()
+	})
+	test.NoError(err)
+
+	expectedMsg := fmt.Sprintf("employees.manager has invalid value for employee %v, which references invalid employee %v", employees[1].Id, badId)
+	test.requireIntegrityErrorAndFixResult(test.empStore, expectedMsg, true)
+}
+
 func TestUniqueIndex_CheckIntegrity(t *testing.T) {
 	test := &crudTest{
 		Assertions: require.New(t),
 	}
-	test.init()
+	test.init(false)
 	defer test.cleanup()
 
 	employees, _ := test.initStoresForIntegrityChecks()
@@ -405,7 +432,7 @@ func TestSetIndex_CheckIntegrity(t *testing.T) {
 	test := &crudTest{
 		Assertions: require.New(t),
 	}
-	test.init()
+	test.init(false)
 	defer test.cleanup()
 
 	employees, _ := test.initStoresForIntegrityChecks()

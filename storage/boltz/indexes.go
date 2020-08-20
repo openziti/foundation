@@ -18,12 +18,16 @@ package boltz
 
 import (
 	"bytes"
-	"github.com/michaelquigley/pfxlog"
+	"fmt"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/openziti/foundation/util/errorz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
+
+type constrained interface {
+	addConstraint(constraint Constraint)
+}
 
 type Indexer struct {
 	constraints []Constraint
@@ -51,9 +55,17 @@ func NewIndexer(basePath ...string) *Indexer {
 }
 
 func (indexer *Indexer) AddUniqueIndex(symbol EntitySymbol) ReadIndex {
+	return indexer.addUniqueIndex(symbol, false)
+}
+
+func (indexer *Indexer) AddNullableUniqueIndex(symbol EntitySymbol) ReadIndex {
+	return indexer.addUniqueIndex(symbol, true)
+}
+
+func (indexer *Indexer) addUniqueIndex(symbol EntitySymbol, nullable bool) ReadIndex {
 	index := &uniqueIndex{
 		symbol:    symbol,
-		nullable:  false,
+		nullable:  nullable,
 		indexPath: indexer.getIndexPath(symbol),
 	}
 
@@ -87,14 +99,38 @@ func (indexer *Indexer) addFkIndex(symbol EntitySymbol, fkSymbol EntitySetSymbol
 
 	indexer.addConstraint(index)
 	fkStore := fkSymbol.GetStore()
-	if baseStore, ok := fkStore.(*BaseStore); ok {
+	if baseStore, ok := fkStore.(constrained); ok {
 		baseStore.addConstraint(&fkDeleteConstraint{
 			symbol:   fkSymbol,
 			fkSymbol: symbol,
 		})
 	} else {
-		pfxlog.Logger().Warnf("fk store %v is not an indexer, can't enforce validity of constraint on delete",
-			fkSymbol.GetStore().GetEntityType())
+		panic(errors.Errorf("linked store %v is not constrained, can't enforce validity of constraint on delete",
+			fkSymbol.GetStore().GetEntityType()))
+	}
+}
+
+func (indexer *Indexer) AddFkConstraint(symbol EntitySymbol, nullable bool, cascade CascadeType) {
+	if symbol.GetLinkedType() == nil {
+		panic(errors.Errorf("invalid symbol for foreign key: %v.%v. It is not linked to another store",
+			symbol.GetStore().GetEntityType(), symbol.GetName()))
+	}
+
+	index := &fkConstraint{
+		symbol:   symbol,
+		nullable: nullable,
+	}
+
+	indexer.addConstraint(index)
+
+	if baseStore, ok := symbol.GetLinkedType().(constrained); ok {
+		baseStore.addConstraint(&fkDeleteCascadeConstraint{
+			symbol:      symbol,
+			cascadeType: cascade,
+		})
+	} else {
+		panic(errors.Errorf("linked store %v is not constrained, can't enforce validity of constraint on delete",
+			symbol.GetLinkedType().GetEntityType()))
 	}
 }
 
@@ -734,10 +770,137 @@ func (index *fkDeleteConstraint) ProcessDelete(ctx *IndexingContext) {
 	}
 }
 
-func (index *fkDeleteConstraint) Initialize(_ *bbolt.Tx, _ errorz.ErrorHolder) {
+func (index *fkDeleteConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
 }
 
-func (index *fkDeleteConstraint) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+func (index *fkDeleteConstraint) CheckIntegrity(*bbolt.Tx, bool, func(error, bool)) error {
+	return nil
+}
+
+type CascadeType int
+
+const (
+	CascadeNone   = 1
+	CascadeDelete = 2
+)
+
+type fkConstraint struct {
+	symbol   EntitySymbol
+	nullable bool
+	cascade  CascadeType
+}
+
+func (index *fkConstraint) ProcessBeforeUpdate(ctx *IndexingContext) {
+	if !ctx.ErrHolder.HasError() {
+		_, fieldValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		ctx.atomStates[index] = fieldValue
+	}
+}
+
+func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
+	if !ctx.ErrHolder.HasError() {
+		_, newValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		oldValue := ctx.atomStates[index]
+
+		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
+			return
+		}
+
+		if len(newValue) > 0 {
+			fkId := string(newValue)
+			if !index.symbol.GetLinkedType().IsEntityPresent(ctx.Tx, fkId) {
+				err := NewNotFoundError(index.symbol.GetLinkedType().GetSingularEntityType(), "id", string(fkId))
+				ctx.ErrHolder.SetError(err)
+			}
+		} else if !index.nullable {
+			ctx.ErrHolder.SetError(errors.Errorf("fk constraint on %v.%v does not allow null or empty values",
+				index.symbol.GetStore().GetEntityType(), index.symbol.GetName()))
+		}
+	}
+
+}
+
+func (index *fkConstraint) ProcessDelete(*IndexingContext) {
+}
+
+func (index *fkConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
+	// nothing to do, as this index has no static location
+}
+
+func (index *fkConstraint) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	for idsCursor := index.symbol.GetStore().IterateValidIds(tx, ast.BoolNodeTrue); idsCursor.IsValid(); idsCursor.Next() {
+		id := idsCursor.Current()
+		_, key := index.symbol.Eval(tx, id)
+		if key == nil {
+			if !index.nullable {
+				errorSink(errors.Errorf("%v.%v is non-nillable, but %v with id %v has nil value",
+					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+					index.symbol.GetStore().GetSingularEntityType(), string(id)), false)
+			}
+		} else {
+			if !index.symbol.GetLinkedType().IsEntityPresent(tx, string(key)) {
+				tryFix := index.nullable && fix && len(index.symbol.GetPath()) == 1
+				if tryFix {
+					entityBucket := index.symbol.GetStore().GetEntityBucket(tx, id)
+					if entityBucket.HasError() {
+						return entityBucket.GetError()
+					}
+					if err := entityBucket.Put([]byte(index.symbol.GetPath()[0]), nil); err != nil {
+						return err
+					}
+				}
+				errorSink(errors.Errorf("%v.%v has invalid value for %v %v, which references invalid %v %v",
+					index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
+					index.symbol.GetStore().GetSingularEntityType(), string(id),
+					index.symbol.GetLinkedType().GetSingularEntityType(), string(key)), tryFix)
+			}
+		}
+	}
+	return nil
+}
+
+type fkDeleteCascadeConstraint struct {
+	symbol      EntitySymbol
+	cascadeType CascadeType
+}
+
+func (index *fkDeleteCascadeConstraint) ProcessBeforeUpdate(*IndexingContext) {
+}
+
+func (index *fkDeleteCascadeConstraint) ProcessAfterUpdate(*IndexingContext) {
+}
+
+func (index *fkDeleteCascadeConstraint) ProcessDelete(ctx *IndexingContext) {
+	if !ctx.ErrHolder.HasError() {
+		filter, err := ast.Parse(index.symbol.GetStore(), fmt.Sprintf(`%v = "%v"`, index.symbol.GetName(), string(ctx.RowId)))
+		if ctx.ErrHolder.SetError(err) {
+			return
+		}
+		targetStore := index.symbol.GetStore().(*BaseStore)
+		mutateCtx := NewMutateContext(ctx.Tx)
+		for cursor := targetStore.IterateValidIds(ctx.Tx, filter); cursor.IsValid(); cursor.Next() {
+			entityId := string(cursor.Current())
+
+			if index.cascadeType == CascadeDelete {
+				if ctx.ErrHolder.SetError(targetStore.DeleteById(mutateCtx, entityId)) {
+					return
+				}
+			} else if index.cascadeType == CascadeNone {
+				ctx.ErrHolder.SetError(errors.Errorf("cannot delete %v with id %v is referenced by %v with id %v, field %v",
+					index.symbol.GetLinkedType().GetSingularEntityType(), string(ctx.RowId),
+					index.symbol.GetStore().GetSingularEntityType(), entityId,
+					index.symbol.GetName()))
+				return
+			}
+		}
+	}
+}
+
+func (index *fkDeleteCascadeConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
+	// nothing to do, as this index has no static location
+}
+
+func (index *fkDeleteCascadeConstraint) CheckIntegrity(*bbolt.Tx, bool, func(error, bool)) error {
 	return nil
 }

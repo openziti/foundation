@@ -45,6 +45,7 @@ const (
 type Db interface {
 	io.Closer
 	Update(fn func(tx *bbolt.Tx) error) error
+	Batch(fn func(tx *bbolt.Tx) error) error
 	View(fn func(tx *bbolt.Tx) error) error
 	RootBucket(tx *bbolt.Tx) (*bbolt.Bucket, error)
 
