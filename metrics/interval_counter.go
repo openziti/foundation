@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+// TODO: See if we can make interval processing use a single goroutine
+
 // IntervalCounter allows tracking counters which are bucketized by some interval
 type IntervalCounter interface {
 	Metric

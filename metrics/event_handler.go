@@ -28,16 +28,13 @@ func getMetricsEventHandlers() []Handler {
 	return EventHandlerRegistry.Value().([]Handler)
 }
 
-// HandlerType is used define known handler types
+// HandlerType is used to define known handler types
 type HandlerType string
 
 const (
-	// HandlerTypeInfluxDB represents the HandlerTypeInfluxDB reporter
 	HandlerTypeInfluxDB HandlerType = "influxdb"
-)
-
-const (
 	HandlerTypeJSONFile HandlerType = "jsonfile"
+	HandlerTypeFile     HandlerType = "file"
 )
 
 // Handler represents a sink for metric events

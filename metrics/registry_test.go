@@ -9,15 +9,17 @@ import (
 )
 
 type testData struct {
-	registry *registryImpl
+	registry *usageRegistryImpl
 	events   []*metrics_pb.MetricsMessage
 }
 
 func setUpTest(t *testing.T) *testData {
 	td := &testData{
-		registry: &registryImpl{
-			sourceId:           t.Name(),
-			metricMap:          cmap.New(),
+		registry: &usageRegistryImpl{
+			registryImpl: registryImpl{
+				sourceId:  t.Name(),
+				metricMap: cmap.New(),
+			},
 			intervalBucketChan: make(chan *bucketEvent, 1),
 		}}
 	td.registry.eventSink = td
@@ -43,13 +45,7 @@ func (t *testData) AcceptMetrics(e *metrics_pb.MetricsMessage) {
 func TestEmpty(t *testing.T) {
 	td := setUpTest(t)
 	td.registry.report()
-	assert.Len(t, td.events, 1)
-	ev := td.events[0]
-
-	assert.Nil(t, ev.FloatValues)
-	assert.Nil(t, ev.Histograms)
-	assert.Nil(t, ev.Meters)
-	assert.Nil(t, ev.IntValues)
+	assert.Len(t, td.events, 0)
 }
 
 func Test_Histogram(t *testing.T) {
@@ -93,7 +89,7 @@ func Test_Timer(t *testing.T) {
 	assert.Nil(t, ev.Meters)
 	assert.Nil(t, ev.IntValues)
 
-	hm := ev.Histograms["test.timer"]
+	hm := ev.Timers["test.timer"]
 	assert.NotNil(t, hm)
 	assert.Equal(t, int64(2), hm.Count)
 
