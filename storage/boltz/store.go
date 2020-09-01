@@ -117,7 +117,6 @@ func (store *BaseStore) GetEntityBucket(tx *bbolt.Tx, id []byte) *TypedBucket {
 	if entityBucket == nil {
 		return nil
 	}
-	entityBucket.extended = store.isExtended
 	return entityBucket.GetPath(store.entityPath...)
 }
 
@@ -175,6 +174,10 @@ func (store *BaseStore) GetSingularEntityType() string {
 func (store *BaseStore) Extended() *BaseStore {
 	store.isExtended = true
 	return store
+}
+
+func (store *BaseStore) IsExtended() bool {
+	return store.isExtended
 }
 
 func GetSingularEntityType(entityType string) string {

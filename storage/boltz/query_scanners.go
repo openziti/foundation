@@ -141,7 +141,7 @@ func (scanner *uniqueIndexScanner) Next() {
 
 		scanner.current = cursor.Current()
 		cursor.Next()
-		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) {
+		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) && !scanner.store.IsExtended() {
 			continue
 		}
 		rowCursor.NextRow(scanner.current)
@@ -203,7 +203,7 @@ func (scanner *sortingScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.SetCu
 	for cursor.IsValid() {
 		current := cursor.Current()
 		cursor.Next()
-		if isChildStore && !scanner.store.IsEntityPresent(tx, string(current)) {
+		if isChildStore && !scanner.store.IsEntityPresent(tx, string(current)) && !scanner.store.IsExtended() {
 			continue
 		}
 		rowCursor.NextRow(current)

@@ -42,16 +42,6 @@ const (
 	TypeNil     FieldType = 7
 )
 
-var FieldTypeNames = map[FieldType]string{
-	TypeBool:    "TypeBool",
-	TypeInt32:   "TypeInt32",
-	TypeInt64:   "TypeInt64",
-	TypeFloat64: "TypeFloat64",
-	TypeString:  "TypeString",
-	TypeTime:    "TypeTime",
-	TypeNil:     "TypeNil",
-}
-
 type FieldChecker interface {
 	IsUpdated(string) bool
 }
@@ -103,16 +93,10 @@ type TypedBucket struct {
 	*bbolt.Bucket
 	parent *TypedBucket
 	*errorz.ErrorHolderImpl
-	extended bool
-}
-
-func (bucket *TypedBucket) Extended() *TypedBucket {
-	bucket.extended = true
-	return bucket
 }
 
 func (bucket *TypedBucket) Tx() *bbolt.Tx {
-	if bucket.Bucket == nil && bucket.extended {
+	if bucket.Bucket == nil && bucket.parent != nil {
 		return bucket.parent.Tx()
 	}
 	return bucket.Bucket.Tx()
@@ -191,10 +175,6 @@ func (bucket *TypedBucket) GetPath(path ...string) *TypedBucket {
 	for _, pathElem := range path {
 		next = next.GetBucket(pathElem)
 		if next == nil {
-			if bucket.extended {
-				return newTypedBucket(bucket, nil).Extended()
-			}
-
 			return nil
 		}
 	}

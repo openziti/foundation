@@ -407,8 +407,7 @@ func (cursor *ValidIdsCursors) Next() {
 }
 
 func (cursor *ValidIdsCursors) IsExtendedDataPresent() bool {
-	bucket := cursor.store.GetEntityBucket(cursor.tx, cursor.wrapped.Current())
-	return bucket.Bucket != nil
+	return nil != cursor.store.GetEntityBucket(cursor.tx, cursor.wrapped.Current())
 }
 
 func (cursor *ValidIdsCursors) IsValid() bool {
