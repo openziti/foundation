@@ -66,6 +66,7 @@ type ListStore interface {
 	GetValueCursor(tx *bbolt.Tx, id []byte, path ...string) *bbolt.Cursor
 	IsChildStore() bool
 	IsEntityPresent(tx *bbolt.Tx, id string) bool
+	IsExtended() bool
 
 	GetSymbol(name string) EntitySymbol
 	MapSymbol(name string, wrapper SymbolMapper)
