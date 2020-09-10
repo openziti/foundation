@@ -33,17 +33,16 @@ import (
 )
 
 type wssListener struct {
-	identity       *identity.TokenId
-	endpoint       transport.Address
-	socket         io.Closer
-	close          chan struct{}
-	handlers       []ConnectionHandler
-	created        chan Underlay
-	connectOptions ConnectOptions
-	serverCert     string
-	key            string
-	tcfg           transport.Configuration
-	incoming       chan *WssConnection
+	identity   *identity.TokenId
+	endpoint   transport.Address
+	socket     io.Closer
+	close      chan struct{}
+	handlers   []ConnectionHandler
+	created    chan Underlay
+	serverCert string
+	key        string
+	tcfg       transport.Configuration
+	incoming   chan *WssConnection
 }
 
 func NewWssListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, serverCert string, key string) UnderlayListener {
@@ -52,15 +51,14 @@ func NewWssListener(identity *identity.TokenId, endpoint transport.Address, conn
 
 func NewWssListenerWithTransportConfiguration(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, tcfg transport.Configuration, serverCert string, key string) UnderlayListener {
 	return &wssListener{
-		identity:       identity,
-		endpoint:       endpoint,
-		close:          make(chan struct{}),
-		created:        make(chan Underlay),
-		incoming:       make(chan *WssConnection, connectOptions.MaxQueuedConnects),
-		connectOptions: connectOptions,
-		serverCert:     serverCert,
-		key:            key,
-		tcfg:           tcfg,
+		identity:   identity,
+		endpoint:   endpoint,
+		close:      make(chan struct{}),
+		created:    make(chan Underlay),
+		incoming:   make(chan *WssConnection, connectOptions.MaxQueuedConnects),
+		serverCert: serverCert,
+		key:        key,
+		tcfg:       tcfg,
 	}
 }
 
@@ -161,16 +159,14 @@ func (listener *wssListener) wsslistener() {
 
 	httpServer := &http.Server{
 		Addr:         listener.endpoint.BindableAddress(),
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
+		WriteTimeout: time.Second * 10,
+		ReadTimeout:  time.Second * 5,
+		IdleTimeout:  time.Second * 5,
 		Handler:      router,
 		TLSConfig: &tls.Config{
 			ClientAuth: tls.RequestClientCert,
 		},
 	}
-
-	// log.Info("listener.options: [%v]", listener.options)
 
 	if err := httpServer.ListenAndServeTLS(listener.serverCert, listener.key); err != nil {
 		panic(err)
@@ -203,8 +199,6 @@ func (listener *wssListener) Create(tcfg transport.Configuration) (Underlay, err
  */
 func (listener *wssListener) binaryListener() {
 	log := pfxlog.ContextLogger(listener.endpoint.String())
-	log.Info("started")
-	defer log.Info("exited")
 
 	for {
 		select {
@@ -222,7 +216,7 @@ func (listener *wssListener) binaryListener() {
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
 							log.Errorf("connection handler error (%s)", err)
 							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
-								log.Errorf("error acknowledging hello (%s)", err)
+								log.Errorf("error acknowledging hello (%v)", err)
 							}
 							break
 						}

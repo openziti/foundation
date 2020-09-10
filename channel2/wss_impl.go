@@ -48,12 +48,8 @@ func (impl *wssImpl) rxHello() (*Message, error) {
 
 	pfxlog.Logger().Infof("rxHello(): mt: %v, wss_message: %v", mt, wss_message)
 
-	if bytes.Equal(wss_message[0:4], magicV2) {
-		msg, err := readHelloWssV2(wss_message)
-		return msg, err
-	}
-
-	return nil, UnknownVersionError
+	msg, _, _, err := readHello(bytes.NewReader([]byte(wss_message)))
+	return msg, err
 }
 
 func (impl *wssImpl) Rx() (*Message, error) {
