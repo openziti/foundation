@@ -55,11 +55,12 @@ func (listener *wssListener) handleWebsocket(w http.ResponseWriter, r *http.Requ
 				InBound: true,
 				Name:    "wss",
 			},
-			ws:   c,
-			log:  log,
-			buf:  newSafeBuffer(),
-			done: make(chan struct{}),
-			cfg:  listener.cfg,
+			ws:    c,
+			log:   log,
+			rxbuf: newSafeBuffer(log),
+			txbuf: newSafeBuffer(log),
+			done:  make(chan struct{}),
+			cfg:   listener.cfg,
 		}
 
 		listener.incoming <- connection // pass the Websocket to the goroutine that will validate the HELLO handshake

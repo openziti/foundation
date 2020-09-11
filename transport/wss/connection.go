@@ -18,6 +18,7 @@ package wss
 
 import (
 	"bytes"
+	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"github.com/gorilla/websocket"
@@ -36,6 +37,7 @@ var (
 // safeBuffer adds thread-safety to *bytes.Buffer
 type safeBuffer struct {
 	buf *bytes.Buffer
+	log *logrus.Entry
 	sync.Mutex
 }
 
@@ -73,7 +75,8 @@ type Connection struct {
 	cfg    *WSSConfig
 	ws     *websocket.Conn
 	log    *logrus.Entry
-	buf    *safeBuffer
+	rxbuf  *safeBuffer
+	txbuf  *safeBuffer
 	done   chan struct{}
 	wmutex sync.Mutex
 	rmutex sync.Mutex
@@ -81,9 +84,9 @@ type Connection struct {
 
 // Read implements io.Reader by wrapping websocket messages in a buffer.
 func (c *Connection) Read(p []byte) (n int, err error) {
-	if c.buf.Len() == 0 {
+	if c.rxbuf.Len() == 0 {
 		var r io.Reader
-		c.buf.Reset()
+		c.rxbuf.Reset()
 		c.rmutex.Lock()
 		defer c.rmutex.Unlock()
 		select {
@@ -98,13 +101,13 @@ func (c *Connection) Read(p []byte) (n int, err error) {
 		if err != nil {
 			return n, err
 		}
-		_, err = io.Copy(c.buf, r)
+		_, err = io.Copy(c.rxbuf, r)
 		if err != nil {
 			return n, err
 		}
 	}
 
-	return c.buf.Read(p)
+	return c.rxbuf.Read(p)
 }
 
 // Write implements io.Writer and sends binary messages only.
@@ -114,19 +117,26 @@ func (c *Connection) Write(p []byte) (n int, err error) {
 
 // write wraps the websocket writer.
 func (c *Connection) write(messageType int, p []byte) (n int, err error) {
+	var txbufLen int
 	c.wmutex.Lock()
 	defer c.wmutex.Unlock()
 	select {
 	case <-c.done:
 		err = errClosing
 	default:
-		err = c.ws.SetWriteDeadline(time.Now().Add(c.cfg.writeTimeout))
-		if err == nil {
-			err = c.ws.WriteMessage(messageType, p)
+		c.txbuf.Write(p)
+		txbufLen = c.txbuf.Len()
+		if txbufLen > 20 { // TEMP HACK:  (until I refactor the JS-SDK to accept the message section and data section in separate salvos)
+			err = c.ws.SetWriteDeadline(time.Now().Add(c.cfg.writeTimeout))
+			if err == nil {
+				m := make([]byte, txbufLen)
+				c.txbuf.Read(m)
+				err = c.ws.WriteMessage(messageType, m)
+			}
 		}
 	}
 	if err == nil {
-		n = len(p)
+		n = txbufLen
 	}
 	return n, err
 }
@@ -165,9 +175,10 @@ func (c *Connection) pinger() {
 }
 
 // newSafeBuffer instantiates a new safeBuffer
-func newSafeBuffer() *safeBuffer {
+func newSafeBuffer(log *logrus.Entry) *safeBuffer {
 	return &safeBuffer{
 		buf: bytes.NewBuffer(nil),
+		log: log,
 	}
 }
 
@@ -176,7 +187,8 @@ func (self *Connection) Detail() *transport.ConnectionDetail {
 }
 
 func (self *Connection) PeerCertificates() []*x509.Certificate {
-	return nil
+	var tlsConn (*tls.Conn) = self.ws.UnderlyingConn().(*tls.Conn)
+	return tlsConn.ConnectionState().PeerCertificates
 }
 
 func (self *Connection) Reader() io.Reader {

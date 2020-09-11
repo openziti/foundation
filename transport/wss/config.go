@@ -35,36 +35,36 @@ func NewDefaultWSSConfig() *WSSConfig {
 
 func (self *WSSConfig) Load(data map[interface{}]interface{}) error {
 	if v, found := data["writeTimeout"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.writeTimeout = time.Second * i
+		if i, ok := v.(int); ok {
+			self.writeTimeout = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'writeTimeout' value")
 		}
 	}
 	if v, found := data["readTimeout"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.readTimeout = i
+		if i, ok := v.(int); ok {
+			self.readTimeout = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'readTimeout' value")
 		}
 	}
 	if v, found := data["idleTimeout"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.idleTimeout = i
+		if i, ok := v.(int); ok {
+			self.idleTimeout = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'idleTimeout' value")
 		}
 	}
 	if v, found := data["pongTimeout"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.pongTimeout = i
+		if i, ok := v.(int); ok {
+			self.pongTimeout = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'pongTimeout' value")
 		}
 	}
 	if v, found := data["pingInterval"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.pingInterval = i
+		if i, ok := v.(int); ok {
+			self.pingInterval = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'pingInterval' value")
 		}
@@ -72,8 +72,8 @@ func (self *WSSConfig) Load(data map[interface{}]interface{}) error {
 		self.pingInterval = (self.pongTimeout * 9) / 10
 	}
 	if v, found := data["handshakeTimeout"]; found {
-		if i, ok := v.(time.Duration); ok {
-			self.handshakeTimeout = i
+		if i, ok := v.(int); ok {
+			self.handshakeTimeout = time.Second * time.Duration(i)
 		} else {
 			return errors.New("invalid 'handshakeTimeout' value")
 		}
@@ -99,11 +99,11 @@ func (self *WSSConfig) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'enableCompression' value")
 		}
 	}
-	if v, found := data["serverCert"]; found {
+	if v, found := data["server_cert"]; found {
 		if s, ok := v.(string); ok {
 			self.serverCert = s
 		} else {
-			return errors.New("invalid 'serverCert' value")
+			return errors.New("invalid 'server_cert' value")
 		}
 	}
 	if v, found := data["key"]; found {
@@ -134,7 +134,6 @@ func (self *WSSConfig) Dump() string {
 	out += fmt.Sprintf("\t%-30s %d\n", "readBufferSize", self.readBufferSize)
 	out += fmt.Sprintf("\t%-30s %d\n", "writeBufferSize", self.writeBufferSize)
 	out += fmt.Sprintf("\t%-30s %t\n", "enableCompression", self.enableCompression)
-	out += fmt.Sprintf("\t%-30s %d\n", "serverCert len", len(self.serverCert))
 	out += fmt.Sprintf("\t%-30s %s\n", "serverCert", self.serverCert)
 	out += fmt.Sprintf("\t%-30s %s\n", "key", self.key)
 	out += "}"

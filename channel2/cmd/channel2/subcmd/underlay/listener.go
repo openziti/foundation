@@ -61,8 +61,6 @@ func runListener(_ *cobra.Command, _ []string) {
 	switch listenerUnderlay {
 	case "classic":
 		listener = channel2.NewClassicListener(id, endpoint, channel2.DefaultConnectOptions())
-	case "wss":
-		listener = channel2.NewWssListener(id, endpoint, channel2.DefaultConnectOptions(), "serverCert-here", "key-here")
 	case "reconnecting":
 		panic("not implemented")
 	default:

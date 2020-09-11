@@ -292,35 +292,6 @@ func readHelloV2(peer io.Reader) (*Message, error) {
 	return m, nil
 }
 
-func readHelloWssV2(wss_message []byte) (*Message, error) {
-	if len(wss_message) < dataSectionV2 {
-		return nil, errors.New("short read")
-	}
-	messageSection := make([]byte, dataSectionV2)
-	copy(messageSection, wss_message[0:dataSectionV2])
-	headersLength, err := readInt32(wss_message[12:16])
-	if err != nil {
-		return nil, err
-	}
-	bodyLength, err := readInt32(wss_message[16:20])
-	if err != nil {
-		return nil, err
-	}
-	if headersLength > 4192 || bodyLength > 4192 {
-		return nil, fmt.Errorf("hello message too big. header len: %v, body len: %v", headersLength, bodyLength)
-	}
-	headerAndBodySection := make([]byte, headersLength+bodyLength)
-	copy(headerAndBodySection, wss_message[dataSectionV2:])
-	m, err := unmarshalV2(messageSection, headerAndBodySection)
-	messageSection = nil
-	headerAndBodySection = nil
-	if err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
 // readV2 reads a V2 message from the given reader and returns the unmarshalled message
 func readV2(peer io.Reader) (*Message, error) {
 	messageSection := make([]byte, dataSectionV2)
@@ -361,36 +332,6 @@ func readV2(peer io.Reader) (*Message, error) {
 	if read != int(headersLength+bodyLength) {
 		return nil, errors.New("short read")
 	}
-	m, err := unmarshalV2(messageSection, headerAndBodySection)
-	messageSection = nil
-	headerAndBodySection = nil
-	if err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func readWssV2(wss_message []byte) (*Message, error) {
-	messageSection := make([]byte, dataSectionV2)
-	copy(messageSection, wss_message[0:dataSectionV2])
-
-	if !bytes.Equal(messageSection[0:4], magicV2) {
-		log := pfxlog.Logger()
-		log.Debugf("received message version bytes: %v", messageSection[:4])
-		return nil, errors.New("channel synchronization")
-	}
-
-	headersLength, err := readInt32(messageSection[12:16])
-	if err != nil {
-		return nil, err
-	}
-	bodyLength, err := readInt32(messageSection[16:20])
-	if err != nil {
-		return nil, err
-	}
-	headerAndBodySection := make([]byte, headersLength+bodyLength)
-	copy(headerAndBodySection, wss_message[dataSectionV2:])
 	m, err := unmarshalV2(messageSection, headerAndBodySection)
 	messageSection = nil
 	headerAndBodySection = nil
