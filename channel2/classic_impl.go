@@ -17,11 +17,11 @@
 package channel2
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"sync"
 )
 

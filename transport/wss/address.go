@@ -14,15 +14,14 @@
 	limitations under the License.
 */
 
-package transwarp
+package wss
 
 import (
+	"errors"
 	"fmt"
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
-	"github.com/pkg/errors"
 	"io"
-	"net"
 	"strconv"
 	"strings"
 )
@@ -34,63 +33,48 @@ type address struct {
 	port     uint16
 }
 
-func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Configuration) (transport.Connection, error) {
-	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve udp")
-	}
+func (a address) Dial(name string, i *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
+	return Dial(a.bindableAddress(), name)
+}
+
+func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
 	var subc map[interface{}]interface{}
 	if tcfg != nil {
-		if v, found := tcfg["westworld2"]; found {
+		if v, found := tcfg["wss"]; found {
 			if subv, ok := v.(map[interface{}]interface{}); ok {
 				subc = subv
 			}
 		}
 	}
-	return Dial(endpoint, name, subc)
+
+	return Listen(a.bindableAddress(), name, incoming, subc)
 }
 
-func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
-	bind, err := net.ResolveUDPAddr("udp", self.bindableAddress())
-	if err != nil {
-		return nil, errors.Wrap(err, "resolve udp")
-	}
-	var subc map[interface{}]interface{}
-	if tcfg != nil {
-		if v, found := tcfg["westworld2"]; found {
-			if subv, ok := v.(map[interface{}]interface{}); ok {
-				subc = subv
-			}
-		}
-	}
-	return Listen(bind, name, incoming, subc)
-}
-
-func (self address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
-	closer, err := self.Listen(name, i, incoming, tcfg)
+func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
+	closer, err := a.Listen(name, i, incoming, tcfg)
 	if err != nil {
 		panic(err)
 	}
 	return closer
 }
 
-func (self address) String() string {
-	return fmt.Sprintf("transwarp:%s", self.bindableAddress())
+func (a address) String() string {
+	return fmt.Sprintf("wss:%s", a.bindableAddress())
 }
 
-func (self address) bindableAddress() string {
-	return fmt.Sprintf("%s:%d", self.hostname, self.port)
+func (a address) bindableAddress() string {
+	return fmt.Sprintf("%s:%d", a.hostname, a.port)
 }
 
 type AddressParser struct{}
 
-func (self AddressParser) Parse(s string) (transport.Address, error) {
+func (ap AddressParser) Parse(s string) (transport.Address, error) {
 	tokens := strings.Split(s, ":")
 	if len(tokens) < 2 {
 		return nil, errors.New("invalid format")
 	}
 
-	if tokens[0] == "transwarp" {
+	if tokens[0] == "wss" {
 		if len(tokens) != 3 {
 			return nil, errors.New("invalid format")
 		}

@@ -17,9 +17,9 @@
 package transport
 
 import (
-	"github.com/openziti/foundation/identity/identity"
 	"errors"
 	"fmt"
+	"github.com/openziti/foundation/identity/identity"
 	"io"
 )
 

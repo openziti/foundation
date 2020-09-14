@@ -42,7 +42,7 @@ func (reporter *channelReporter) AcceptMetrics(message *metrics_pb.MetricsMessag
 	if err != nil {
 		log.Errorf("Failed to send metrics message: %v", err)
 	} else {
-		log.Debug("Reported metrics to fabric controller")
+		log.Trace("Reported metrics to fabric controller")
 	}
 }
 

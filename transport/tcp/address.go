@@ -17,10 +17,10 @@
 package tcp
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"errors"
 	"fmt"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"io"
 	"strconv"
 	"strings"
