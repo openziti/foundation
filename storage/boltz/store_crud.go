@@ -62,7 +62,15 @@ func (store *BaseStore) BaseLoadOneById(tx *bbolt.Tx, id string, entity Entity) 
 
 	bucket := store.GetEntityBucket(tx, []byte(id))
 	if bucket == nil {
-		return false, nil
+		if store.IsExtended() {
+			bucket = store.parent.GetEntityBucket(tx, []byte(id))
+			if bucket == nil {
+				return false, nil
+			}
+			bucket = newTypedBucket(bucket, nil)
+		} else {
+			return false, nil
+		}
 	}
 
 	entity.SetId(id)

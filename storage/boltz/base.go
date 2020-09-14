@@ -45,6 +45,7 @@ const (
 type Db interface {
 	io.Closer
 	Update(fn func(tx *bbolt.Tx) error) error
+	Batch(fn func(tx *bbolt.Tx) error) error
 	View(fn func(tx *bbolt.Tx) error) error
 	RootBucket(tx *bbolt.Tx) (*bbolt.Bucket, error)
 
@@ -65,6 +66,7 @@ type ListStore interface {
 	GetValueCursor(tx *bbolt.Tx, id []byte, path ...string) *bbolt.Cursor
 	IsChildStore() bool
 	IsEntityPresent(tx *bbolt.Tx, id string) bool
+	IsExtended() bool
 
 	GetSymbol(name string) EntitySymbol
 	MapSymbol(name string, wrapper SymbolMapper)

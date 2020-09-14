@@ -5,12 +5,11 @@ import (
 	"time"
 )
 
-// Histogram represents a metric which is measuring the distribution of values for some measurement
 type Timer interface {
 	Metric
-	// Clear()
-	Update(time.Duration)
 	Time(func())
+	Update(time.Duration)
+	UpdateSince(time.Time)
 }
 
 type timerImpl struct {
