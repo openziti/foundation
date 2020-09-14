@@ -88,7 +88,7 @@ func Listen(bindAddress string, name string, incoming chan transport.Connection,
  */
 func wsslistener(log *logrus.Entry, bindAddress string, cfg *WSSConfig, name string, incoming chan transport.Connection) {
 
-	log.Info("starting HTTP (websocket) server")
+	log.Infof("starting HTTP (websocket) server at bindAddress [%s]", bindAddress)
 
 	listener := &wssListener{
 		log:      log,

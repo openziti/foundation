@@ -34,11 +34,11 @@ type address struct {
 }
 
 func (a address) Dial(name string, i *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
-	return Dial(a.BindableAddress(), name)
+	return Dial(a.bindableAddress(), name)
 }
 
 func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {
-	return Listen(a.BindableAddress(), name, incoming)
+	return Listen(a.bindableAddress(), name, incoming)
 }
 
 func (a address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
@@ -50,10 +50,10 @@ func (a address) MustListen(name string, i *identity.TokenId, incoming chan tran
 }
 
 func (a address) String() string {
-	return fmt.Sprintf("tcp:%s", a.BindableAddress())
+	return fmt.Sprintf("tcp:%s", a.bindableAddress())
 }
 
-func (a address) BindableAddress() string {
+func (a address) bindableAddress() string {
 	return fmt.Sprintf("%s:%d", a.hostname, a.port)
 }
 

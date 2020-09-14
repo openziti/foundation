@@ -32,7 +32,6 @@ type Address interface {
 	Listen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) (io.Closer, error)
 	MustListen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) io.Closer
 	String() string
-	BindableAddress() string
 }
 
 // AddressParser implements the functionality provided by an "address parser".
