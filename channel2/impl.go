@@ -201,8 +201,12 @@ func (channel *channelImpl) SendWithPriority(m *Message, p Priority) (err error)
 		}
 	}()
 	channel.stampSequence(m)
-	channel.outQueue <- &priorityMessage{m: m, p: p}
+	channel.enqueue(m, p)
 	return nil
+}
+
+func (channel *channelImpl) enqueue(m *Message, p Priority) {
+	channel.outQueue <- &priorityMessage{m: m, p: p}
 }
 
 func (channel *channelImpl) SendAndSync(m *Message) (chan error, error) {
@@ -224,12 +228,12 @@ func (channel *channelImpl) SendAndSyncWithPriority(m *Message, p Priority) (syn
 	channel.stampSequence(m)
 	syncCh = make(chan error, 1)
 	channel.syncers.Store(m.sequence, syncCh)
-	channel.outQueue <- &priorityMessage{m: m, p: p}
+	channel.enqueue(m, p)
 	return syncCh, nil
 }
 
-func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) error {
-	syncC, err := channel.SendAndSync(m)
+func (channel *channelImpl) SendPrioritizedWithTimeout(m *Message, p Priority, timeout time.Duration) error {
+	syncC, err := channel.SendAndSyncWithPriority(m, p)
 	if err != nil {
 		return err
 	}
@@ -241,8 +245,12 @@ func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) e
 	}
 }
 
-func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Duration) (*Message, error) {
-	replyChan, err := channel.SendAndWait(m)
+func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) error {
+	return channel.SendPrioritizedWithTimeout(m, Standard, timeout)
+}
+
+func (channel *channelImpl) SendPrioritizedAndWaitWithTimeout(m *Message, p Priority, timeout time.Duration) (*Message, error) {
+	replyChan, err := channel.SendAndWaitWithPriority(m, p)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +260,10 @@ func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Dura
 	case <-time.After(timeout):
 		return nil, errors.New("timeout waiting for response")
 	}
+}
+
+func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Duration) (*Message, error) {
+	return channel.SendPrioritizedAndWaitWithTimeout(m, Standard, timeout)
 }
 
 func (channel *channelImpl) SendAndWait(m *Message) (chan *Message, error) {
@@ -273,7 +285,7 @@ func (channel *channelImpl) SendAndWaitWithPriority(m *Message, p Priority) (wai
 	channel.stampSequence(m)
 	waitCh = make(chan *Message, 1)
 	channel.waiters.Store(m.sequence, waitCh)
-	channel.outQueue <- &priorityMessage{m: m, p: p}
+	channel.enqueue(m, p)
 	return waitCh, nil
 }
 
