@@ -208,7 +208,7 @@ func (ctx *PersistContext) SetInt64(field string, value int64) {
 }
 
 func (ctx *PersistContext) SetMap(field string, value map[string]interface{}) {
-	ctx.Bucket.PutMap(field, value, ctx.FieldChecker)
+	ctx.Bucket.PutMap(field, value, ctx.FieldChecker, true)
 }
 
 func (ctx *PersistContext) SetStringList(field string, value []string) {
@@ -330,11 +330,11 @@ func (entity *ExtEntityFields) CreateBaseValues(bucket *TypedBucket) {
 		bucket.SetTimeP(FieldCreatedAt, &now, nil)
 		bucket.SetTimeP(FieldUpdatedAt, &now, nil)
 	}
-	bucket.PutMap(FieldTags, entity.Tags, nil)
+	bucket.PutMap(FieldTags, entity.Tags, nil, false)
 }
 
 func (entity *ExtEntityFields) UpdateBaseValues(bucket *TypedBucket, fieldChecker FieldChecker) {
 	now := time.Now()
 	bucket.SetTimeP(FieldUpdatedAt, &now, nil)
-	bucket.PutMap(FieldTags, entity.Tags, fieldChecker)
+	bucket.PutMap(FieldTags, entity.Tags, fieldChecker, false)
 }
