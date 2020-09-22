@@ -92,7 +92,9 @@ type Sender interface {
 	SendAndSync(m *Message) (chan error, error)
 	SendAndSyncWithPriority(m *Message, p Priority) (chan error, error)
 	SendWithTimeout(m *Message, timeout time.Duration) error
+	SendPrioritizedWithTimeout(m *Message, p Priority, timeout time.Duration) error
 	SendAndWaitWithTimeout(m *Message, timeout time.Duration) (*Message, error)
+	SendPrioritizedAndWaitWithTimeout(m *Message, p Priority, timeout time.Duration) (*Message, error)
 	SendAndWait(m *Message) (chan *Message, error)
 	SendAndWaitWithPriority(m *Message, p Priority) (chan *Message, error)
 	SendForReply(msg TypedMessage, timeout time.Duration) (*Message, error)

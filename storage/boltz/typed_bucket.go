@@ -42,6 +42,10 @@ const (
 	TypeNil     FieldType = 7
 )
 
+const (
+	ListSizeKeyName = "__list__size__36484231-110c-4767-afe2-01b6e3db107a"
+)
+
 type FieldChecker interface {
 	IsUpdated(string) bool
 }
@@ -493,11 +497,16 @@ func (bucket *TypedBucket) GetInt32WithDefault(name string, defaultValue int32) 
 	return *result
 }
 
+func Int32ToBytes(value int32) []byte {
+	buf := make([]byte, 5) // 1 byte for type + 4 bytes for int32
+	buf[0] = byte(TypeInt32)
+	binary.LittleEndian.PutUint32(buf[1:], uint32(value))
+	return buf
+}
+
 func (bucket *TypedBucket) SetInt32(name string, value int32, fieldChecker FieldChecker) *TypedBucket {
 	if bucket.ProceedWithSet(name, fieldChecker) {
-		buf := make([]byte, 5) // 1 byte for type + 4 bytes for int32
-		buf[0] = byte(TypeInt32)
-		binary.LittleEndian.PutUint32(buf[1:], uint32(value))
+		buf := Int32ToBytes(value)
 		bucket.Err = bucket.Put([]byte(name), buf)
 	}
 	return bucket
@@ -735,8 +744,11 @@ func (bucket *TypedBucket) DeleteListEntry(fieldType FieldType, value []byte) *T
 }
 
 func (bucket *TypedBucket) getMarshaled(name string) interface{} {
-	// If there's a sub bucket, then this is a nested map
-	if bucket.GetBucket(name) != nil {
+	// If there's a sub bucket, then this is either a nested map or list
+	if childBucket := bucket.GetBucket(name); childBucket != nil {
+		if listSize := childBucket.GetInt32(ListSizeKeyName); listSize != nil {
+			return bucket.GetList(name)
+		}
 		return bucket.GetMap(name)
 	}
 	fieldType, value := bucket.getTyped(name)
@@ -781,7 +793,7 @@ func (bucket *TypedBucket) getMarshaled(name string) interface{} {
 	return nil
 }
 
-func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBucket {
+func (bucket *TypedBucket) setMarshaled(name string, value interface{}, allowNested bool) *TypedBucket {
 	if bucket.Err != nil {
 		return bucket
 	}
@@ -808,7 +820,17 @@ func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBu
 	case bool:
 		bucket.SetBool(name, val, nil)
 	case map[string]interface{}:
-		bucket.PutMap(name, val, nil)
+		if allowNested {
+			bucket.PutMap(name, val, nil, true)
+		} else {
+			bucket.SetError(errors.New("nested maps not supported"))
+		}
+	case []interface{}:
+		if allowNested {
+			bucket.PutList(name, val, nil)
+		} else {
+			bucket.SetError(errors.New("nested lists not supported"))
+		}
 	default:
 		bucket.SetError(errors.Errorf("unsupported type %v in map", reflect.TypeOf(val)))
 	}
@@ -818,18 +840,18 @@ func (bucket *TypedBucket) setMarshaled(name string, value interface{}) *TypedBu
 
 func (bucket *TypedBucket) GetMap(name string) map[string]interface{} {
 	result := make(map[string]interface{})
-	tagsBucket := bucket.GetBucket(name)
-	if tagsBucket != nil {
-		cursor := tagsBucket.Cursor()
+	mapBucket := bucket.GetBucket(name)
+	if mapBucket != nil {
+		cursor := mapBucket.Cursor()
 		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
 			tagKey := string(key)
-			result[tagKey] = tagsBucket.getMarshaled(tagKey)
+			result[tagKey] = mapBucket.getMarshaled(tagKey)
 		}
 	}
 	return result
 }
 
-func (bucket *TypedBucket) PutMap(name string, value map[string]interface{}, checker FieldChecker) *TypedBucket {
+func (bucket *TypedBucket) PutMap(name string, value map[string]interface{}, checker FieldChecker, allowNested bool) *TypedBucket {
 	if bucket.ProceedWithSet(name, checker) {
 		tagsBucket, err := bucket.EmptyBucket(name)
 		if err != nil {
@@ -837,11 +859,45 @@ func (bucket *TypedBucket) PutMap(name string, value map[string]interface{}, che
 			return bucket
 		}
 		for key, val := range value {
-			tagsBucket.setMarshaled(key, val)
+			tagsBucket.setMarshaled(key, val, allowNested)
 		}
 		bucket.Err = tagsBucket.Err
 	}
 	return bucket
+}
+
+func (bucket *TypedBucket) PutList(name string, value []interface{}, checker FieldChecker) *TypedBucket {
+	if bucket.ProceedWithSet(name, checker) {
+		listBucket, err := bucket.EmptyBucket(name)
+		if err != nil {
+			bucket.Err = err
+			return bucket
+		}
+		for idx, val := range value {
+			key := Int32ToBytes(int32(idx))
+			listBucket.setMarshaled(string(key), val, true)
+		}
+		listBucket.SetInt32(ListSizeKeyName, int32(len(value)), nil)
+		bucket.Err = listBucket.Err
+	}
+	return bucket
+}
+
+func (bucket *TypedBucket) GetList(name string) []interface{} {
+	listBucket := bucket.GetBucket(name)
+	size := listBucket.GetInt32(ListSizeKeyName)
+	if size == nil {
+		return nil
+	}
+
+	result := make([]interface{}, *size)
+	for idx := int32(0); idx < (*size); idx++ {
+		key := Int32ToBytes(idx)
+		value := listBucket.getMarshaled(string(key))
+		result[idx] = value
+	}
+
+	return result
 }
 
 func (bucket *TypedBucket) ProceedWithSet(name string, checker FieldChecker) bool {

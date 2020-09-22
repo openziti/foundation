@@ -228,8 +228,8 @@ func (channel *channelImpl) SendAndSyncWithPriority(m *Message, p Priority) (syn
 	return syncCh, nil
 }
 
-func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) error {
-	syncC, err := channel.SendAndSync(m)
+func (channel *channelImpl) SendPrioritizedWithTimeout(m *Message, p Priority, timeout time.Duration) error {
+	syncC, err := channel.SendAndSyncWithPriority(m, p)
 	if err != nil {
 		return err
 	}
@@ -241,8 +241,12 @@ func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) e
 	}
 }
 
-func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Duration) (*Message, error) {
-	replyChan, err := channel.SendAndWait(m)
+func (channel *channelImpl) SendWithTimeout(m *Message, timeout time.Duration) error {
+	return channel.SendPrioritizedWithTimeout(m, Standard, timeout)
+}
+
+func (channel *channelImpl) SendPrioritizedAndWaitWithTimeout(m *Message, p Priority, timeout time.Duration) (*Message, error) {
+	replyChan, err := channel.SendAndWaitWithPriority(m, p)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +256,10 @@ func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Dura
 	case <-time.After(timeout):
 		return nil, errors.New("timeout waiting for response")
 	}
+}
+
+func (channel *channelImpl) SendAndWaitWithTimeout(m *Message, timeout time.Duration) (*Message, error) {
+	return channel.SendPrioritizedAndWaitWithTimeout(m, Standard, timeout)
 }
 
 func (channel *channelImpl) SendAndWait(m *Message) (chan *Message, error) {
