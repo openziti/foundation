@@ -201,12 +201,8 @@ func (channel *channelImpl) SendWithPriority(m *Message, p Priority) (err error)
 		}
 	}()
 	channel.stampSequence(m)
-	channel.enqueue(m, p)
-	return nil
-}
-
-func (channel *channelImpl) enqueue(m *Message, p Priority) {
 	channel.outQueue <- &priorityMessage{m: m, p: p}
+	return nil
 }
 
 func (channel *channelImpl) SendAndSync(m *Message) (chan error, error) {
@@ -228,7 +224,7 @@ func (channel *channelImpl) SendAndSyncWithPriority(m *Message, p Priority) (syn
 	channel.stampSequence(m)
 	syncCh = make(chan error, 1)
 	channel.syncers.Store(m.sequence, syncCh)
-	channel.enqueue(m, p)
+	channel.outQueue <- &priorityMessage{m: m, p: p}
 	return syncCh, nil
 }
 
@@ -285,7 +281,7 @@ func (channel *channelImpl) SendAndWaitWithPriority(m *Message, p Priority) (wai
 	channel.stampSequence(m)
 	waitCh = make(chan *Message, 1)
 	channel.waiters.Store(m.sequence, waitCh)
-	channel.enqueue(m, p)
+	channel.outQueue <- &priorityMessage{m: m, p: p}
 	return waitCh, nil
 }
 
