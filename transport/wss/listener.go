@@ -63,6 +63,8 @@ func (listener *wssListener) handleWebsocket(w http.ResponseWriter, r *http.Requ
 			cfg:   listener.cfg,
 		}
 
+		go connection.pinger()
+
 		listener.incoming <- connection // pass the Websocket to the goroutine that will validate the HELLO handshake
 	}
 }

@@ -93,10 +93,7 @@ func (c *Connection) Read(p []byte) (n int, err error) {
 		case <-c.done:
 			err = errClosing
 		default:
-			err = c.ws.SetReadDeadline(time.Now().Add(c.cfg.pongTimeout))
-			if err == nil {
-				_, r, err = c.ws.NextReader()
-			}
+			_, r, err = c.ws.NextReader()
 		}
 		if err != nil {
 			return n, err
@@ -167,6 +164,7 @@ func (c *Connection) pinger() {
 		case <-c.done:
 			return
 		case <-ticker.C:
+			c.log.Trace("sending websocket Ping")
 			if _, err := c.write(websocket.PingMessage, []byte{}); err != nil {
 				_ = c.Close()
 			}
