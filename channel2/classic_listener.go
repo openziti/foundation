@@ -33,13 +33,14 @@ type classicListener struct {
 	created        chan Underlay
 	connectOptions ConnectOptions
 	tcfg           transport.Configuration
+	headers        map[int32][]byte
 }
 
-func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions) UnderlayListener {
-	return NewClassicListenerWithTransportConfiguration(identity, endpoint, connectOptions, nil)
+func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, headers map[int32][]byte) UnderlayListener {
+	return NewClassicListenerWithTransportConfiguration(identity, endpoint, connectOptions, nil, headers)
 }
 
-func NewClassicListenerWithTransportConfiguration(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, tcfg transport.Configuration) UnderlayListener {
+func NewClassicListenerWithTransportConfiguration(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, tcfg transport.Configuration, headers map[int32][]byte) UnderlayListener {
 	return &classicListener{
 		identity:       identity,
 		endpoint:       endpoint,
@@ -47,6 +48,7 @@ func NewClassicListenerWithTransportConfiguration(identity *identity.TokenId, en
 		created:        make(chan Underlay),
 		connectOptions: connectOptions,
 		tcfg:           tcfg,
+		headers:        headers,
 	}
 }
 
@@ -175,8 +177,14 @@ func (listener *classicListener) receiveHello(impl *classicImpl) (*Message, *Hel
 
 func (listener *classicListener) ackHello(impl *classicImpl, request *Message, success bool, message string) error {
 	response := NewResult(success, message)
+
+	for key, val := range listener.headers {
+		response.Headers[key] = val
+	}
+
 	response.Headers[ConnectionIdHeader] = []byte(impl.connectionId)
 	response.sequence = HelloSequence
+
 	response.ReplyTo(request)
 	return impl.Tx(response)
 }

@@ -41,6 +41,7 @@ const (
 	ReplyForHeader                  = 1
 	ResultSuccessHeader             = 2
 	HelloRouterAdvertisementsHeader = 3
+	HelloVersion                    = 4
 
 	// Headers in the range 128-255 inclusive will be reflected when creating replies
 	ReflectedHeaderBitMask = 1 << 7
