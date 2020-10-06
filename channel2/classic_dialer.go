@@ -93,6 +93,7 @@ func (dialer *classicDialer) sendHello(impl *classicImpl) error {
 		return errors.New(result.Message)
 	}
 	impl.connectionId = string(response.Headers[ConnectionIdHeader])
+	impl.headers = response.Headers
 
 	return nil
 }
