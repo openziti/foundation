@@ -141,6 +141,18 @@ func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
 	return result, true
 }
 
+func (header *MessageHeader) PutByteHeader(key int32, value byte) {
+	header.Headers[key] = []byte{value}
+}
+
+func (header *MessageHeader) GetByteHeader(key int32) (byte, bool) {
+	encoded, ok := header.Headers[key]
+	if !ok || len(encoded) < 1 {
+		return 0, ok
+	}
+	return encoded[0], true
+}
+
 func (header *MessageHeader) PutBoolHeader(key int32, value bool) {
 	byteVal := byte(0)
 	if value {
