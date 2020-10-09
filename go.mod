@@ -17,7 +17,7 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
-	github.com/lucas-clemente/quic-go v0.18.0
+	github.com/lucas-clemente/quic-go v0.18.1
 	github.com/michaelquigley/dilithium v0.2.0
 	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
 	github.com/miekg/pkcs11 v1.0.3
