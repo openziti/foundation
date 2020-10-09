@@ -1,8 +1,10 @@
-// replace github.com/michaelquigley/dilithium => ../../q/research/dilithium
-
 module github.com/openziti/foundation
 
 go 1.14
+
+// replace github.com/michaelquigley/dilithium => ../../q/research/dilithium
+
+// replace github.com/kataras/go-events => ../go-events
 
 require (
 	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
@@ -14,7 +16,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
-	github.com/kataras/go-events v0.0.3-0.20170604004442-17d67be645c3
+	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
 	github.com/lucas-clemente/quic-go v0.18.0
 	github.com/michaelquigley/dilithium v0.2.0
 	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
