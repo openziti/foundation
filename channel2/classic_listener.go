@@ -70,7 +70,6 @@ func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
 
 func (listener *classicListener) Close() error {
 	close(listener.close)
-	defer close(listener.created) // don't close created until socket is closed, to ensure we don't write to empty channel
 	if err := listener.socket.Close(); err != nil {
 		return err
 	}
@@ -134,7 +133,12 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 					impl.headers = hello.Headers
 
 					if err := listener.ackHello(impl, request, true, ""); err == nil {
-						listener.created <- impl
+						select {
+						case listener.created <- impl:
+						case <-listener.close:
+							log.Infof("channel closed, can't notify of new connection [%s] (%v)", peer.Detail().Address, err)
+							return
+						}
 					} else {
 						log.Errorf("error acknowledging hello for [%s] (%v)", peer.Detail().Address, err)
 					}
