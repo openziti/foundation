@@ -25,14 +25,21 @@ import (
 )
 
 func GenerateStack() string {
-	stackBuf := make([]byte, 1024*1024)
-	size := runtime.Stack(stackBuf, true)
-	return string(stackBuf[:size])
+	return generateStack(1024*1024, true)
 }
 
 func GenerateLocalStack() string {
-	stackBuf := make([]byte, 1024*10)
-	size := runtime.Stack(stackBuf, false)
+	return generateStack(8*1024, true)
+}
+
+func generateStack(size int, all bool) string {
+	stackBuf := make([]byte, size)
+	size = runtime.Stack(stackBuf, all)
+	for size == len(stackBuf) {
+		size = len(stackBuf) * 2
+		stackBuf = make([]byte, size)
+		size = runtime.Stack(stackBuf, all)
+	}
 	return string(stackBuf[:size])
 }
 
