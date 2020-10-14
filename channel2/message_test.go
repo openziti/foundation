@@ -17,6 +17,7 @@
 package channel2
 
 import (
+	"encoding/binary"
 	"errors"
 	"testing"
 )
@@ -64,6 +65,8 @@ func Test_getRetryVersionFor(t *testing.T) {
 
 func TestMessageHeader_PutUint64Header(t *testing.T) {
 	testHeader := int32(1111)
+	testLEHeader := int32(2222)
+
 	type args struct {
 		key   int32
 		value uint64
@@ -90,6 +93,10 @@ func TestMessageHeader_PutUint64Header(t *testing.T) {
 			}
 
 			header.PutUint64Header(tt.args.key, tt.args.value)
+			leVal := make([]byte,8)
+			binary.LittleEndian.PutUint64(leVal, tt.args.value)
+			header.Headers[testLEHeader] = leVal
+
 			binary, err := marshalHeaders(header.Headers)
 			if err != nil {
 				t.Error(tt.name, err)
@@ -110,6 +117,14 @@ func TestMessageHeader_PutUint64Header(t *testing.T) {
 			}
 			if v != tt.args.value {
 				t.Errorf("%s: %d(%v) != %v", tt.name, v, header.Headers[tt.args.key], tt.args.value)
+			}
+
+			leV, found := header.GetUint64Header(testLEHeader)
+			if !found {
+				t.Errorf("%s: put failed", tt.name)
+			}
+			if leV != tt.args.value {
+				t.Errorf("%s: %d(%v) != %v", tt.name, leV, header.Headers[tt.args.key], tt.args.value)
 			}
 		})
 	}
