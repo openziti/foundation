@@ -1,6 +1,6 @@
 module github.com/openziti/foundation
 
-go 1.14
+go 1.15
 
 // replace github.com/michaelquigley/dilithium => ../../q/research/dilithium
 

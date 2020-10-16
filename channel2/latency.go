@@ -16,20 +16,34 @@
 
 package channel2
 
-import "github.com/michaelquigley/pfxlog"
+import (
+	"github.com/michaelquigley/pfxlog"
+	"sync/atomic"
+)
 
 // LatencyHandler responds to latency messages with Result messages.
 //
-type LatencyHandler struct{}
+type LatencyHandler struct {
+	responses int32
+}
 
 func (h *LatencyHandler) ContentType() int32 {
 	return ContentTypeLatencyType
 }
 
 func (h *LatencyHandler) HandleReceive(msg *Message, ch Channel) {
-	response := NewResult(true, "")
-	response.ReplyTo(msg)
-	if err := ch.SendWithPriority(response, High); err != nil {
-		pfxlog.ContextLogger(ch.Label()).Errorf("error sending latency response (%s)", err)
+	// need to send response in a separate go-routine. We get stuck sending, we'll also pause the receiving side
+	// limit the number of concurrent responses
+	if count := atomic.AddInt32(&h.responses, 1); count < 2 {
+		go func() {
+			defer atomic.AddInt32(&h.responses, -1)
+			response := NewResult(true, "")
+			response.ReplyTo(msg)
+			if err := ch.SendWithPriority(response, High); err != nil {
+				pfxlog.ContextLogger(ch.Label()).Errorf("error sending latency response (%s)", err)
+			}
+		}()
+	} else {
+		atomic.AddInt32(&h.responses, -1)
 	}
 }
