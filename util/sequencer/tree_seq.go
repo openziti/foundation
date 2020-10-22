@@ -93,7 +93,6 @@ func (seq *singleWriterBtreeSeq) GetNext() interface{} {
 		default:
 			return nil
 		}
-		return nil
 	}
 }
 
