@@ -174,6 +174,16 @@ func (channel *channelImpl) Close() error {
 			pfxlog.ContextLogger(channel.Label()).Debug("no close handlers")
 		}
 
+		err := errors.New("channel closed unexpectedly")
+		channel.syncers.Range(func(key, value interface{}) bool {
+			syncChan := value.(chan error)
+			select {
+			case syncChan <- err:
+			default:
+			}
+			return true
+		})
+
 		return channel.underlay.Close()
 	}
 

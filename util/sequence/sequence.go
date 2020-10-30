@@ -17,8 +17,8 @@
 package sequence
 
 import (
-	"github.com/openziti/foundation/util/info"
 	"fmt"
+	"github.com/openziti/foundation/util/info"
 	"github.com/speps/go-hashids"
 	"math/rand"
 	"sync/atomic"
@@ -37,7 +37,7 @@ func NewSequence() *Sequence {
 }
 
 func (s *Sequence) Next() uint32 {
-	return uint32(atomic.AddUint32(&s.value, 1))
+	return atomic.AddUint32(&s.value, 1)
 }
 
 func (s *Sequence) NextHash() (string, error) {

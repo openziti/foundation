@@ -27,7 +27,7 @@ import (
 func NewSingleWriterSeq(maxOutOfOrder uint32) Sequencer {
 	return &singleWriterBtreeSeq{
 		maxOutOfOrder: int(maxOutOfOrder),
-		ch:            make(chan interface{}, 16),
+		ch:            make(chan interface{}),
 		tree:          btree.NewWith(4, utils.UInt32Comparator),
 		nextSeq:       1,
 		closeNotify:   make(chan struct{}),
