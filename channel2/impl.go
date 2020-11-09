@@ -370,7 +370,7 @@ func (channel *channelImpl) rxer() {
 		if m.IsReply() {
 			replyFor := m.ReplyFor()
 			if tmp, found := channel.waiters.Load(replyFor); found {
-				log.Debugf("waiter found for message. type [%v], sequence [%v], replyFor [%v]", m.ContentType, m.sequence, replyFor)
+				log.Tracef("waiter found for message. type [%v], sequence [%v], replyFor [%v]", m.ContentType, m.sequence, replyFor)
 
 				waiter := tmp.(chan *Message)
 				select {

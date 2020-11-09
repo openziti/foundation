@@ -305,6 +305,10 @@ func readHelloV2(peer io.Reader) (*Message, error) {
 	return m, nil
 }
 
+func ReadWSMessage(peer io.Reader) (*Message, error) {
+	return readV2(peer)
+}
+
 // readV2 reads a V2 message from the given reader and returns the unmarshalled message
 func readV2(peer io.Reader) (*Message, error) {
 	messageSection := make([]byte, dataSectionV2)
