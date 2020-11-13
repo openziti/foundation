@@ -209,7 +209,7 @@ func (c *Connection) Write(p []byte) (n int, err error) {
 func (c *Connection) write(messageType int, p []byte) (n int, err error) {
 	var txbufLen int
 	currentDepth := atomic.AddInt32(&c.writeCallDepth, 1)
-	c.log.Debugf("Write() start currentDepth[%d] len[%d]", c.writeCallDepth, len(p))
+	c.log.Tracef("Write() start currentDepth[%d] len[%d]", c.writeCallDepth, len(p))
 
 	if c.tlsConnHandshakeComplete {
 		if currentDepth == 1 {
@@ -244,28 +244,26 @@ func (c *Connection) write(messageType int, p []byte) (n int, err error) {
 			c.log.Tracef("Write() doing raw write; currentDepth[%d] txbufLen[%d] data[%o]", c.writeCallDepth, txbufLen, p)
 		}
 
-		if txbufLen > 20 { // TEMP HACK:  (until I refactor the JS-SDK to accept the message section and data section in separate salvos)
-			err = c.ws.SetWriteDeadline(time.Now().Add(c.cfg.writeTimeout))
-			if err == nil {
-				if !c.tlsConnHandshakeComplete {
-					m := make([]byte, txbufLen)
-					c.tlstxbuf.Read(m)
-					c.log.Tracef("Write() doing TLS handshake (to websocket); currentDepth[%d] txbufLen[%d] data[%o]", c.writeCallDepth, txbufLen, m)
-					err = c.ws.WriteMessage(messageType, m)
-				} else if currentDepth == 1 {
-					m := make([]byte, txbufLen)
-					c.tlstxbuf.Read(m)
-					c.log.Tracef("Write() doing TLS write (to conn); currentDepth[%d] txbufLen[%d] data[%o]", c.writeCallDepth, txbufLen, m)
-					n, err = c.tlsConn.Write(m)
-					atomic.SwapInt32(&c.writeCallDepth, (c.writeCallDepth - 1))
-					c.log.Tracef("write() end TLS write currentDepth[%d]", c.writeCallDepth)
-					return n, err
-				} else {
-					m := make([]byte, txbufLen)
-					c.txbuf.Read(m)
-					c.log.Debugf("Write() doing raw write (to websocket); currentDepth[%d] len[%d]", c.writeCallDepth, len(m))
-					err = c.ws.WriteMessage(messageType, m)
-				}
+		err = c.ws.SetWriteDeadline(time.Now().Add(c.cfg.writeTimeout))
+		if err == nil {
+			if !c.tlsConnHandshakeComplete {
+				m := make([]byte, txbufLen)
+				c.tlstxbuf.Read(m)
+				c.log.Tracef("Write() doing TLS handshake (to websocket); currentDepth[%d] txbufLen[%d] data[%o]", c.writeCallDepth, txbufLen, m)
+				err = c.ws.WriteMessage(messageType, m)
+			} else if currentDepth == 1 {
+				m := make([]byte, txbufLen)
+				c.tlstxbuf.Read(m)
+				c.log.Tracef("Write() doing TLS write (to conn); currentDepth[%d] txbufLen[%d] data[%o]", c.writeCallDepth, txbufLen, m)
+				n, err = c.tlsConn.Write(m)
+				atomic.SwapInt32(&c.writeCallDepth, (c.writeCallDepth - 1))
+				c.log.Tracef("write() end TLS write currentDepth[%d]", c.writeCallDepth)
+				return n, err
+			} else {
+				m := make([]byte, txbufLen)
+				c.txbuf.Read(m)
+				c.log.Tracef("Write() doing raw write (to websocket); currentDepth[%d] len[%d]", c.writeCallDepth, len(m))
+				err = c.ws.WriteMessage(messageType, m)
 			}
 		}
 	}
@@ -370,10 +368,9 @@ func (c *Connection) tlsHandshake() error {
 			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
-		ClientAuth:                  tls.RequireAndVerifyClientCert,
-		MinVersion:                  tls.VersionTLS11,
-		PreferServerCipherSuites:    true,
-		DynamicRecordSizingDisabled: true,
+		ClientAuth:               tls.RequireAndVerifyClientCert,
+		MinVersion:               tls.VersionTLS11,
+		PreferServerCipherSuites: true,
 	}
 
 	c.tlsConn = tls.Server(c, cfg)
