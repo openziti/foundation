@@ -174,6 +174,16 @@ func (channel *channelImpl) Close() error {
 			pfxlog.ContextLogger(channel.Label()).Debug("no close handlers")
 		}
 
+		err := errors.New("channel closed unexpectedly")
+		channel.syncers.Range(func(key, value interface{}) bool {
+			syncChan := value.(chan error)
+			select {
+			case syncChan <- err:
+			default:
+			}
+			return true
+		})
+
 		return channel.underlay.Close()
 	}
 
@@ -203,6 +213,13 @@ func (channel *channelImpl) SendWithPriority(m *Message, p Priority) (err error)
 	channel.stampSequence(m)
 	channel.outQueue <- &priorityMessage{m: m, p: p}
 	return nil
+}
+
+func (channel *channelImpl) SendBufferSafeWithPriority(m *Message, p Priority) (err error) {
+	copyBuf := make([]byte, len(m.Body))
+	copy(copyBuf, m.Body)
+	m.Body = copyBuf
+	return channel.SendWithPriority(m, p)
 }
 
 func (channel *channelImpl) SendAndSync(m *Message) (chan error, error) {

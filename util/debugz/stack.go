@@ -18,10 +18,12 @@ package debugz
 
 import (
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 )
 
 func GenerateStack() string {
@@ -29,7 +31,7 @@ func GenerateStack() string {
 }
 
 func GenerateLocalStack() string {
-	return generateStack(8*1024, true)
+	return generateStack(8*1024, false)
 }
 
 func generateStack(size int, all bool) string {
@@ -47,6 +49,10 @@ func DumpStack() {
 	fmt.Println(GenerateStack())
 }
 
+func DumpLocalStack() {
+	fmt.Println(GenerateLocalStack())
+}
+
 func AddStackDumpHandler() {
 	go func() {
 		signalC := make(chan os.Signal, 1)
@@ -55,4 +61,28 @@ func AddStackDumpHandler() {
 			fmt.Printf("\n DUMPING STACK AS REQUESTED BY SIGQUIT \n\n%v\n", GenerateStack())
 		}
 	}()
+}
+
+func DumpStackOnTick(tickerChan <-chan time.Time, fileFormatter func(time.Time) string) {
+	go func() {
+		for t := range tickerChan {
+			DumpStackToFile(fileFormatter(t))
+		}
+	}()
+}
+
+func DumpStackToFile(fileName string) {
+	out, err := os.Create(fileName)
+	if err != nil {
+		pfxlog.Logger().WithError(err).Errorf("failed to create stackdump file: %v", fileName)
+		return
+	}
+
+	defer func() { _ = out.Close() }()
+
+	stackDump := GenerateStack()
+	_, err = out.WriteString(stackDump)
+	if err != nil {
+		pfxlog.Logger().WithError(err).Errorf("failed to write stackdump to file %v", fileName)
+	}
 }

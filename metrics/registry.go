@@ -34,6 +34,8 @@ type Metric interface {
 // Registry allows for configuring and accessing metrics for a fabric application
 type Registry interface {
 	SourceId() string
+	Gauge(name string) Gauge
+	FuncGauge(name string, f func() int64) Gauge
 	Meter(name string) Meter
 	Histogram(name string) Histogram
 	Timer(name string) Timer
@@ -61,6 +63,46 @@ func (registry *registryImpl) dispose(name string) {
 
 func (registry *registryImpl) SourceId() string {
 	return registry.sourceId
+}
+
+func (registry *registryImpl) Gauge(name string) Gauge {
+	metric, present := registry.metricMap.Get(name)
+	if present {
+		gauge, ok := metric.(Gauge)
+		if !ok {
+			panic(fmt.Errorf("metric '%v' already exists and is not a gauge. It is a %v", name, reflect.TypeOf(metric).Name()))
+		}
+		return gauge
+	}
+
+	gauge := &gaugeImpl{
+		Gauge: metrics.NewGauge(),
+		dispose: func() {
+			registry.dispose(name)
+		},
+	}
+	registry.metricMap.Set(name, gauge)
+	return gauge
+}
+
+func (registry *registryImpl) FuncGauge(name string, f func() int64) Gauge {
+	metric, present := registry.metricMap.Get(name)
+	if present {
+		gauge, ok := metric.(Gauge)
+		if !ok {
+			panic(fmt.Errorf("metric '%v' already exists and is not a gauge. It is a %v", name, reflect.TypeOf(metric).Name()))
+		}
+		return gauge
+	}
+
+	gauge := &gaugeImpl{
+		Gauge: metrics.NewFunctionalGauge(f),
+		dispose: func() {
+			registry.dispose(name)
+		},
+	}
+	registry.metricMap.Set(name, gauge)
+	return gauge
 }
 
 func (registry *registryImpl) Meter(name string) Meter {
@@ -184,6 +226,8 @@ func (registry *registryImpl) Poll() *metrics_pb.MetricsMessage {
 
 	registry.EachMetric(func(name string, i Metric) {
 		switch metric := i.(type) {
+		case *gaugeImpl:
+			builder.addIntGauge(name, metric.Snapshot())
 		case *meterImpl:
 			builder.addMeter(name, metric.Snapshot())
 		case *histogramImpl:
