@@ -11,7 +11,7 @@ require (
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.4.3
-	github.com/google/go-cmp v0.5.3
+	github.com/google/go-cmp v0.5.4
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
