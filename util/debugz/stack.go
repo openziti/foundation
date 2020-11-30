@@ -29,7 +29,7 @@ func GenerateStack() string {
 }
 
 func GenerateLocalStack() string {
-	return generateStack(8*1024, true)
+	return generateStack(8*1024, false)
 }
 
 func generateStack(size int, all bool) string {
@@ -45,6 +45,10 @@ func generateStack(size int, all bool) string {
 
 func DumpStack() {
 	fmt.Println(GenerateStack())
+}
+
+func DumpLocalStack() {
+	fmt.Println(GenerateLocalStack())
 }
 
 func AddStackDumpHandler() {

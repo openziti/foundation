@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-func NewNoopSequencer() Sequencer {
+func NewNoopSequencer(channelDepth int) Sequencer {
 	return &noopSeq{
-		ch:          make(chan interface{}),
+		ch:          make(chan interface{}, channelDepth),
 		closeNotify: make(chan struct{}),
 	}
 }
