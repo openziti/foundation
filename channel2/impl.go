@@ -215,13 +215,6 @@ func (channel *channelImpl) SendWithPriority(m *Message, p Priority) (err error)
 	return nil
 }
 
-func (channel *channelImpl) SendBufferSafeWithPriority(m *Message, p Priority) (err error) {
-	copyBuf := make([]byte, len(m.Body))
-	copy(copyBuf, m.Body)
-	m.Body = copyBuf
-	return channel.SendWithPriority(m, p)
-}
-
 func (channel *channelImpl) SendAndSync(m *Message) (chan error, error) {
 	return channel.SendAndSyncWithPriority(m, Standard)
 }

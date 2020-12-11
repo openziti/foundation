@@ -88,7 +88,6 @@ type Underlay interface {
 
 type Sender interface {
 	Send(m *Message) error
-	SendBufferSafeWithPriority(m *Message, p Priority) error
 	SendWithPriority(m *Message, p Priority) error
 	SendAndSync(m *Message) (chan error, error)
 	SendAndSyncWithPriority(m *Message, p Priority) (chan error, error)

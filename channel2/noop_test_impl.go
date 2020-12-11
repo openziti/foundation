@@ -73,10 +73,6 @@ func (ch *NoopTestChannel) SendWithPriority(*Message, Priority) error {
 	return nil
 }
 
-func (ch *NoopTestChannel) SendBufferSafeWithPriority(*Message, Priority) error {
-	return nil
-}
-
 func (ch *NoopTestChannel) SendAndSync(m *Message) (chan error, error) {
 	return ch.SendAndSyncWithPriority(m, Standard)
 }
