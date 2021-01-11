@@ -17,7 +17,7 @@
 package transwarp
 
 import (
-	"github.com/michaelquigley/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/protocol/westworld2"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
