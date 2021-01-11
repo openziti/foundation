@@ -41,7 +41,7 @@ func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Config
 	}
 	var subc map[interface{}]interface{}
 	if tcfg != nil {
-		if v, found := tcfg["westworld2"]; found {
+		if v, found := tcfg["westworld3"]; found {
 			if subv, ok := v.(map[interface{}]interface{}); ok {
 				subc = subv
 			}
@@ -57,7 +57,7 @@ func (self address) Listen(name string, _ *identity.TokenId, incoming chan trans
 	}
 	var subc map[interface{}]interface{}
 	if tcfg != nil {
-		if v, found := tcfg["westworld2"]; found {
+		if v, found := tcfg["westworld3"]; found {
 			if subv, ok := v.(map[interface{}]interface{}); ok {
 				subc = subv
 			}

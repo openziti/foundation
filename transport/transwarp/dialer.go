@@ -17,7 +17,8 @@
 package transwarp
 
 import (
-	"github.com/openziti/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/cf"
+	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -25,14 +26,20 @@ import (
 )
 
 func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (transport.Connection, error) {
-	var cfg = westworld2.NewDefaultConfig()
+	profileId := byte(0)
 	if tcfg != nil {
-		if err := cfg.Load(tcfg); err != nil {
-			return nil, errors.Wrap(err, "load configuration")
+		profile := &westworld3.Profile{}
+		if err := profile.Load(cf.MapIToMapS(tcfg)); err != nil {
+			return nil, errors.Wrap(err, "load profile")
 		}
+		newProfileId, err := westworld3.AddProfile(profile)
+		if err != nil {
+			return nil, errors.Wrap(err, "register profile")
+		}
+		profileId = newProfileId
 	}
-	logrus.Infof(cfg.Dump())
-	socket, err := westworld2.Dial(endpoint, cfg)
+	logrus.Infof("westworld3 profile = [\n%s\n]", westworld3.GetProfile(profileId).Dump())
+	socket, err := westworld3.Dial(endpoint, profileId)
 	if err != nil {
 		return nil, errors.Wrap(err, "dial")
 	}

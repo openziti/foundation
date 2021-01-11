@@ -18,7 +18,8 @@ package transwarp
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/dilithium/protocol/westworld2"
+	"github.com/openziti/dilithium/cf"
+	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -29,14 +30,21 @@ import (
 func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
 	log := pfxlog.ContextLogger(name + "/transwarp:" + bind.String())
 
-	cfg := westworld2.NewDefaultConfig()
+	profileId := byte(0)
 	if tcfg != nil {
-		if err := cfg.Load(tcfg); err != nil {
-			return nil, errors.Wrap(err, "load configuration")
+		profile := &westworld3.Profile{}
+		if err := profile.Load(cf.MapIToMapS(tcfg)); err != nil {
+			return nil, errors.Wrap(err, "load profile")
 		}
+		newProfileId, err := westworld3.AddProfile(profile)
+		if err != nil {
+			return nil, errors.Wrap(err, "register profile")
+		}
+		profileId = newProfileId
 	}
-	logrus.Infof(cfg.Dump())
-	listener, err := westworld2.Listen(bind, cfg)
+	logrus.Infof("westworld3 profile = [\n%s\n]", westworld3.GetProfile(profileId).Dump())
+
+	listener, err := westworld3.Listen(bind, profileId)
 	if err != nil {
 		return nil, err
 	}
