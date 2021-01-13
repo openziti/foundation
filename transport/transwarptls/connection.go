@@ -14,7 +14,7 @@
 	limitations under the License.
 */
 
-package transwarp
+package transwarptls
 
 import (
 	"crypto/x509"
@@ -57,14 +57,10 @@ func (self *Connection) SetWriteTimeout(t time.Duration) error {
 	return self.socket.SetWriteDeadline(time.Now().Add(t))
 }
 
-// ClearReadTimeout clears the read time for all current and future reads
-//
 func (self *Connection) ClearReadTimeout() error {
 	return self.socket.SetReadDeadline(time.Time{})
 }
 
-// ClearWriteTimeout clears the write timeout for all current and future writes
-//
 func (self *Connection) ClearWriteTimeout() error {
 	return self.socket.SetWriteDeadline(time.Time{})
 }
