@@ -41,7 +41,10 @@ func Dial(endpoint *net.UDPAddr, name string, id *identity.TokenId, tcfg transpo
 		profileId = newProfileId
 	}
 	logrus.Infof("westworld3 profile = [\n%s\n]", westworld3.GetProfile(profileId).Dump())
-	socket, err := westlsworld3.Dial(endpoint, id.ClientTLSConfig(), profileId)
+
+	tlsConfig := id.ClientTLSConfig()
+	tlsConfig.ServerName = endpoint.IP.String()
+	socket, err := westlsworld3.Dial(endpoint, tlsConfig, profileId)
 	if err != nil {
 		return nil, errors.Wrap(err, "dial")
 	}
