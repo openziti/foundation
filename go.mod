@@ -7,7 +7,7 @@ go 1.15
 // replace github.com/kataras/go-events => ../go-events
 
 require (
-	github.com/antlr/antlr4 v0.0.0-20191115170859-54daca92f7b0
+	github.com/antlr/antlr4 v0.0.0-20210114010855-d34d2e1c271a
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.4.3
