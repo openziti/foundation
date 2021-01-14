@@ -43,11 +43,15 @@ type IndexingContext struct {
 	Parent *IndexingContext
 	*Indexer
 	IsCreate   bool
-	Tx         *bbolt.Tx
+	Ctx        MutateContext
 	RowId      []byte
 	ErrHolder  errorz.ErrorHolder
 	atomStates map[Constraint][]byte
 	setStates  map[Constraint][]FieldTypeAndValue
+}
+
+func (ctx *IndexingContext) Tx() *bbolt.Tx {
+	return ctx.Ctx.Tx()
 }
 
 func NewIndexer(basePath ...string) *Indexer {
@@ -193,7 +197,7 @@ type ReadIndex interface {
 	Read(tx *bbolt.Tx, val []byte) []byte
 }
 
-type SetChangeListener func(tx *bbolt.Tx, rowId []byte, old []FieldTypeAndValue, new []FieldTypeAndValue, holder errorz.ErrorHolder)
+type SetChangeListener func(ctx MutateContext, rowId []byte, old []FieldTypeAndValue, new []FieldTypeAndValue, holder errorz.ErrorHolder)
 
 type SetReadIndex interface {
 	GetSymbol() EntitySetSymbol
@@ -243,21 +247,21 @@ func (index *uniqueIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolde
 
 func (index *uniqueIndex) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, fieldValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		ctx.atomStates[index] = fieldValue
 	}
 }
 
 func (index *uniqueIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, newValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		oldValue := ctx.atomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
 			return
 		}
 
-		indexBucket := index.getIndexBucket(ctx.Tx)
+		indexBucket := index.getIndexBucket(ctx.Tx())
 
 		if len(oldValue) > 0 {
 			ctx.ErrHolder.SetError(indexBucket.DeleteValue(oldValue).Err)
@@ -285,14 +289,15 @@ func (index *uniqueIndex) processIntegrityFix(ctx *IndexingContext) error {
 
 func (index *uniqueIndex) ProcessDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		if _, value := index.symbol.Eval(ctx.Tx, ctx.RowId); len(value) > 0 {
-			indexBucket := index.getIndexBucket(ctx.Tx)
+		if _, value := index.symbol.Eval(ctx.Tx(), ctx.RowId); len(value) > 0 {
+			indexBucket := index.getIndexBucket(ctx.Tx())
 			ctx.ErrHolder.SetError(indexBucket.DeleteValue(value).Err)
 		}
 	}
 }
 
 func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
+	mutateCtx := NewMutateContext(tx)
 	indexBucket := index.getIndexBucket(tx)
 	cursor := indexBucket.Cursor()
 	store := index.symbol.GetStore()
@@ -329,7 +334,7 @@ func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(
 
 		if idxId == nil {
 			if fix {
-				ctx := store.(*BaseStore).NewIndexingContext(false, tx, string(id), nil)
+				ctx := store.(*BaseStore).NewIndexingContext(false, mutateCtx, string(id), nil)
 				if err := index.processIntegrityFix(ctx); err != nil {
 					return err
 				}
@@ -416,9 +421,9 @@ func (index *setIndex) ReadKeys(tx *bbolt.Tx, f func(val []byte)) {
 
 func (index *setIndex) visitCurrent(ctx *IndexingContext, f func(fieldType FieldType, value []byte)) {
 	rtSymbol := index.symbol.GetRuntimeSymbol()
-	cursor := rtSymbol.OpenCursor(ctx.Tx, ctx.RowId)
+	cursor := rtSymbol.OpenCursor(ctx.Tx(), ctx.RowId)
 	for cursor.IsValid() {
-		fieldType, value := rtSymbol.Eval(ctx.Tx, ctx.RowId)
+		fieldType, value := rtSymbol.Eval(ctx.Tx(), ctx.RowId)
 		f(fieldType, value)
 		cursor.Next()
 	}
@@ -464,18 +469,18 @@ func (index *setIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 		}
 
 		for _, oldVal := range oldValues {
-			indexBucket := index.getIndexBucket(ctx.Tx, oldVal.Value)
+			indexBucket := index.getIndexBucket(ctx.Tx(), oldVal.Value)
 			ctx.ErrHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.RowId).Err)
 			if k, _ := indexBucket.Cursor().First(); k == nil {
-				ctx.ErrHolder.SetError(index.deleteIndexKey(ctx.Tx, oldVal.Value))
+				ctx.ErrHolder.SetError(index.deleteIndexKey(ctx.Tx(), oldVal.Value))
 			}
 		}
 		for _, newVal := range newValues {
-			indexBucket := index.getIndexBucket(ctx.Tx, newVal.Value)
+			indexBucket := index.getIndexBucket(ctx.Tx(), newVal.Value)
 			ctx.ErrHolder.SetError(indexBucket.SetListEntry(TypeString, ctx.RowId).Err)
 		}
 		for _, listener := range index.listeners {
-			listener(ctx.Tx, ctx.RowId, oldValues, newValues, ctx.ErrHolder)
+			listener(ctx.Ctx, ctx.RowId, oldValues, newValues, ctx.ErrHolder)
 		}
 	}
 }
@@ -484,7 +489,7 @@ func (index *setIndex) ProcessDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		values := index.getCurrentValues(ctx)
 		for _, val := range values {
-			indexBucket := index.getIndexBucket(ctx.Tx, val.Value)
+			indexBucket := index.getIndexBucket(ctx.Tx(), val.Value)
 			ctx.ErrHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.RowId).Err)
 		}
 	}
@@ -597,14 +602,14 @@ type fkIndex struct {
 
 func (index *fkIndex) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, fieldValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		ctx.atomStates[index] = fieldValue
 	}
 }
 
 func (index *fkIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, newValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		oldValue := ctx.atomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
@@ -612,12 +617,12 @@ func (index *fkIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 		}
 
 		if len(oldValue) > 0 {
-			indexBucket := index.getIndexBucket(ctx.Tx, oldValue)
+			indexBucket := index.getIndexBucket(ctx.Tx(), oldValue)
 			ctx.ErrHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.RowId).Err)
 		}
 
 		if len(newValue) > 0 {
-			indexBucket := index.getIndexBucket(ctx.Tx, newValue)
+			indexBucket := index.getIndexBucket(ctx.Tx(), newValue)
 			ctx.ErrHolder.SetError(indexBucket.SetListEntry(TypeString, ctx.RowId).Err)
 		} else if !index.nullable {
 			ctx.ErrHolder.SetError(errors.Errorf("index on %v.%v does not allow null or empty values",
@@ -628,8 +633,8 @@ func (index *fkIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 
 func (index *fkIndex) ProcessDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		if _, value := index.symbol.Eval(ctx.Tx, ctx.RowId); len(value) > 0 {
-			indexBucket := index.getIndexBucket(ctx.Tx, value)
+		if _, value := index.symbol.Eval(ctx.Tx(), ctx.RowId); len(value) > 0 {
+			indexBucket := index.getIndexBucket(ctx.Tx(), value)
 			ctx.ErrHolder.SetError(indexBucket.DeleteListEntry(TypeString, ctx.RowId).Err)
 		}
 	}
@@ -695,7 +700,7 @@ func (index *fkIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(erro
 					errorSink(errors.Errorf("for fk %v.%v, %v %v references %v %v, which has non-matching value %v",
 						index.symbol.GetStore().GetEntityType(), index.symbol.GetName(),
 						index.fkSymbol.GetStore().GetSingularEntityType(), string(id),
-						index.symbol.GetStore().GetSingularEntityType(), string(fkId), string(logVal)), fix)
+						index.symbol.GetStore().GetSingularEntityType(), string(fkId), logVal), fix)
 				}
 			}
 		}
@@ -761,8 +766,8 @@ func (index *fkDeleteConstraint) ProcessAfterUpdate(_ *IndexingContext) {
 func (index *fkDeleteConstraint) ProcessDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		rtSymbol := index.symbol.GetRuntimeSymbol()
-		if rtSymbol.OpenCursor(ctx.Tx, ctx.RowId).IsValid() {
-			_, firstId := rtSymbol.Eval(ctx.Tx, ctx.RowId)
+		if rtSymbol.OpenCursor(ctx.Tx(), ctx.RowId).IsValid() {
+			_, firstId := rtSymbol.Eval(ctx.Tx(), ctx.RowId)
 			ctx.ErrHolder.SetError(errors.Errorf("cannot delete %v with id %v is referenced by %v with id %v, field %v",
 				index.symbol.GetStore().GetEntityType(), string(ctx.RowId), index.fkSymbol.GetStore().GetEntityType(),
 				string(firstId), index.fkSymbol.GetName()))
@@ -793,14 +798,14 @@ type fkConstraint struct {
 
 func (index *fkConstraint) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, fieldValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		ctx.atomStates[index] = fieldValue
 	}
 }
 
 func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		_, newValue := index.symbol.Eval(ctx.Tx, ctx.RowId)
+		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
 		oldValue := ctx.atomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
@@ -809,8 +814,8 @@ func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
 
 		if len(newValue) > 0 {
 			fkId := string(newValue)
-			if !index.symbol.GetLinkedType().IsEntityPresent(ctx.Tx, fkId) {
-				err := NewNotFoundError(index.symbol.GetLinkedType().GetSingularEntityType(), "id", string(fkId))
+			if !index.symbol.GetLinkedType().IsEntityPresent(ctx.Tx(), fkId) {
+				err := NewNotFoundError(index.symbol.GetLinkedType().GetSingularEntityType(), "id", fkId)
 				ctx.ErrHolder.SetError(err)
 			}
 		} else if !index.nullable {
@@ -878,8 +883,8 @@ func (index *fkDeleteCascadeConstraint) ProcessDelete(ctx *IndexingContext) {
 			return
 		}
 		targetStore := index.symbol.GetStore().(*BaseStore)
-		mutateCtx := NewMutateContext(ctx.Tx)
-		for cursor := targetStore.IterateValidIds(ctx.Tx, filter); cursor.IsValid(); cursor.Next() {
+		mutateCtx := NewMutateContext(ctx.Tx())
+		for cursor := targetStore.IterateValidIds(ctx.Tx(), filter); cursor.IsValid(); cursor.Next() {
 			entityId := string(cursor.Current())
 
 			if index.cascadeType == CascadeDelete {

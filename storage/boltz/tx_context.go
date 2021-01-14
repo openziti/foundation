@@ -21,6 +21,10 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+type CommitAction interface {
+	Exec()
+}
+
 type MutateContext interface {
 	Tx() *bbolt.Tx
 	AddEvent(em events.EventEmmiter, name events.EventName, entity Entity)
@@ -32,6 +36,14 @@ type mutateEvent struct {
 	name   events.EventName
 }
 
+func (self *mutateEvent) Exec() {
+	self.em.Emit(self.name, self.entity)
+}
+
+func (self *mutateEvent) Matches(i interface{}) bool {
+	return false
+}
+
 func NewMutateContext(tx *bbolt.Tx) MutateContext {
 	context := &mutateContext{tx: tx}
 	tx.OnCommit(context.handleCommit)
@@ -40,7 +52,7 @@ func NewMutateContext(tx *bbolt.Tx) MutateContext {
 
 type mutateContext struct {
 	tx     *bbolt.Tx
-	events []*mutateEvent
+	events []CommitAction
 }
 
 func (context *mutateContext) Tx() *bbolt.Tx {
@@ -56,7 +68,9 @@ func (context *mutateContext) AddEvent(em events.EventEmmiter, name events.Event
 }
 
 func (context *mutateContext) handleCommit() {
-	for _, event := range context.events {
-		go event.em.Emit(event.name, event.entity)
-	}
+	go func() {
+		for _, event := range context.events {
+			event.Exec()
+		}
+	}()
 }
