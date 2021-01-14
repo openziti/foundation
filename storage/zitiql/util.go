@@ -21,16 +21,32 @@ import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
+var (
+	lexerPool = &sync.Pool{New: func() interface{} {
+		return NewZitiQlLexer(nil)
+	}}
+
+	parserPool = &sync.Pool{New: func() interface{} {
+		return NewZitiQlParser(nil)
+	}}
+)
+
 func parse(str string, l ZitiQlListener, el antlr.ErrorListener, debug bool) {
+	lexer := lexerPool.Get().(*ZitiQlLexer)
+	defer lexerPool.Put(lexer)
+
 	input := antlr.NewInputStream(str)
-	lexer := NewZitiQlLexer(input)
+	lexer.SetInputStream(input)
+
+	p := parserPool.Get().(*ZitiQlParser)
+	defer parserPool.Put(p)
 
 	stream := antlr.NewCommonTokenStream(lexer, 0)
-
-	p := NewZitiQlParser(stream)
+	p.SetInputStream(stream)
 
 	if debug {
 		p.AddErrorListener(antlr.NewDiagnosticErrorListener(true))

@@ -135,7 +135,7 @@ type CrudStore interface {
 	NewStoreEntity() Entity
 
 	AddDeleteHandler(handler EntityChangeHandler)
-	NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext
+	NewIndexingContext(isCreate bool, ctx MutateContext, id string, holder errorz.ErrorHolder) *IndexingContext
 
 	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 
@@ -143,6 +143,7 @@ type CrudStore interface {
 }
 
 type PersistContext struct {
+	MutateContext
 	Id           string
 	Store        CrudStore
 	Bucket       *TypedBucket
@@ -152,11 +153,12 @@ type PersistContext struct {
 
 func (ctx *PersistContext) GetParentContext() *PersistContext {
 	result := &PersistContext{
-		Id:           ctx.Id,
-		Store:        ctx.Store.GetParentStore(),
-		Bucket:       ctx.Store.GetParentStore().GetEntityBucket(ctx.Bucket.Tx(), []byte(ctx.Id)),
-		FieldChecker: ctx.FieldChecker,
-		IsCreate:     ctx.IsCreate,
+		MutateContext: ctx.MutateContext,
+		Id:            ctx.Id,
+		Store:         ctx.Store.GetParentStore(),
+		Bucket:        ctx.Store.GetParentStore().GetEntityBucket(ctx.Bucket.Tx(), []byte(ctx.Id)),
+		FieldChecker:  ctx.FieldChecker,
+		IsCreate:      ctx.IsCreate,
 	}
 	// inherit error context
 	result.Bucket.ErrorHolderImpl = ctx.Bucket.ErrorHolderImpl
