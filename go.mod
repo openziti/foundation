@@ -28,7 +28,7 @@ require (
 	github.com/sirupsen/logrus v1.7.0
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/spf13/cobra v1.1.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/sys v0.0.0-20200615200032-f1bc736245b1
