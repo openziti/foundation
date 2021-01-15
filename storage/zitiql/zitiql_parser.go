@@ -1,4 +1,4 @@
-// Code generated from ZitiQl.g4 by ANTLR 4.7.2. DO NOT EDIT.
+// Code generated from ZitiQl.g4 by ANTLR 4.9.1. DO NOT EDIT.
 
 package zitiql // ZitiQl
 import (
@@ -347,7 +347,6 @@ var parserATN = []uint16{
 	525, 534, 541, 550, 557, 566, 573, 582, 589, 598, 605, 609, 613, 620, 627,
 	636, 643, 652, 659, 664, 668, 674, 680, 686,
 }
-
 var literalNames = []string{
 	"", "','", "", "'('", "')'", "'['", "']'",
 }
@@ -369,17 +368,20 @@ type ZitiQlParser struct {
 	*antlr.BaseParser
 }
 
+// NewZitiQlParser produces a new parser instance for the optional input antlr.TokenStream.
+//
+// The *ZitiQlParser instance produced may be reused by calling the SetInputStream method.
+// The initial parser configuration is expensive to construct, and the object is not thread-safe;
+// however, if used within a Golang sync.Pool, the construction cost amortizes well and the
+// objects can be used in a thread-safe manner.
 func NewZitiQlParser(input antlr.TokenStream) *ZitiQlParser {
-	var deserializer = antlr.NewATNDeserializer(nil)
-	var deserializedATN = deserializer.DeserializeFromUInt16(parserATN)
-
-var decisionToDFA = make([]*antlr.DFA, len(deserializedATN.DecisionToState))
+	this := new(ZitiQlParser)
+	deserializer := antlr.NewATNDeserializer(nil)
+	deserializedATN := deserializer.DeserializeFromUInt16(parserATN)
+	decisionToDFA := make([]*antlr.DFA, len(deserializedATN.DecisionToState))
 	for index, ds := range deserializedATN.DecisionToState {
 		decisionToDFA[index] = antlr.NewDFA(ds, index)
 	}
-
-	this := new(ZitiQlParser)
-
 	this.BaseParser = antlr.NewBaseParser(input)
 
 	this.Interpreter = antlr.NewParserATNSimulator(this, deserializedATN, decisionToDFA, antlr.NewPredictionContextCache())

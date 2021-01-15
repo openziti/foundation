@@ -115,16 +115,16 @@ func (store *BaseStore) BaseLoadOneByQuery(tx *bbolt.Tx, query string, entity En
 	return store.BaseLoadOneById(tx, ids[0], entity)
 }
 
-func (store *BaseStore) NewIndexingContext(isCreate bool, tx *bbolt.Tx, id string, holder errorz.ErrorHolder) *IndexingContext {
+func (store *BaseStore) NewIndexingContext(isCreate bool, ctx MutateContext, id string, holder errorz.ErrorHolder) *IndexingContext {
 	var parentContext *IndexingContext
 	if store.parent != nil {
-		parentContext = store.parent.NewIndexingContext(isCreate, tx, id, holder)
+		parentContext = store.parent.NewIndexingContext(isCreate, ctx, id, holder)
 	}
 	return &IndexingContext{
 		Parent:     parentContext,
 		Indexer:    &store.Indexer,
 		IsCreate:   isCreate,
-		Tx:         tx,
+		Ctx:        ctx,
 		RowId:      []byte(id),
 		ErrHolder:  holder,
 		atomStates: map[Constraint][]byte{},
@@ -152,13 +152,14 @@ func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 
 	bucket := store.GetOrCreateEntityBucket(ctx.Tx(), []byte(entity.GetId()))
 	persistCtx := &PersistContext{
-		Id:       entity.GetId(),
-		Store:    store.impl,
-		Bucket:   bucket,
-		IsCreate: true,
+		MutateContext: ctx,
+		Id:            entity.GetId(),
+		Store:         store.impl,
+		Bucket:        bucket,
+		IsCreate:      true,
 	}
 	entity.SetValues(persistCtx)
-	indexingContext := store.NewIndexingContext(true, ctx.Tx(), entity.GetId(), bucket)
+	indexingContext := store.NewIndexingContext(true, ctx, entity.GetId(), bucket)
 	indexingContext.ProcessAfterUpdate()
 
 	ctx.AddEvent(store, EventCreate, entity)
@@ -184,14 +185,15 @@ func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldCh
 		return store.entityNotFoundF(entity.GetId())
 	}
 
-	indexingContext := store.NewIndexingContext(false, ctx.Tx(), entity.GetId(), bucket)
+	indexingContext := store.NewIndexingContext(false, ctx, entity.GetId(), bucket)
 	indexingContext.ProcessBeforeUpdate() // remove old values, using existing values in store
 	persistCtx := &PersistContext{
-		Id:           entity.GetId(),
-		Store:        store.impl,
-		Bucket:       bucket,
-		FieldChecker: checker,
-		IsCreate:     false,
+		MutateContext: ctx,
+		Id:            entity.GetId(),
+		Store:         store.impl,
+		Bucket:        bucket,
+		FieldChecker:  checker,
+		IsCreate:      false,
 	}
 	entity.SetValues(persistCtx)
 	indexingContext.ProcessAfterUpdate() // add new values, using updated values in store
@@ -215,10 +217,11 @@ func (store *BaseStore) CreateChild(ctx MutateContext, id string, entity Entity)
 	}
 	bucket := parentBucket.GetOrCreatePath(entity.GetEntityType(), entity.GetId())
 	persistCtx := &PersistContext{
-		Id:       entity.GetId(),
-		Store:    store.impl,
-		Bucket:   bucket,
-		IsCreate: true,
+		MutateContext: ctx,
+		Id:            entity.GetId(),
+		Store:         store.impl,
+		Bucket:        bucket,
+		IsCreate:      true,
 	}
 	entity.SetValues(persistCtx)
 
@@ -247,11 +250,12 @@ func (store *BaseStore) UpdateChild(ctx MutateContext, id string, entity Entity,
 		return store.entityNotFoundF(entity.GetId())
 	}
 	persistCtx := &PersistContext{
-		Id:           entity.GetId(),
-		Store:        store.impl,
-		Bucket:       bucket,
-		FieldChecker: checker,
-		IsCreate:     false,
+		MutateContext: ctx,
+		Id:            entity.GetId(),
+		Store:         store.impl,
+		Bucket:        bucket,
+		FieldChecker:  checker,
+		IsCreate:      false,
 	}
 	entity.SetValues(persistCtx)
 
@@ -369,7 +373,7 @@ func (store *BaseStore) cleanupLinks(tx *bbolt.Tx, id string, holder errorz.Erro
 
 func (store *BaseStore) CleanupExternal(ctx MutateContext, id string) error {
 	errHolder := &errorz.ErrorHolderImpl{}
-	indexingContext := store.NewIndexingContext(false, ctx.Tx(), id, errHolder)
+	indexingContext := store.NewIndexingContext(false, ctx, id, errHolder)
 	indexingContext.ProcessDelete()
 	store.cleanupLinks(ctx.Tx(), id, errHolder)
 	return errHolder.Err
