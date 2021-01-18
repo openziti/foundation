@@ -947,6 +947,15 @@ func (test *crudTest) testLinkCollection(_ *testing.T) {
 		var currentIds []string
 		err = test.db.View(func(tx *bbolt.Tx) error {
 			currentIds = test.empStore.locationsCollection.GetLinks(tx, employee.Id)
+
+			for _, key := range keys {
+				test.True(test.empStore.locationsCollection.IsLinked(tx, []byte(employee.Id), []byte(key)))
+			}
+
+			for j := 0; j < 100; j++ {
+				test.False(test.empStore.locationsCollection.IsLinked(tx, []byte(employee.Id), []byte(uuid.New().String())))
+			}
+
 			return nil
 		})
 		test.NoError(err)
