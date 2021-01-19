@@ -47,7 +47,7 @@ type VersionEncDecImpl struct{}
 var StdVersionEncDec = VersionEncDecImpl{}
 
 func (encDec *VersionEncDecImpl) Encode(info *VersionInfo) ([]byte, error) {
-	out := fmt.Sprintf("%v|%v|%v|%v|%v", info.Version, info.Revision, info.BuildDate, info.Arch, info.OS)
+	out := fmt.Sprintf("%v|%v|%v|%v|%v", info.Version, info.Revision, info.BuildDate, info.OS, info.Arch)
 	return []byte(out), nil
 }
 
