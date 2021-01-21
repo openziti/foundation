@@ -17,6 +17,7 @@
 package boltz
 
 import (
+	"bytes"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
@@ -31,6 +32,7 @@ type LinkCollection interface {
 	SetLinks(tx *bbolt.Tx, id string, keys []string) error
 	GetLinks(tx *bbolt.Tx, id string) []string
 	IterateLinks(tx *bbolt.Tx, id []byte) ast.SeekableSetCursor
+	IsLinked(tx *bbolt.Tx, id, relatedId []byte) bool
 	EntityDeleted(tx *bbolt.Tx, id string) error
 	GetFieldSymbol() EntitySymbol
 	GetLinkedSymbol() EntitySymbol
@@ -170,6 +172,12 @@ func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) err
 	}
 
 	return fieldBucket.Err
+}
+
+func (collection *linkCollectionImpl) IsLinked(tx *bbolt.Tx, id, relatedId []byte) bool {
+	cursor := collection.IterateLinks(tx, id)
+	cursor.Seek(relatedId)
+	return cursor.IsValid() && bytes.Equal(cursor.Current(), relatedId)
 }
 
 func (collection *linkCollectionImpl) GetLinks(tx *bbolt.Tx, id string) []string {
