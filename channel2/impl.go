@@ -34,7 +34,6 @@ import (
 
 type channelImpl struct {
 	logicalName       string
-	underlayFactory   UnderlayFactory
 	underlay          Underlay
 	options           *Options
 	sequence          *sequence.Sequence
@@ -60,7 +59,6 @@ func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Op
 func NewChannelWithTransportConfiguration(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
 	impl := &channelImpl{
 		logicalName:     logicalName,
-		underlayFactory: underlayFactory,
 		options:         options,
 		sequence:        sequence.NewSequence(),
 		outQueue:        make(chan *priorityMessage, 4),
@@ -89,6 +87,40 @@ func NewChannelWithTransportConfiguration(logicalName string, underlayFactory Un
 	//go impl.keepalive()
 
 	return impl, nil
+}
+
+func AcceptNextChannel(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
+	underlay, err := underlayFactory.Create(tcfg)
+	if err != nil {
+		return nil, err
+	}
+	go acceptAsync(logicalName, underlay, options)
+}
+
+func acceptAsync(logicalName string, underlay Underlay, options *Options) {
+	impl := &channelImpl{
+		underlay:        underlay,
+		logicalName:     logicalName,
+		options:         options,
+		sequence:        sequence.NewSequence(),
+		outQueue:        make(chan *priorityMessage, 4),
+		outPriority:     &priorityHeap{},
+		receiveHandlers: make(map[int32]ReceiveHandler),
+	}
+
+	heap.Init(impl.outPriority)
+	impl.AddReceiveHandler(&pingHandler{})
+
+	if options != nil {
+		for _, binder := range options.BindHandlers {
+			if err := binder.BindChannel(impl); err != nil {
+				pfxlog.Logger().WithError(err).Errorf("failure accepting channel %v with underlay %v", impl.Label(), underlay.Label())
+				return
+			}
+		}
+	}
+
+	impl.startMultiplex()
 }
 
 func (channel *channelImpl) Id() *identity.TokenId {
