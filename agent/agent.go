@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net"
@@ -308,6 +309,22 @@ func handle(conn io.ReadWriter, op byte) error {
 			return err
 		}
 		_, _ = fmt.Fprintf(conn, "New GC percent set to %v. Previous value was %v.\n", perc, debug.SetGCPercent(int(perc)))
+
+	case SetLogLevel:
+		param, err := bufio.NewReader(conn).ReadByte()
+		if err != nil {
+			return err
+		}
+		if param < byte(logrus.PanicLevel) || param > byte(logrus.TraceLevel) {
+			return errors.Errorf("invalid log level %v", param)
+		}
+
+		oldLevel := logrus.GetLevel()
+		newLevel := logrus.Level(param)
+		logrus.SetLevel(newLevel)
+
+		pfxlog.Logger().Infof("Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
+		_, _ = fmt.Fprintf(conn, "Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
 	}
 	return nil
 }
