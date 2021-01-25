@@ -323,6 +323,7 @@ func handle(conn io.ReadWriter, op byte) error {
 		newLevel := logrus.Level(param)
 		logrus.SetLevel(newLevel)
 
+		pfxlog.Logger().Infof("Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
 		_, _ = fmt.Fprintf(conn, "Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
 	}
 	return nil
