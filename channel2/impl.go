@@ -89,12 +89,13 @@ func NewChannelWithTransportConfiguration(logicalName string, underlayFactory Un
 	return impl, nil
 }
 
-func AcceptNextChannel(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) (Channel, error) {
+func AcceptNextChannel(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) error {
 	underlay, err := underlayFactory.Create(tcfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	go acceptAsync(logicalName, underlay, options)
+	return nil
 }
 
 func acceptAsync(logicalName string, underlay Underlay, options *Options) {
