@@ -47,4 +47,7 @@ const (
 
 	// SetGCPercent sets the garbage collection target percentage.
 	SetGCPercent = byte(0x10)
+
+	// SetLogLevel sets the logrus level
+	SetLogLevel = byte(0x11)
 )

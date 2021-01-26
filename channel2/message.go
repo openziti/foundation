@@ -314,9 +314,11 @@ func readV2(peer io.Reader) (*Message, error) {
 	messageSection := make([]byte, dataSectionV2)
 	read, err := io.ReadFull(peer, messageSection)
 
+	// short-circuit io.EOF, specifically
 	if err == io.EOF {
 		return nil, err
 	}
+
 	if read < 4 {
 		return nil, errors.New("short read")
 	}

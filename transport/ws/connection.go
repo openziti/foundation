@@ -172,16 +172,13 @@ func (c *Connection) Read(p []byte) (n int, err error) {
 		case <-c.done:
 			err = errClosing
 		default:
-			err = c.ws.SetReadDeadline(time.Now().Add(c.cfg.readTimeout))
-			if err == nil {
-				if c.tlsConnHandshakeComplete && currentDepth == 1 {
-					n, err = c.tlsConn.Read(p)
-					atomic.SwapInt32(&c.readCallDepth, (c.readCallDepth - 1))
-					c.log.Tracef("Read() end currentDepth[%d]", currentDepth)
-					return n, err
-				} else {
-					_, r, err = c.ws.NextReader()
-				}
+			if c.tlsConnHandshakeComplete && currentDepth == 1 {
+				n, err = c.tlsConn.Read(p)
+				atomic.SwapInt32(&c.readCallDepth, (c.readCallDepth - 1))
+				c.log.Tracef("Read() end currentDepth[%d]", currentDepth)
+				return n, err
+			} else {
+				_, r, err = c.ws.NextReader()
 			}
 		}
 		if err != nil {
