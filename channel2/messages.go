@@ -17,10 +17,11 @@
 package channel2
 
 const (
-	ContentTypeHelloType   = 0
-	ContentTypePingType    = 1
-	ContentTypeResultType  = 2
-	ContentTypeLatencyType = 3
+	ContentTypeHelloType           = 0
+	ContentTypePingType            = 1
+	ContentTypeResultType          = 2
+	ContentTypeLatencyType         = 3
+	ContentTypeLatencyResponseType = 4
 )
 
 type Hello struct {
