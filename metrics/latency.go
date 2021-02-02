@@ -123,24 +123,13 @@ func (self *latencyProbe) run() {
 	defer log.Debug("exited")
 	defer self.handler.ChannelClosed()
 
-	lastSend := info.NowInMilliseconds()
-	for {
+	for !self.ch.IsClosed() {
+		request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
+		request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
+		if err := self.ch.SendPrioritizedWithTimeout(request, channel2.High, 10*time.Second); err != nil {
+			log.WithError(err).Error("unexpected error sending latency probe")
+		}
 		time.Sleep(self.interval)
-		if self.ch.IsClosed() {
-			return
-		}
-
-		now := info.NowInMilliseconds()
-		if now-lastSend > 10000 {
-			lastSend = now
-			request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
-			request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
-			err := self.ch.SendPrioritizedWithTimeout(request, channel2.High, 5*time.Second)
-			if err != nil {
-				log.Errorf("unexpected error sending latency probe (%s)", err)
-				continue
-			}
-		}
 	}
 }
 
@@ -164,7 +153,7 @@ func (self *LatencyResponder) ContentType() int32 {
 	return channel2.ContentTypeLatencyType
 }
 
-func (self *LatencyResponder) HandleReceive(msg *channel2.Message, ch channel2.Channel) {
+func (self *LatencyResponder) HandleReceive(msg *channel2.Message, _ channel2.Channel) {
 	if sentTime, found := msg.Headers[latencyProbeTime]; found {
 		resp := channel2.NewMessage(channel2.ContentTypeLatencyResponseType, nil)
 		resp.Headers[latencyProbeTime] = sentTime
@@ -187,7 +176,7 @@ func (self *LatencyResponder) responseSender() {
 		select {
 		case response := <-self.responseChannel:
 			if err := self.ch.SendWithPriority(response, channel2.High); err != nil {
-				pfxlog.ContextLogger(self.ch.Label()).Errorf("error sending latency response (%s)", err)
+				log.WithError(err).Error("error sending latency response")
 				if self.ch.IsClosed() {
 					return
 				}
