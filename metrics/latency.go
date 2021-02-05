@@ -82,3 +82,109 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 		}
 	}
 }
+
+type LatencyHandler interface {
+	LatencyReported(latency time.Duration)
+	ChannelClosed()
+}
+
+func AddLatencyProbe(ch channel2.Channel, interval time.Duration, handler LatencyHandler) {
+	probe := &latencyProbe{
+		handler:  handler,
+		ch:       ch,
+		interval: interval,
+	}
+	ch.AddReceiveHandler(probe)
+	go probe.run()
+}
+
+type latencyProbe struct {
+	handler  LatencyHandler
+	ch       channel2.Channel
+	interval time.Duration
+}
+
+func (self *latencyProbe) ContentType() int32 {
+	return channel2.ContentTypeLatencyResponseType
+}
+
+func (self *latencyProbe) HandleReceive(m *channel2.Message, _ channel2.Channel) {
+	if sentTime, ok := m.GetUint64Header(latencyProbeTime); ok {
+		latency := time.Duration(time.Now().UnixNano() - int64(sentTime))
+		self.handler.LatencyReported(latency)
+	} else {
+		pfxlog.Logger().Error("no send time on latency response")
+	}
+}
+
+func (self *latencyProbe) run() {
+	log := pfxlog.ContextLogger(self.ch.Label())
+	log.Debug("started")
+	defer log.Debug("exited")
+	defer self.handler.ChannelClosed()
+
+	for !self.ch.IsClosed() {
+		request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
+		request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
+		if err := self.ch.SendPrioritizedWithTimeout(request, channel2.High, 10*time.Second); err != nil {
+			log.WithError(err).Error("unexpected error sending latency probe")
+		}
+		time.Sleep(self.interval)
+	}
+}
+
+func AddLatencyProbeResponder(ch channel2.Channel) {
+	responder := &LatencyResponder{
+		ch:              ch,
+		responseChannel: make(chan *channel2.Message, 1),
+	}
+	ch.AddReceiveHandler(responder)
+	go responder.responseSender()
+}
+
+// LatencyResponder responds to latency messages with LatencyResponse messages.
+//
+type LatencyResponder struct {
+	responseChannel chan *channel2.Message
+	ch              channel2.Channel
+}
+
+func (self *LatencyResponder) ContentType() int32 {
+	return channel2.ContentTypeLatencyType
+}
+
+func (self *LatencyResponder) HandleReceive(msg *channel2.Message, _ channel2.Channel) {
+	if sentTime, found := msg.Headers[latencyProbeTime]; found {
+		resp := channel2.NewMessage(channel2.ContentTypeLatencyResponseType, nil)
+		resp.Headers[latencyProbeTime] = sentTime
+		select {
+		case self.responseChannel <- resp:
+		default:
+		}
+	}
+}
+
+func (self *LatencyResponder) responseSender() {
+	log := pfxlog.ContextLogger(self.ch.Label())
+	log.Debug("started")
+	defer log.Debug("exited")
+
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case response := <-self.responseChannel:
+			if err := self.ch.SendWithPriority(response, channel2.High); err != nil {
+				log.WithError(err).Error("error sending latency response")
+				if self.ch.IsClosed() {
+					return
+				}
+			}
+		case <-ticker.C:
+			if self.ch.IsClosed() {
+				return
+			}
+		}
+	}
+}

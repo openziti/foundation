@@ -82,3 +82,56 @@ func Test_Versions_EncDec(t *testing.T) {
 	})
 
 }
+
+func Test_Compare(t *testing.T) {
+	v1 := ParseSemVer("v0.18.4")
+	req := require.New(t)
+	req.Equal("0.18.4", v1.String())
+	req.True(v1.Equals(ParseSemVer("0.18.4")))
+
+	v2 := ParseSemVer("0.18.5")
+	req.Equal("0.18.5", v2.String())
+	req.True(v2.Equals(ParseSemVer("0.18.5")))
+
+	v3 := ParseSemVer("0.18.6")
+	req.Equal("0.18.6", v3.String())
+	req.True(v3.Equals(ParseSemVer("0.18.6")))
+
+	v4 := ParseSemVer("0.19.6")
+	req.Equal("0.19.6", v4.String())
+	req.True(v4.Equals(ParseSemVer("0.19.6")))
+
+	v5 := ParseSemVer("2.0.0")
+	req.Equal("2.0.0", v5.String())
+	req.True(v5.Equals(ParseSemVer("2.0.0")))
+
+	req.Equal(1, v2.CompareTo(v1))
+	req.Equal(0, v2.CompareTo(v2))
+	req.Equal(-1, v2.CompareTo(v3))
+	req.Equal(-1, v2.CompareTo(v4))
+	req.Equal(-1, v2.CompareTo(v5))
+
+	versionInfo := &VersionInfo{Version: "v0.14.7"}
+	req.False(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "v0.18.4"}
+	req.False(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "v0.18.5"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "v0.19.0"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "v1.0.0"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "0.20"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "20"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	versionInfo = &VersionInfo{Version: "v0.0.0"}
+	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+}

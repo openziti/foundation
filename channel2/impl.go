@@ -81,6 +81,9 @@ func NewChannelWithTransportConfiguration(logicalName string, underlayFactory Un
 				return nil, err
 			}
 		}
+		for _, handler := range options.PeekHandlers {
+			impl.AddPeekHandler(handler)
+		}
 	}
 
 	impl.startMultiplex()
@@ -118,6 +121,9 @@ func acceptAsync(logicalName string, underlay Underlay, options *Options) {
 				pfxlog.Logger().WithError(err).Errorf("failure accepting channel %v with underlay %v", impl.Label(), underlay.Label())
 				return
 			}
+		}
+		for _, handler := range options.PeekHandlers {
+			impl.AddPeekHandler(handler)
 		}
 	}
 
