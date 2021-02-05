@@ -144,6 +144,10 @@ func (ctx *BaseTestContext) RequireUpdate(entity Entity) {
 	ctx.NoError(ctx.Update(entity))
 }
 
+func (ctx *BaseTestContext) RequirePatch(entity Entity, checker FieldChecker) {
+	ctx.NoError(ctx.Patch(entity, checker))
+}
+
 func (ctx *BaseTestContext) Create(entity Entity) error {
 	return ctx.GetDb().Update(func(tx *bbolt.Tx) error {
 		mutateContext := NewMutateContext(tx)
@@ -157,6 +161,14 @@ func (ctx *BaseTestContext) Update(entity Entity) error {
 		mutateContext := NewMutateContext(tx)
 		store := ctx.GetStoreForEntity(entity)
 		return store.Update(mutateContext, entity, nil)
+	})
+}
+
+func (ctx *BaseTestContext) Patch(entity Entity, checker FieldChecker) error {
+	return ctx.GetDb().Update(func(tx *bbolt.Tx) error {
+		mutateContext := NewMutateContext(tx)
+		store := ctx.GetStoreForEntity(entity)
+		return store.Update(mutateContext, entity, checker)
 	})
 }
 
@@ -195,21 +207,21 @@ func (ctx *BaseTestContext) ValidateUpdated(entity ExtEntity) {
 	loaded, ok := store.NewStoreEntity().(ExtEntity)
 	ctx.True(ok, "store entity type does not implement Entity: %v", reflect.TypeOf(store.NewStoreEntity()))
 
+	var found bool
 	err := ctx.GetDb().View(func(tx *bbolt.Tx) error {
-		found, err := store.BaseLoadOneById(tx, entity.GetId(), loaded)
-		ctx.NoError(err)
-		ctx.Equal(true, found)
-
-		now := time.Now()
-		ctx.Equal(entity.GetId(), loaded.GetId())
-		ctx.Equal(entity.GetEntityType(), loaded.GetEntityType())
-		ctx.Equal(entity.GetCreatedAt(), loaded.GetCreatedAt())
-		ctx.True(loaded.GetCreatedAt().Before(loaded.GetUpdatedAt()), "%v should be before %v", loaded.GetCreatedAt(), loaded.GetUpdatedAt())
-		ctx.True(loaded.GetUpdatedAt().Equal(now) || loaded.GetUpdatedAt().Before(now))
-
-		return nil
+		var err error
+		found, err = store.BaseLoadOneById(tx, entity.GetId(), loaded)
+		return err
 	})
 	ctx.NoError(err)
+	ctx.Equal(true, found)
+
+	now := time.Now()
+	ctx.Equal(entity.GetId(), loaded.GetId())
+	ctx.Equal(entity.GetEntityType(), loaded.GetEntityType())
+	ctx.Equal(entity.GetCreatedAt(), loaded.GetCreatedAt())
+	ctx.True(loaded.GetCreatedAt().Before(loaded.GetUpdatedAt()), "%v should be before %v", loaded.GetCreatedAt(), loaded.GetUpdatedAt())
+	ctx.True(loaded.GetUpdatedAt().Equal(now) || loaded.GetUpdatedAt().Before(now))
 
 	entity.SetCreatedAt(loaded.GetCreatedAt())
 	entity.SetUpdatedAt(loaded.GetUpdatedAt())
