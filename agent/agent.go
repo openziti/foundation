@@ -70,6 +70,9 @@ type Options struct {
 	// can call Close before shutting down.
 	// Optional.
 	ShutdownCleanup *bool
+
+	// Custom Operations
+	CustomOps map[byte]func(conn io.ReadWriter) error
 }
 
 // Listen starts the gops agent on a host process. Once agent started, users
@@ -139,11 +142,19 @@ func Listen(opts Options) error {
 		}
 	}
 
-	go listen()
+	h := &handler{
+		options: opts,
+	}
+
+	go h.listen()
 	return nil
 }
 
-func listen() {
+type handler struct {
+	options Options
+}
+
+func (self *handler) listen() {
 	logger := pfxlog.Logger()
 
 	for {
@@ -153,12 +164,12 @@ func listen() {
 				break
 			}
 		} else {
-			handleConnection(conn)
+			self.handleConnection(conn)
 		}
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func (self *handler) handleConnection(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 
 	logger := pfxlog.Logger()
@@ -180,7 +191,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	if err := handle(conn, buf[len(buf)-1]); err != nil {
+	if err := self.handle(conn, buf[len(buf)-1]); err != nil {
 		logger.WithError(err).Error("error while processing gops request")
 		_, _ = conn.Write([]byte(err.Error()))
 	}
@@ -227,7 +238,7 @@ func formatBytes(val uint64) string {
 	return fmt.Sprintf("%d bytes", val)
 }
 
-func handle(conn io.ReadWriter, op byte) error {
+func (self *handler) handle(conn io.ReadWriter, op byte) error {
 	switch op {
 	case StackTrace:
 		return pprof.Lookup("goroutine").WriteTo(conn, 2)
@@ -325,6 +336,12 @@ func handle(conn io.ReadWriter, op byte) error {
 
 		pfxlog.Logger().Infof("Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
 		_, _ = fmt.Fprintf(conn, "Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
+	default:
+		if self.options.CustomOps != nil {
+			if customHandler, found := self.options.CustomOps[op]; found {
+				return customHandler(conn)
+			}
+		}
 	}
 	return nil
 }

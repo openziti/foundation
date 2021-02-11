@@ -430,7 +430,7 @@ func (channel *channelImpl) rxer() {
 				channel.waiters.Delete(replyFor)
 				handled = true
 			} else {
-				log.Warnf("no waiter for message. type [%v], sequence [%v], replyFor [%v]", m.ContentType, m.sequence, replyFor)
+				log.Debugf("no waiter for message. type [%v], sequence [%v], replyFor [%v]", m.ContentType, m.sequence, replyFor)
 			}
 		}
 
