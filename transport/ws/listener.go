@@ -17,6 +17,7 @@
 package ws
 
 import (
+	"crypto/tls"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/michaelquigley/pfxlog"
@@ -113,15 +114,20 @@ func wslistener(log *logrus.Entry, bindAddress string, cfg *WSConfig, name strin
 
 	router.HandleFunc("/ws", listener.handleWebsocket).Methods("GET")
 
+	cert, _ := tls.LoadX509KeyPair(cfg.serverCert, cfg.key)
+
 	httpServer := &http.Server{
 		Addr:         bindAddress,
 		WriteTimeout: cfg.writeTimeout,
 		ReadTimeout:  cfg.readTimeout,
 		IdleTimeout:  cfg.idleTimeout,
 		Handler:      router,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
 	}
 
-	if err := httpServer.ListenAndServe(); err != nil {
+	if err := httpServer.ListenAndServeTLS("", ""); err != nil {
 		panic(err)
 	}
 }
