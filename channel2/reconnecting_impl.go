@@ -23,6 +23,7 @@ import (
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"github.com/openziti/foundation/util/concurrenz"
+	"github.com/pkg/errors"
 	"io"
 )
 
@@ -170,6 +171,32 @@ func (impl *reconnectingImpl) pingInstance() error {
 	return nil
 }
 
+func (impl *reconnectingImpl) Disconnect() error {
+	if dialer, ok := impl.reconnectionHandler.(*reconnectingDialer); ok {
+		if impl.disconnected.CompareAndSwap(false, true) {
+			dialer.reconnectLock.Lock()
+			return impl.peer.Close()
+		} else {
+			return errors.New("already marked disconnected")
+		}
+	} else {
+		return errors.New("unexpected reconnect handler implementation")
+	}
+}
+
+func (impl *reconnectingImpl) Reconnect() error {
+	if dialer, ok := impl.reconnectionHandler.(*reconnectingDialer); ok {
+		if impl.disconnected.CompareAndSwap(true, false) {
+			dialer.reconnectLock.Unlock()
+			return nil
+		} else {
+			return errors.New("cannot reconnect, not disconnected")
+		}
+	} else {
+		return errors.New("unexpected reconnect handler implementation")
+	}
+}
+
 type reconnectingImpl struct {
 	peer                transport.Connection
 	id                  *identity.TokenId
@@ -179,6 +206,7 @@ type reconnectingImpl struct {
 	closed              concurrenz.AtomicBoolean
 	readF               readFunction
 	marshalF            marshalFunction
+	disconnected        concurrenz.AtomicBoolean
 }
 
 type reconnectionHandler interface {

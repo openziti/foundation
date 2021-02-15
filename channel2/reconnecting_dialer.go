@@ -27,11 +27,12 @@ import (
 )
 
 type reconnectingDialer struct {
-	identity      *identity.TokenId
-	endpoint      transport.Address
-	headers       map[int32][]byte
-	tcfg          transport.Configuration
-	reconnectLock sync.Mutex
+	identity         *identity.TokenId
+	endpoint         transport.Address
+	headers          map[int32][]byte
+	tcfg             transport.Configuration
+	reconnectLock    sync.Mutex
+	reconnectHandler func()
 }
 
 func NewReconnectingDialer(identity *identity.TokenId, endpoint transport.Address, headers map[int32][]byte) UnderlayFactory {
@@ -39,6 +40,15 @@ func NewReconnectingDialer(identity *identity.TokenId, endpoint transport.Addres
 		identity: identity,
 		endpoint: endpoint,
 		headers:  headers,
+	}
+}
+
+func NewReconnectingDialerWithHandler(identity *identity.TokenId, endpoint transport.Address, headers map[int32][]byte, reconnectHandler func()) UnderlayFactory {
+	return &reconnectingDialer{
+		identity:         identity,
+		endpoint:         endpoint,
+		headers:          headers,
+		reconnectHandler: reconnectHandler,
 	}
 }
 
@@ -89,6 +99,9 @@ func (dialer *reconnectingDialer) Reconnect(impl *reconnectingImpl) error {
 			if err == nil {
 				impl.peer = peer
 				if err := dialer.sendHello(impl); err == nil {
+					if dialer.reconnectHandler != nil {
+						dialer.reconnectHandler()
+					}
 					return nil
 				} else {
 					if version, ok := getRetryVersion(err); ok {
