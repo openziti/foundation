@@ -45,7 +45,7 @@ type Memory struct {
 	path      string
 	interval  time.Duration
 	ctr       int
-	shutdownC chan struct{}
+	shutdownC <-chan struct{}
 }
 
 // NewGoroutineMonitor can be used to track down goroutine leaks
@@ -94,7 +94,7 @@ func NewMemory(path string, interval time.Duration) *Memory {
 	return NewMemoryWithShutdown(path, interval, nil)
 }
 
-func NewMemoryWithShutdown(path string, interval time.Duration, shutdownC chan struct{}) *Memory {
+func NewMemoryWithShutdown(path string, interval time.Duration, shutdownC <-chan struct{}) *Memory {
 	// go NewGoroutineMonitor(interval) // disable for now
 	return &Memory{path: path, interval: interval, ctr: 0, shutdownC: shutdownC}
 }

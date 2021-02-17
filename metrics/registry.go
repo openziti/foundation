@@ -41,6 +41,7 @@ type Registry interface {
 	Timer(name string) Timer
 	EachMetric(visitor func(name string, metric Metric))
 	Poll() *metrics_pb.MetricsMessage
+	DisposeAll()
 }
 
 func NewRegistry(sourceId string, tags map[string]string) Registry {
@@ -59,6 +60,12 @@ type registryImpl struct {
 
 func (registry *registryImpl) dispose(name string) {
 	registry.metricMap.Remove(name)
+}
+
+func (registry *registryImpl) DisposeAll() {
+	registry.EachMetric(func(name string, metric Metric) {
+		metric.Dispose()
+	})
 }
 
 func (registry *registryImpl) SourceId() string {
