@@ -81,10 +81,12 @@ func (reporter *collectingReporter) GetNextIntervals(eventCount uint32, timeout 
 func TestTrackerNonDuplicate(t *testing.T) {
 	assert := require.New(t)
 
+	closeNotify := make(chan struct{})
+	defer close(closeNotify)
 	reporter := &collectingReporter{intervalChan: make(chan *intervalEvent)}
 
 	intervalCounter := newIntervalCounter(
-		"usage", time.Minute, reporter, time.Duration(0), time.Duration(0), func() {}).(*intervalCounterImpl)
+		"usage", time.Minute, reporter, time.Duration(0), time.Duration(0), func() {}, closeNotify).(*intervalCounterImpl)
 
 	currentMinute := time.Now().Truncate(time.Minute)
 

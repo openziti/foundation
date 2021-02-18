@@ -94,5 +94,5 @@ func Test_Timer(t *testing.T) {
 	assert.Equal(t, int64(2), hm.Count)
 
 	assert.Equal(t, 3*time.Second, time.Duration(hm.Max))
-	assert.InDelta(t, time.Second, time.Duration(hm.Min), float64(time.Millisecond))
+	assert.InDelta(t, time.Second, time.Duration(hm.Min), float64(2*time.Millisecond))
 }

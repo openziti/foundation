@@ -17,8 +17,8 @@
 package metrics
 
 import (
-	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/sirupsen/logrus"
 	"reflect"
 	"time"
 )
@@ -40,7 +40,8 @@ func newIntervalCounter(name string,
 	reporter intervalCounterReporter,
 	flushFreq time.Duration,
 	ageThreshold time.Duration,
-	disposeF func()) IntervalCounter {
+	disposeF func(),
+	closeNotify <-chan struct{}) IntervalCounter {
 
 	currentInterval := time.Now().Truncate(intervalSize).UTC().Unix()
 	currentCounters := make(map[string]uint64)
@@ -63,12 +64,10 @@ func newIntervalCounter(name string,
 		ticker:          ticker,
 		ageThreshold:    ageThreshold,
 		dispose:         disposeF,
+		closeNotify:     closeNotify,
 	}
 
 	go intervalCounter.run()
-	if ticker != nil {
-		go intervalCounter.startTicker()
-	}
 	return intervalCounter
 }
 
@@ -77,8 +76,6 @@ type counterEvent struct {
 	time       time.Time
 	value      uint64
 }
-
-type shutdownEvent struct{}
 
 type intervalCounterImpl struct {
 	name            string
@@ -91,6 +88,7 @@ type intervalCounterImpl struct {
 	ticker          *time.Ticker
 	ageThreshold    time.Duration
 	dispose         func()
+	closeNotify     <-chan struct{}
 }
 
 func (intervalCounter *intervalCounterImpl) Update(intervalId string, time time.Time, value uint64) {
@@ -103,40 +101,45 @@ func (intervalCounter *intervalCounterImpl) Update(intervalId string, time time.
 
 func (intervalCounter *intervalCounterImpl) Dispose() {
 	intervalCounter.dispose()
-	intervalCounter.eventChan <- &shutdownEvent{}
 }
 
 func (intervalCounter *intervalCounterImpl) report() {
 	intervalCounter.eventChan <- time.Now()
 }
 
-func (intervalCounter *intervalCounterImpl) startTicker() {
-	for event := range intervalCounter.ticker.C {
-		intervalCounter.eventChan <- event
-	}
-}
-
 func (intervalCounter *intervalCounterImpl) run() {
-	defer fmt.Println("Interval intervalCounter shutting down")
+	defer logrus.Debug("interval counter shutting down")
 
-	for i := range intervalCounter.eventChan {
-		switch event := i.(type) {
-		case *counterEvent:
-			interval := event.time.Truncate(intervalCounter.intervalSize).UTC().Unix()
-			valueMap := intervalCounter.getValueMapForInterval(interval)
-			valueMap[event.intervalId] += event.value
-			break
-		case time.Time:
-			intervalCounter.flushIntervals()
-		case *shutdownEvent:
+	var tickerC <-chan time.Time
+	if intervalCounter.ticker != nil {
+		tickerC = intervalCounter.ticker.C
+	}
+
+	for {
+		select {
+		case <-intervalCounter.closeNotify:
 			if intervalCounter.ticker != nil {
 				intervalCounter.ticker.Stop()
 			}
 			intervalCounter.currentValues = nil
 			intervalCounter.intervalMap = nil
 			return
-		default:
-			pfxlog.Logger().Errorf("unhandled IntervalCounter event type '%v'", reflect.TypeOf(event).Name())
+
+		case <-tickerC:
+			intervalCounter.flushIntervals()
+
+		case i := <-intervalCounter.eventChan:
+			switch event := i.(type) {
+			case *counterEvent:
+				interval := event.time.Truncate(intervalCounter.intervalSize).UTC().Unix()
+				valueMap := intervalCounter.getValueMapForInterval(interval)
+				valueMap[event.intervalId] += event.value
+				break
+			case time.Time:
+				intervalCounter.flushIntervals()
+			default:
+				pfxlog.Logger().Errorf("unhandled IntervalCounter event type '%v'", reflect.TypeOf(event).Name())
+			}
 		}
 	}
 }

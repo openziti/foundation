@@ -47,6 +47,14 @@ func (d TraceMessageDecode) MarshalTraceMessageDecode() ([]byte, error) {
 	return data, nil
 }
 
+func (d TraceMessageDecode) MarshalResult() ([]byte, bool) {
+	data, err := json.Marshal(d)
+	if err != nil {
+		return nil, true
+	}
+	return data, true
+}
+
 func DecodeTraceAndFormat(decode []byte) string {
 	if len(decode) > 0 {
 		meta := make(map[string]interface{})

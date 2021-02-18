@@ -1,64 +1,47 @@
 package event
 
-import (
-	"errors"
-	"github.com/openziti/foundation/util/concurrenz"
-)
+import "github.com/sirupsen/logrus"
 
 type Dispatcher interface {
 	Dispatch(event Event)
-	Stop()
 }
 
 type Event interface {
 	Handle()
 }
 
-var DispatcherNotRunningError = errors.New("dispatched not running")
-
-func NewDispatcher() Dispatcher {
+func NewDispatcher(closeNotify <-chan struct{}) Dispatcher {
 	result := &dispatcherImpl{
-		shutdownC: make(chan struct{}),
-		eventC:    make(chan Event, 25),
+		closeNotify: closeNotify,
+		eventC:      make(chan Event, 25),
 	}
 
-	result.start()
+	go result.eventLoop()
 	return result
 }
 
 type dispatcherImpl struct {
-	running   concurrenz.AtomicBoolean
-	shutdownC chan struct{}
-	eventC    chan Event
-}
-
-func (dispatcher *dispatcherImpl) Stop() {
-	if dispatcher.running.CompareAndSwap(true, false) {
-		close(dispatcher.shutdownC)
-	}
-}
-
-func (dispatcher *dispatcherImpl) start() {
-	if dispatcher.running.CompareAndSwap(false, true) {
-		go dispatcher.eventLoop()
-	}
+	closeNotify <-chan struct{}
+	eventC      chan Event
 }
 
 func (dispatcher *dispatcherImpl) eventLoop() {
-	for dispatcher.running.Get() {
+	logrus.Info("event dispatcher: started")
+	defer logrus.Info("event dispatcher: stopped")
+
+	for {
 		select {
 		case event := <-dispatcher.eventC:
 			event.Handle()
-		case <-dispatcher.shutdownC:
+		case <-dispatcher.closeNotify:
+			return
 		}
 	}
 }
 
 func (dispatcher *dispatcherImpl) Dispatch(event Event) {
-	if dispatcher.running.Get() {
-		select {
-		case dispatcher.eventC <- event:
-		case <-dispatcher.shutdownC:
-		}
+	select {
+	case dispatcher.eventC <- event:
+	case <-dispatcher.closeNotify:
 	}
 }

@@ -14,14 +14,14 @@ type UsageRegistry interface {
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
 }
 
-func NewUsageRegistryFromConfig(config *Config) UsageRegistry {
+func NewUsageRegistryFromConfig(config *Config, closeNotify chan struct{}) UsageRegistry {
 	if config.ReportInterval == 0 {
 		config.ReportInterval = 15 * time.Second
 	}
-	return NewUsageRegistry(config.Source, config.Tags, config.ReportInterval, config.EventSink)
+	return NewUsageRegistry(config.Source, config.Tags, config.ReportInterval, config.EventSink, closeNotify)
 }
 
-func NewUsageRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, eventSink Handler) UsageRegistry {
+func NewUsageRegistry(sourceId string, tags map[string]string, reportInterval time.Duration, eventSink Handler, closeNotify <-chan struct{}) UsageRegistry {
 	registry := &usageRegistryImpl{
 		registryImpl: registryImpl{
 			sourceId:  sourceId,
@@ -30,6 +30,7 @@ func NewUsageRegistry(sourceId string, tags map[string]string, reportInterval ti
 		},
 		eventSink:          eventSink,
 		intervalBucketChan: make(chan *bucketEvent, 1),
+		closeNotify:        closeNotify,
 	}
 
 	go registry.run(reportInterval)
@@ -47,6 +48,7 @@ type usageRegistryImpl struct {
 	eventSink          Handler
 	intervalBucketChan chan *bucketEvent
 	intervalBuckets    []*bucketEvent
+	closeNotify        <-chan struct{}
 }
 
 // NewIntervalCounter creates an IntervalCounter
@@ -61,7 +63,7 @@ func (registry *usageRegistryImpl) IntervalCounter(name string, intervalSize tim
 	}
 
 	disposeF := func() { registry.dispose(name) }
-	intervalCounter := newIntervalCounter(name, intervalSize, registry, time.Minute, time.Second*80, disposeF)
+	intervalCounter := newIntervalCounter(name, intervalSize, registry, time.Minute, time.Second*80, disposeF, registry.closeNotify)
 	registry.metricMap.Set(name, intervalCounter)
 	return intervalCounter
 }
@@ -86,14 +88,18 @@ func (registry *usageRegistryImpl) Poll() *metrics_pb.MetricsMessage {
 }
 
 func (registry *usageRegistryImpl) run(reportInterval time.Duration) {
-	ticker := time.Tick(reportInterval)
+	ticker := time.NewTicker(reportInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case interval := <-registry.intervalBucketChan:
 			registry.intervalBuckets = append(registry.intervalBuckets, interval)
-		case <-ticker:
+		case <-ticker.C:
 			registry.report()
+		case <-registry.closeNotify:
+			registry.DisposeAll()
+			return
 		}
 	}
 }
