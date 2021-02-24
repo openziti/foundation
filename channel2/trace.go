@@ -17,18 +17,21 @@
 package channel2
 
 import (
+	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/trace"
 	"github.com/openziti/foundation/trace/pb"
-	"github.com/michaelquigley/pfxlog"
+	"github.com/sirupsen/logrus"
 	"os"
 	"time"
 )
 
 type TraceHandler struct {
-	f        *os.File
-	id       string
-	decoders []TraceMessageDecoder
+	f         *os.File
+	id        string
+	decoders  []TraceMessageDecoder
+	logTraces bool
 }
 
 func NewTraceHandler(path string, id *identity.TokenId) (*TraceHandler, error) {
@@ -103,4 +106,20 @@ func (h TraceHandler) writeChannelMessage(msg *Message, ch Channel, rx bool) {
 	if err := trace.WriteChannelMessage(t, h.f); err != nil {
 		pfxlog.ContextLogger(ch.Label()).Errorf("unexpected error (%s)", err)
 	}
+
+	if h.logTraces {
+		logrus.Info(h.msgToString(t))
+	}
+}
+
+func (h TraceHandler) msgToString(msg *trace_pb.ChannelMessage) string {
+	flow := "->"
+	if msg.IsRx {
+		flow = "<-"
+	}
+	replyFor := ""
+	if msg.ReplyFor != -1 {
+		replyFor = fmt.Sprintf(">%d", msg.ReplyFor)
+	}
+	return fmt.Sprintf("%-16s %8s %s #%-5d %5s | %s\n", msg.Identity, msg.Channel, flow, msg.Sequence, replyFor, DecodeTraceAndFormat(msg.Decode))
 }

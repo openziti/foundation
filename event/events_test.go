@@ -32,7 +32,9 @@ func addTestHandler(handler testEventHandler) {
 }
 
 func TestDispatcherImpl_Dispatch(t *testing.T) {
-	dispatcher := NewDispatcher()
+	closeNotify := make(chan struct{})
+	defer close(closeNotify)
+	dispatcher := NewDispatcher(closeNotify)
 
 	latch := sync.WaitGroup{}
 	latch.Add(1000)

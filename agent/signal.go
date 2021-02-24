@@ -50,4 +50,7 @@ const (
 
 	// SetLogLevel sets the logrus level
 	SetLogLevel = byte(0x11)
+
+	// CustomOp reserved for application specific operations
+	CustomOp = byte(0x12)
 )
