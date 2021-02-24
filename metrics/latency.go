@@ -72,7 +72,7 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 				log.Errorf("unexpected latency response [%d]", response.ContentType)
 			}
 		case <-time.After(timeout):
-			log.Error("latency timeout after [%s]", timeout)
+			log.Errorf("latency timeout after [%s]", timeout)
 		}
 	}
 }
