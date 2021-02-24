@@ -19,7 +19,7 @@ require (
 	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
 	github.com/lucas-clemente/quic-go v0.18.1
 	github.com/michaelquigley/dilithium v0.2.0
-	github.com/michaelquigley/pfxlog v0.0.0-20190813191113-2be43bd0dccc
+	github.com/michaelquigley/pfxlog v0.3.7
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6
