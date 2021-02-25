@@ -18,7 +18,7 @@ require (
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
 	github.com/lucas-clemente/quic-go v0.18.1
-	github.com/michaelquigley/pfxlog v0.3.6
+	github.com/michaelquigley/pfxlog v0.3.7
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/openziti/dilithium v0.0.0-00010101000000-000000000000

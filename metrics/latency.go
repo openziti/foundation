@@ -19,7 +19,6 @@ package metrics
 import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/channel2"
-	"github.com/openziti/foundation/util/info"
 	"time"
 )
 
@@ -29,7 +28,7 @@ const (
 
 // send regular latency probes
 //
-func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Duration) {
+func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Duration, timeout time.Duration) {
 	log := pfxlog.ContextLogger(ch.Label())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -37,48 +36,43 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 		histogram.Dispose()
 	}()
 
-	lastSend := info.NowInMilliseconds()
 	for {
 		time.Sleep(interval)
 		if ch.IsClosed() {
 			return
 		}
 
-		now := info.NowInMilliseconds()
-		if now-lastSend > 10000 {
-			lastSend = now
-			request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
-			request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
-			waitCh, err := ch.SendAndWaitWithPriority(request, channel2.High)
-			if err != nil {
-				log.Errorf("unexpected error sending latency probe (%s)", err)
-				continue
-			}
+		request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
+		request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
+		waitCh, err := ch.SendAndWaitWithPriority(request, channel2.High)
+		if err != nil {
+			log.Errorf("unexpected error sending latency probe (%s)", err)
+			continue
+		}
 
-			select {
-			case response := <-waitCh:
-				if response == nil {
-					log.Error("wait channel closed")
-					return
-				}
-				if response.ContentType == channel2.ContentTypeResultType {
-					result := channel2.UnmarshalResult(response)
-					if result.Success {
-						if sentTime, ok := response.GetUint64Header(latencyProbeTime); ok {
-							latency := time.Now().UnixNano() - int64(sentTime)
-							histogram.Update(latency)
-						} else {
-							log.Error("no send time")
-						}
+		select {
+		case response := <-waitCh:
+			if response == nil {
+				log.Error("wait channel closed")
+				return
+			}
+			if response.ContentType == channel2.ContentTypeResultType {
+				result := channel2.UnmarshalResult(response)
+				if result.Success {
+					if sentTime, ok := response.GetUint64Header(latencyProbeTime); ok {
+						latency := time.Now().UnixNano() - int64(sentTime)
+						histogram.Update(latency)
 					} else {
-						log.Error("failed latency response")
+						log.Error("no send time")
 					}
 				} else {
-					log.Errorf("unexpected latency response [%d]", response.ContentType)
+					log.Error("failed latency response")
 				}
-			case <-time.After(time.Second * 5):
-				log.Error("latency timeout")
+			} else {
+				log.Errorf("unexpected latency response [%d]", response.ContentType)
 			}
+		case <-time.After(timeout):
+			log.Errorf("latency timeout after [%s]", timeout)
 		}
 	}
 }
