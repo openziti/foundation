@@ -12,6 +12,8 @@ import (
 type UsageRegistry interface {
 	Registry
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
+	SetEventSink(eventSink Handler)
+	Flush()
 }
 
 func NewUsageRegistryFromConfig(config *Config, closeNotify chan struct{}) UsageRegistry {
@@ -49,6 +51,10 @@ type usageRegistryImpl struct {
 	intervalBucketChan chan *bucketEvent
 	intervalBuckets    []*bucketEvent
 	closeNotify        <-chan struct{}
+}
+
+func (registry *usageRegistryImpl) SetEventSink(eventSink Handler) {
+	registry.eventSink = eventSink
 }
 
 // NewIntervalCounter creates an IntervalCounter
@@ -126,4 +132,14 @@ func (registry *usageRegistryImpl) report() {
 	if msg := registry.Poll(); msg != nil {
 		registry.eventSink.AcceptMetrics(msg)
 	}
+}
+
+func (registry *usageRegistryImpl) Flush() {
+	registry.EachMetric(func(name string, metric Metric) {
+		if ic, ok := metric.(*intervalCounterImpl); ok {
+			ic.flush()
+		}
+	})
+	time.Sleep(250 * time.Millisecond)
+	registry.report()
 }
