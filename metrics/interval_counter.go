@@ -107,6 +107,10 @@ func (intervalCounter *intervalCounterImpl) report() {
 	intervalCounter.eventChan <- time.Now()
 }
 
+func (intervalCounter *intervalCounterImpl) flush() {
+	intervalCounter.eventChan <- time.Time{}
+}
+
 func (intervalCounter *intervalCounterImpl) run() {
 	defer logrus.Debug("interval counter shutting down")
 
@@ -136,6 +140,9 @@ func (intervalCounter *intervalCounterImpl) run() {
 				valueMap[event.intervalId] += event.value
 				break
 			case time.Time:
+				if event.IsZero() {
+					intervalCounter.currentInterval++
+				}
 				intervalCounter.flushIntervals()
 			default:
 				pfxlog.Logger().Errorf("unhandled IntervalCounter event type '%v'", reflect.TypeOf(event).Name())
