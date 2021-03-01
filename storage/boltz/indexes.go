@@ -25,8 +25,8 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-type constrained interface {
-	addConstraint(constraint Constraint)
+type Constrained interface {
+	AddConstraint(constraint Constraint)
 }
 
 type Indexer struct {
@@ -46,7 +46,7 @@ type IndexingContext struct {
 	Ctx        MutateContext
 	RowId      []byte
 	ErrHolder  errorz.ErrorHolder
-	atomStates map[Constraint][]byte
+	AtomStates map[Constraint][]byte
 	setStates  map[Constraint][]FieldTypeAndValue
 }
 
@@ -101,10 +101,10 @@ func (indexer *Indexer) addFkIndex(symbol EntitySymbol, fkSymbol EntitySetSymbol
 		fkSymbol: fkSymbol,
 	}
 
-	indexer.addConstraint(index)
+	indexer.AddConstraint(index)
 	fkStore := fkSymbol.GetStore()
-	if baseStore, ok := fkStore.(constrained); ok {
-		baseStore.addConstraint(&fkDeleteConstraint{
+	if baseStore, ok := fkStore.(Constrained); ok {
+		baseStore.AddConstraint(&fkDeleteConstraint{
 			symbol:   fkSymbol,
 			fkSymbol: symbol,
 		})
@@ -125,10 +125,10 @@ func (indexer *Indexer) AddFkConstraint(symbol EntitySymbol, nullable bool, casc
 		nullable: nullable,
 	}
 
-	indexer.addConstraint(index)
+	indexer.AddConstraint(index)
 
-	if baseStore, ok := symbol.GetLinkedType().(constrained); ok {
-		baseStore.addConstraint(&fkDeleteCascadeConstraint{
+	if baseStore, ok := symbol.GetLinkedType().(Constrained); ok {
+		baseStore.AddConstraint(&fkDeleteCascadeConstraint{
 			symbol:      symbol,
 			cascadeType: cascade,
 		})
@@ -138,7 +138,7 @@ func (indexer *Indexer) AddFkConstraint(symbol EntitySymbol, nullable bool, casc
 	}
 }
 
-func (indexer *Indexer) addConstraint(constraint Constraint) {
+func (indexer *Indexer) AddConstraint(constraint Constraint) {
 	indexer.constraints = append(indexer.constraints, constraint)
 }
 
@@ -166,14 +166,26 @@ func (ctx *IndexingContext) ProcessAfterUpdate() {
 	}
 }
 
-func (ctx *IndexingContext) ProcessDelete() {
+func (ctx *IndexingContext) ProcessBeforeDelete() {
 	if ctx.Parent != nil {
-		ctx.Parent.ProcessDelete()
+		ctx.Parent.ProcessBeforeDelete()
 	}
 
 	if !ctx.ErrHolder.HasError() {
 		for _, index := range ctx.constraints {
-			index.ProcessDelete(ctx)
+			index.ProcessBeforeDelete(ctx)
+		}
+	}
+}
+
+func (ctx *IndexingContext) ProcessAfterDelete() {
+	if ctx.Parent != nil {
+		ctx.Parent.ProcessAfterDelete()
+	}
+
+	if !ctx.ErrHolder.HasError() {
+		for _, index := range ctx.constraints {
+			index.ProcessAfterDelete(ctx)
 		}
 	}
 }
@@ -211,7 +223,8 @@ type SetReadIndex interface {
 type Constraint interface {
 	ProcessBeforeUpdate(ctx *IndexingContext)
 	ProcessAfterUpdate(ctx *IndexingContext)
-	ProcessDelete(ctx *IndexingContext)
+	ProcessBeforeDelete(ctx *IndexingContext)
+	ProcessAfterDelete(ctx *IndexingContext)
 	Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder)
 	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 }
@@ -248,14 +261,14 @@ func (index *uniqueIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolde
 func (index *uniqueIndex) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		ctx.atomStates[index] = fieldValue
+		ctx.AtomStates[index] = fieldValue
 	}
 }
 
 func (index *uniqueIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		oldValue := ctx.atomStates[index]
+		oldValue := ctx.AtomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
 			return
@@ -287,7 +300,7 @@ func (index *uniqueIndex) processIntegrityFix(ctx *IndexingContext) error {
 	return ctx.ErrHolder.GetError()
 }
 
-func (index *uniqueIndex) ProcessDelete(ctx *IndexingContext) {
+func (index *uniqueIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		if _, value := index.symbol.Eval(ctx.Tx(), ctx.RowId); len(value) > 0 {
 			indexBucket := index.getIndexBucket(ctx.Tx())
@@ -295,6 +308,8 @@ func (index *uniqueIndex) ProcessDelete(ctx *IndexingContext) {
 		}
 	}
 }
+
+func (index *uniqueIndex) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
 	mutateCtx := NewMutateContext(tx)
@@ -485,7 +500,7 @@ func (index *setIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	}
 }
 
-func (index *setIndex) ProcessDelete(ctx *IndexingContext) {
+func (index *setIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		values := index.getCurrentValues(ctx)
 		for _, val := range values {
@@ -494,6 +509,8 @@ func (index *setIndex) ProcessDelete(ctx *IndexingContext) {
 		}
 	}
 }
+
+func (index *setIndex) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *setIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder) {
 	if !errorHolder.HasError() {
@@ -603,14 +620,14 @@ type fkIndex struct {
 func (index *fkIndex) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		ctx.atomStates[index] = fieldValue
+		ctx.AtomStates[index] = fieldValue
 	}
 }
 
 func (index *fkIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		oldValue := ctx.atomStates[index]
+		oldValue := ctx.AtomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
 			return
@@ -631,7 +648,7 @@ func (index *fkIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	}
 }
 
-func (index *fkIndex) ProcessDelete(ctx *IndexingContext) {
+func (index *fkIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		if _, value := index.symbol.Eval(ctx.Tx(), ctx.RowId); len(value) > 0 {
 			indexBucket := index.getIndexBucket(ctx.Tx(), value)
@@ -639,6 +656,8 @@ func (index *fkIndex) ProcessDelete(ctx *IndexingContext) {
 		}
 	}
 }
+
+func (index *fkIndex) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *fkIndex) getIndexBucket(tx *bbolt.Tx, fkId []byte) *TypedBucket {
 	fkStore := index.fkSymbol.GetStore()
@@ -763,7 +782,7 @@ func (index *fkDeleteConstraint) ProcessBeforeUpdate(_ *IndexingContext) {
 func (index *fkDeleteConstraint) ProcessAfterUpdate(_ *IndexingContext) {
 }
 
-func (index *fkDeleteConstraint) ProcessDelete(ctx *IndexingContext) {
+func (index *fkDeleteConstraint) ProcessBeforeDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		rtSymbol := index.symbol.GetRuntimeSymbol()
 		if rtSymbol.OpenCursor(ctx.Tx(), ctx.RowId).IsValid() {
@@ -774,6 +793,8 @@ func (index *fkDeleteConstraint) ProcessDelete(ctx *IndexingContext) {
 		}
 	}
 }
+
+func (index *fkDeleteConstraint) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *fkDeleteConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
@@ -799,14 +820,14 @@ type fkConstraint struct {
 func (index *fkConstraint) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, fieldValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		ctx.atomStates[index] = fieldValue
+		ctx.AtomStates[index] = fieldValue
 	}
 }
 
 func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		_, newValue := index.symbol.Eval(ctx.Tx(), ctx.RowId)
-		oldValue := ctx.atomStates[index]
+		oldValue := ctx.AtomStates[index]
 
 		if !ctx.IsCreate && bytes.Equal(oldValue, newValue) {
 			return
@@ -826,8 +847,8 @@ func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
 
 }
 
-func (index *fkConstraint) ProcessDelete(*IndexingContext) {
-}
+func (index *fkConstraint) ProcessBeforeDelete(*IndexingContext) {}
+func (index *fkConstraint) ProcessAfterDelete(*IndexingContext)  {}
 
 func (index *fkConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
@@ -876,7 +897,7 @@ func (index *fkDeleteCascadeConstraint) ProcessBeforeUpdate(*IndexingContext) {
 func (index *fkDeleteCascadeConstraint) ProcessAfterUpdate(*IndexingContext) {
 }
 
-func (index *fkDeleteCascadeConstraint) ProcessDelete(ctx *IndexingContext) {
+func (index *fkDeleteCascadeConstraint) ProcessBeforeDelete(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
 		filter, err := ast.Parse(index.symbol.GetStore(), fmt.Sprintf(`%v = "%v"`, index.symbol.GetName(), string(ctx.RowId)))
 		if ctx.ErrHolder.SetError(err) {
@@ -901,6 +922,8 @@ func (index *fkDeleteCascadeConstraint) ProcessDelete(ctx *IndexingContext) {
 		}
 	}
 }
+
+func (index *fkDeleteCascadeConstraint) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *fkDeleteCascadeConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
