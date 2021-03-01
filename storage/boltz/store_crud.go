@@ -127,7 +127,7 @@ func (store *BaseStore) NewIndexingContext(isCreate bool, ctx MutateContext, id 
 		Ctx:        ctx,
 		RowId:      []byte(id),
 		ErrHolder:  holder,
-		atomStates: map[Constraint][]byte{},
+		AtomStates: map[Constraint][]byte{},
 		setStates:  map[Constraint][]FieldTypeAndValue{},
 	}
 }
@@ -374,7 +374,7 @@ func (store *BaseStore) cleanupLinks(tx *bbolt.Tx, id string, holder errorz.Erro
 func (store *BaseStore) CleanupExternal(ctx MutateContext, id string) error {
 	errHolder := &errorz.ErrorHolderImpl{}
 	indexingContext := store.NewIndexingContext(false, ctx, id, errHolder)
-	indexingContext.ProcessDelete()
+	indexingContext.ProcessBeforeDelete()
 	store.cleanupLinks(ctx.Tx(), id, errHolder)
 	return errHolder.Err
 }

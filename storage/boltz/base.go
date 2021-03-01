@@ -111,6 +111,7 @@ type ListStore interface {
 
 type CrudStore interface {
 	ListStore
+	Constrained
 
 	GetParentStore() CrudStore
 	AddLinkCollection(local EntitySymbol, remove EntitySymbol) LinkCollection
