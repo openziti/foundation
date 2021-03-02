@@ -92,11 +92,13 @@ type intervalCounterImpl struct {
 }
 
 func (intervalCounter *intervalCounterImpl) Update(intervalId string, time time.Time, value uint64) {
-	event := &counterEvent{intervalId, time, value}
+	if value > 0 {
+		event := &counterEvent{intervalId, time, value}
 
-	// Select on this to make sure we don't block? If blocked, log to disk instead? Map updates should be
-	// very fast, not sure that's needed
-	intervalCounter.eventChan <- event
+		// Select on this to make sure we don't block? If blocked, log to disk instead? Map updates should be
+		// very fast, not sure that's needed
+		intervalCounter.eventChan <- event
+	}
 }
 
 func (intervalCounter *intervalCounterImpl) Dispose() {
