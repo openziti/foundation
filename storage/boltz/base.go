@@ -20,7 +20,6 @@ import (
 	"github.com/kataras/go-events"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/openziti/foundation/util/errorz"
-	"github.com/openziti/foundation/validation"
 	"go.etcd.io/bbolt"
 	"io"
 	"time"
@@ -179,7 +178,7 @@ func (ctx *PersistContext) GetAndSetString(field string, value string) (*string,
 func (ctx *PersistContext) SetRequiredString(field string, value string) {
 	if ctx.ProceedWithSet(field) {
 		if value == "" {
-			ctx.Bucket.SetError(validation.NewFieldError(field+" is required", field, value))
+			ctx.Bucket.SetError(errorz.NewFieldError(field+" is required", field, value))
 			return
 		}
 		ctx.Bucket.setTyped(TypeString, field, []byte(value))
