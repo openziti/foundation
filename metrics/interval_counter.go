@@ -92,11 +92,13 @@ type intervalCounterImpl struct {
 }
 
 func (intervalCounter *intervalCounterImpl) Update(intervalId string, time time.Time, value uint64) {
-	event := &counterEvent{intervalId, time, value}
+	if value > 0 {
+		event := &counterEvent{intervalId, time, value}
 
-	// Select on this to make sure we don't block? If blocked, log to disk instead? Map updates should be
-	// very fast, not sure that's needed
-	intervalCounter.eventChan <- event
+		// Select on this to make sure we don't block? If blocked, log to disk instead? Map updates should be
+		// very fast, not sure that's needed
+		intervalCounter.eventChan <- event
+	}
 }
 
 func (intervalCounter *intervalCounterImpl) Dispose() {
@@ -105,6 +107,10 @@ func (intervalCounter *intervalCounterImpl) Dispose() {
 
 func (intervalCounter *intervalCounterImpl) report() {
 	intervalCounter.eventChan <- time.Now()
+}
+
+func (intervalCounter *intervalCounterImpl) flush() {
+	intervalCounter.eventChan <- time.Time{}
 }
 
 func (intervalCounter *intervalCounterImpl) run() {
@@ -136,6 +142,9 @@ func (intervalCounter *intervalCounterImpl) run() {
 				valueMap[event.intervalId] += event.value
 				break
 			case time.Time:
+				if event.IsZero() {
+					intervalCounter.currentInterval++
+				}
 				intervalCounter.flushIntervals()
 			default:
 				pfxlog.Logger().Errorf("unhandled IntervalCounter event type '%v'", reflect.TypeOf(event).Name())

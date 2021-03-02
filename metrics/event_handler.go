@@ -43,6 +43,10 @@ type Handler interface {
 	AcceptMetrics(message *metrics_pb.MetricsMessage)
 }
 
+type NilHandler struct{}
+
+func (NilHandler) AcceptMetrics(message *metrics_pb.MetricsMessage) {}
+
 type eventWrapper struct {
 	msg *metrics_pb.MetricsMessage
 }
