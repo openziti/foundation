@@ -22,6 +22,7 @@ import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
+	"time"
 )
 
 type classicDialer struct {
@@ -38,7 +39,7 @@ func NewClassicDialer(identity *identity.TokenId, endpoint transport.Address, he
 	}
 }
 
-func (dialer *classicDialer) Create(tcfg transport.Configuration) (Underlay, error) {
+func (dialer *classicDialer) Create(timeout time.Duration, tcfg transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -47,7 +48,7 @@ func (dialer *classicDialer) Create(tcfg transport.Configuration) (Underlay, err
 	tryCount := 0
 
 	for {
-		peer, err := dialer.endpoint.Dial("classic", dialer.identity, tcfg)
+		peer, err := dialer.endpoint.Dial("classic", dialer.identity, timeout, tcfg)
 		if err != nil {
 			return nil, err
 		}

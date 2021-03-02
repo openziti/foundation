@@ -25,6 +25,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var _ transport.Address = (*address)(nil) // enforce that address implements transport.Address
@@ -34,7 +35,7 @@ type address struct {
 	port     uint16
 }
 
-func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Configuration) (transport.Connection, error) {
+func (self address) Dial(name string, _ *identity.TokenId, timeout time.Duration, tcfg transport.Configuration) (transport.Connection, error) {
 	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
@@ -47,7 +48,7 @@ func (self address) Dial(name string, _ *identity.TokenId, tcfg transport.Config
 			}
 		}
 	}
-	return Dial(endpoint, name, subc)
+	return Dial(endpoint, name, timeout, subc)
 }
 
 func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
