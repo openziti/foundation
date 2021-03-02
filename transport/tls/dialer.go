@@ -17,16 +17,18 @@
 package tls
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"crypto/tls"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
+	"net"
+	"time"
 )
 
-func Dial(destination, name string, i *identity.TokenId) (transport.Connection, error) {
+func Dial(destination, name string, i *identity.TokenId, timeout time.Duration) (transport.Connection, error) {
 	log := pfxlog.Logger()
 
-	socket, err := tls.Dial("tcp", destination, i.ClientTLSConfig())
+	socket, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", destination, i.ClientTLSConfig())
 	if err != nil {
 		return nil, err
 	}

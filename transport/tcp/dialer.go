@@ -19,10 +19,11 @@ package tcp
 import (
 	"github.com/openziti/foundation/transport"
 	"net"
+	"time"
 )
 
-func Dial(destination, name string) (transport.Connection, error) {
-	socket, err := net.Dial("tcp", destination)
+func Dial(destination, name string, timeout time.Duration) (transport.Connection, error) {
+	socket, err := net.DialTimeout("tcp", destination, timeout)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/openziti/foundation/identity/identity"
 	"io"
+	"time"
 )
 
 type Configuration map[interface{}]interface{}
@@ -28,7 +29,7 @@ type Configuration map[interface{}]interface{}
 // Address implements the functionality provided by a generic "address".
 //
 type Address interface {
-	Dial(name string, i *identity.TokenId, tcfg Configuration) (Connection, error)
+	Dial(name string, i *identity.TokenId, timeout time.Duration, tcfg Configuration) (Connection, error)
 	Listen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) (io.Closer, error)
 	MustListen(name string, i *identity.TokenId, incoming chan Connection, tcfg Configuration) io.Closer
 	String() string

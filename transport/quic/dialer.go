@@ -19,6 +19,7 @@ package quic
 import (
 	"context"
 	"crypto/tls"
+	"time"
 
 	quicgo "github.com/lucas-clemente/quic-go"
 	"github.com/openziti/foundation/identity/identity"
@@ -27,13 +28,13 @@ import (
 
 // Dial a connection over QUIC.
 //
-func Dial(destination, name string, i *identity.TokenId) (transport.Connection, error) {
+func Dial(destination, name string, i *identity.TokenId, timeout time.Duration) (transport.Connection, error) {
 	tlsConfig := i.ClientTLSConfig()
 	if tlsConfig == nil {
 		tlsConfig = &tls.Config{}
 	}
 	tlsConfig.NextProtos = append(tlsConfig.NextProtos, "ziti-channel")
-	session, err := quicgo.DialAddr(destination, tlsConfig, &quicgo.Config{})
+	session, err := quicgo.DialAddr(destination, tlsConfig, &quicgo.Config{HandshakeTimeout: timeout})
 	if err != nil {
 		return nil, err
 	}
