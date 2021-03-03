@@ -18,8 +18,6 @@ package boltz
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -62,39 +60,10 @@ func (p *testPerson) String() string {
 }
 
 type boltTest struct {
-	*require.Assertions
-	dbFile        *os.File
-	db            *bbolt.DB
+	dbTest
 	referenceTime time.Time
 	placesStore   ListStore
 	peopleStore   ListStore
-}
-
-func (test *boltTest) openBoltDb() {
-	var err error
-	test.dbFile, err = ioutil.TempFile("", "query-bolt-test-db")
-	test.NoError(err)
-	test.NoError(test.dbFile.Close())
-	test.db, err = bbolt.Open(test.dbFile.Name(), 0, bbolt.DefaultOptions)
-	test.NoError(err)
-}
-
-func (test *boltTest) switchTestContext(t *testing.T) {
-	test.Assertions = require.New(t)
-}
-
-func (test *boltTest) cleanup() {
-	if test.db != nil {
-		if err := test.db.Close(); err != nil {
-			fmt.Printf("error closing bolt db: %v", err)
-		}
-	}
-
-	if test.dbFile != nil {
-		if err := os.Remove(test.dbFile.Name()); err != nil {
-			fmt.Printf("error deleting bolt db file: %v", err)
-		}
-	}
 }
 
 func (test *boltTest) createTestSchema() {
@@ -247,11 +216,12 @@ func (test *boltTest) query(queryString string) ([]string, int64) {
 
 func TestQuery(t *testing.T) {
 	boltTestContext := &boltTest{
-		Assertions:    require.New(t),
 		referenceTime: time.Now(),
 	}
+	boltTestContext.switchTestContext(t)
+	boltTestContext.init()
 	defer boltTestContext.cleanup()
-	boltTestContext.openBoltDb()
+
 	boltTestContext.createTestSchema()
 	boltTestContext.setupScanEntity()
 

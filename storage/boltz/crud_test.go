@@ -20,13 +20,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/openziti/foundation/storage/ast"
-	"github.com/openziti/foundation/util/errorz"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"sort"
 	"testing"
 )
@@ -189,22 +186,13 @@ func (store *locationStoreImpl) initializeLinked() {
 }
 
 type crudTest struct {
-	errorz.ErrorHolderImpl
-	*require.Assertions
-	dbFile *os.File
-	db     *bbolt.DB
-
+	dbTest
 	empStore *employeeStoreImpl
 	locStore *locationStoreImpl
 }
 
 func (test *crudTest) init(constaint bool) {
-	var err error
-	test.dbFile, err = ioutil.TempFile("", "query-bolt-test-db")
-	test.NoError(err)
-	test.NoError(test.dbFile.Close())
-	test.db, err = bbolt.Open(test.dbFile.Name(), 0, bbolt.DefaultOptions)
-	test.NoError(err)
+	test.dbTest.init()
 
 	stores := &testStores{
 		employee: newEmployeeStore(),
@@ -220,7 +208,7 @@ func (test *crudTest) init(constaint bool) {
 	stores.employee.initializeLinked()
 	stores.location.initializeLinked()
 
-	err = test.db.Update(func(tx *bbolt.Tx) error {
+	err := test.db.Update(func(tx *bbolt.Tx) error {
 		stores.employee.InitializeIndexes(tx, test)
 		stores.location.InitializeIndexes(tx, test)
 		return nil
@@ -231,24 +219,9 @@ func (test *crudTest) init(constaint bool) {
 	test.locStore = stores.location
 }
 
-func (test *crudTest) cleanup() {
-	if test.db != nil {
-		if err := test.db.Close(); err != nil {
-			fmt.Printf("error closing bolt db: %v", err)
-		}
-	}
-
-	if test.dbFile != nil {
-		if err := os.Remove(test.dbFile.Name()); err != nil {
-			fmt.Printf("error deleting bolt db file: %v", err)
-		}
-	}
-}
-
 func TestCrud(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(false)
 	defer test.cleanup()
 
@@ -260,9 +233,8 @@ func TestCrud(t *testing.T) {
 }
 
 func TestLinkCollectionImpl_CheckIntegrity(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(false)
 	defer test.cleanup()
 
@@ -293,9 +265,8 @@ func TestLinkCollectionImpl_CheckIntegrity(t *testing.T) {
 }
 
 func TestFkIndex_CheckIntegrity(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(false)
 	defer test.cleanup()
 
@@ -345,9 +316,8 @@ func TestFkIndex_CheckIntegrity(t *testing.T) {
 }
 
 func TestFkConstraint_CheckIntegrity(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(true)
 	defer test.cleanup()
 
@@ -366,9 +336,8 @@ func TestFkConstraint_CheckIntegrity(t *testing.T) {
 }
 
 func TestUniqueIndex_CheckIntegrity(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(false)
 	defer test.cleanup()
 
@@ -429,9 +398,8 @@ func TestUniqueIndex_CheckIntegrity(t *testing.T) {
 }
 
 func TestSetIndex_CheckIntegrity(t *testing.T) {
-	test := &crudTest{
-		Assertions: require.New(t),
-	}
+	test := &crudTest{}
+	test.Assertions = require.New(t)
 	test.init(false)
 	defer test.cleanup()
 

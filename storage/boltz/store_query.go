@@ -274,6 +274,7 @@ func (store *BaseStore) AddExtEntitySymbols() {
 	store.AddSymbol(FieldCreatedAt, ast.NodeTypeDatetime)
 	store.AddSymbol(FieldUpdatedAt, ast.NodeTypeDatetime)
 	store.AddMapSymbol(FieldTags, ast.NodeTypeAnyType, FieldTags)
+	store.AddSymbol(FieldIsSystemEntity, ast.NodeTypeBool)
 }
 
 func (store *BaseStore) NewScanner(sort []ast.SortField) Scanner {

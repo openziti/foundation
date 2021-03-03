@@ -25,6 +25,26 @@ func NewEntityCanNotBeDeleted() *ApiError {
 	}
 }
 
+func NewEntityCanNotBeDeletedFrom(err error) *ApiError {
+	return &ApiError{
+		Code:        EntityCanNotBeDeletedCode,
+		Message:     EntityCanNotBeDeletedMessage,
+		Status:      EntityCanNotBeDeletedStatus,
+		Cause:       err,
+		AppendCause: true,
+	}
+}
+
+func NewEntityCanNotBeUpdatedFrom(err error) *ApiError {
+	return &ApiError{
+		Code:        EntityCanNotBeUpdatedCode,
+		Message:     EntityCanNotBeUpdatedMessage,
+		Status:      EntityCanNotBeUpdatedStatus,
+		Cause:       err,
+		AppendCause: true,
+	}
+}
+
 func NewFieldApiError(fieldError *FieldError) *ApiError {
 	return &ApiError{
 		Code:        InvalidFieldCode,
