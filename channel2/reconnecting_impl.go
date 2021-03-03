@@ -25,6 +25,7 @@ import (
 	"github.com/openziti/foundation/util/concurrenz"
 	"github.com/pkg/errors"
 	"io"
+	"time"
 )
 
 func (impl *reconnectingImpl) Rx() (*Message, error) {
@@ -115,12 +116,13 @@ func (impl *reconnectingImpl) IsClosed() bool {
 	return impl.closed.Get()
 }
 
-func newReconnectingImpl(peer transport.Connection, reconnectionHandler reconnectionHandler) *reconnectingImpl {
+func newReconnectingImpl(peer transport.Connection, reconnectionHandler reconnectionHandler, timeout time.Duration) *reconnectingImpl {
 	return &reconnectingImpl{
 		peer:                peer,
 		reconnectionHandler: reconnectionHandler,
 		readF:               readV2,
 		marshalF:            marshalV2,
+		timeout:             timeout,
 	}
 }
 
@@ -207,6 +209,7 @@ type reconnectingImpl struct {
 	readF               readFunction
 	marshalF            marshalFunction
 	disconnected        concurrenz.AtomicBoolean
+	timeout             time.Duration
 }
 
 type reconnectionHandler interface {

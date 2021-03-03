@@ -52,7 +52,7 @@ func NewReconnectingDialerWithHandler(identity *identity.TokenId, endpoint trans
 	}
 }
 
-func (dialer *reconnectingDialer) Create(tcfg transport.Configuration) (Underlay, error) {
+func (dialer *reconnectingDialer) Create(timeout time.Duration, tcfg transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(dialer.endpoint.String())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -63,12 +63,12 @@ func (dialer *reconnectingDialer) Create(tcfg transport.Configuration) (Underlay
 	version := uint32(2)
 
 	for {
-		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, tcfg)
+		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, timeout, tcfg)
 		if err != nil {
 			return nil, err
 		}
 
-		impl := newReconnectingImpl(peer, dialer)
+		impl := newReconnectingImpl(peer, dialer, timeout)
 		impl.setProtocolVersion(version)
 
 		if err := dialer.sendHello(impl); err != nil {
@@ -95,7 +95,7 @@ func (dialer *reconnectingDialer) Reconnect(impl *reconnectingImpl) error {
 	if err := impl.pingInstance(); err != nil {
 		log.Errorf("unable to ping (%s)", err)
 		for i := 0; true; i++ {
-			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, dialer.tcfg)
+			peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, impl.timeout, dialer.tcfg)
 			if err == nil {
 				impl.peer = peer
 				if err := dialer.sendHello(impl); err == nil {

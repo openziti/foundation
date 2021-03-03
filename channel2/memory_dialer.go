@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/transport"
+	"time"
 )
 
 type memoryDialer struct {
@@ -37,7 +38,7 @@ func NewMemoryDialer(identity *identity.TokenId, headers map[int32][]byte, ctx *
 	}
 }
 
-func (dialer *memoryDialer) Create(_ transport.Configuration) (Underlay, error) {
+func (dialer *memoryDialer) Create(_ time.Duration, _ transport.Configuration) (Underlay, error) {
 	log := pfxlog.ContextLogger(fmt.Sprintf("%p", dialer.ctx))
 	log.Info("started")
 	defer log.Info("exited")

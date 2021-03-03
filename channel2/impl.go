@@ -69,7 +69,11 @@ func NewChannelWithTransportConfiguration(logicalName string, underlayFactory Un
 	heap.Init(impl.outPriority)
 	impl.AddReceiveHandler(&pingHandler{})
 
-	underlay, err := underlayFactory.Create(tcfg)
+	timeout := time.Duration(0)
+	if options != nil {
+		timeout = time.Duration(options.ConnectTimeoutMs) * time.Millisecond
+	}
+	underlay, err := underlayFactory.Create(timeout, tcfg)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +97,7 @@ func NewChannelWithTransportConfiguration(logicalName string, underlayFactory Un
 }
 
 func AcceptNextChannel(logicalName string, underlayFactory UnderlayFactory, options *Options, tcfg transport.Configuration) error {
-	underlay, err := underlayFactory.Create(tcfg)
+	underlay, err := underlayFactory.Create(0, tcfg)
 	if err != nil {
 		return err
 	}

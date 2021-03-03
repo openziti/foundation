@@ -24,6 +24,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var _ transport.Address = (*address)(nil) // enforce that address implements transport.Address
@@ -33,8 +34,8 @@ type address struct {
 	port     uint16
 }
 
-func (a address) Dial(name string, i *identity.TokenId, _ transport.Configuration) (transport.Connection, error) {
-	return Dial(a.bindableAddress(), name)
+func (a address) Dial(name string, i *identity.TokenId, timeout time.Duration, _ transport.Configuration) (transport.Connection, error) {
+	return Dial(a.bindableAddress(), name, timeout)
 }
 
 func (a address) Listen(name string, i *identity.TokenId, incoming chan transport.Connection, _ transport.Configuration) (io.Closer, error) {

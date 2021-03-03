@@ -22,6 +22,7 @@ import (
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"io"
+	"time"
 )
 
 type classicListener struct {
@@ -77,7 +78,7 @@ func (listener *classicListener) Close() error {
 	return nil
 }
 
-func (listener *classicListener) Create(tcfg transport.Configuration) (Underlay, error) {
+func (listener *classicListener) Create(_ time.Duration, tcfg transport.Configuration) (Underlay, error) {
 	listener.tcfg = tcfg
 	if listener.created == nil {
 		return nil, ListenerClosedError
