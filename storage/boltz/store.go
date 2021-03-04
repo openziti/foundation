@@ -53,7 +53,7 @@ func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id s
 		// result.impl isn't initialized here, so we need to defer evaluation
 		result.parent.AddDeleteHandler(func(ctx MutateContext, entityId string) error {
 			if result.IsEntityPresent(ctx.Tx(), entityId) {
-				return result.impl.CleanupExternal(ctx, entityId)
+				return result.impl.cleanupExternal(ctx, entityId)
 			}
 			return nil
 		})
