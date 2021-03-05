@@ -101,7 +101,7 @@ func (i *ID) ServerTLSConfig() *tls.Config {
 
 func (i *ID) ClientTLSConfig() *tls.Config {
 	tlsConfig := &tls.Config{
-		GetCertificate: i.GetClientCertificate,
+		GetClientCertificate: i.GetClientCertificate,
 		RootCAs:        i.CA(),
 	}
 	tlsConfig.BuildNameToCertificate()
@@ -116,7 +116,7 @@ func (i *ID) GetServerCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, 
 	return i.serverCert, nil
 }
 
-func (i *ID) GetClientCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (i *ID) GetClientCertificate(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	i.certLock.RLock()
 	defer i.certLock.RUnlock()
 
