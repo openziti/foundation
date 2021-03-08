@@ -123,7 +123,7 @@ type CrudStore interface {
 	Update(ctx MutateContext, entity Entity, checker FieldChecker) error
 	DeleteById(ctx MutateContext, id string) error
 	DeleteWhere(ctx MutateContext, query string) error
-	CleanupExternal(ctx MutateContext, id string) error
+	cleanupExternal(ctx MutateContext, id string) error
 
 	CreateChild(ctx MutateContext, parentId string, entity Entity) error
 	UpdateChild(ctx MutateContext, parentId string, entity Entity, checker FieldChecker) error

@@ -50,8 +50,6 @@ func (self *systemEntityConstraint) ProcessBeforeDelete(ctx *IndexingContext) {
 	}
 }
 
-func (self *systemEntityConstraint) ProcessAfterDelete(*IndexingContext) {}
-
 func (self *systemEntityConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {}
 
 func (self *systemEntityConstraint) CheckIntegrity(*bbolt.Tx, bool, func(err error, fixed bool)) error {

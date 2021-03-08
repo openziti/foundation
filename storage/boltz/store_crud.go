@@ -371,7 +371,7 @@ func (store *BaseStore) cleanupLinks(tx *bbolt.Tx, id string, holder errorz.Erro
 	}
 }
 
-func (store *BaseStore) CleanupExternal(ctx MutateContext, id string) error {
+func (store *BaseStore) cleanupExternal(ctx MutateContext, id string) error {
 	errHolder := &errorz.ErrorHolderImpl{}
 	indexingContext := store.NewIndexingContext(false, ctx, id, errHolder)
 	indexingContext.ProcessBeforeDelete()
@@ -398,7 +398,7 @@ func (store *BaseStore) DeleteById(ctx MutateContext, id string) error {
 		return err
 	}
 
-	if err := store.impl.CleanupExternal(ctx, id); err != nil {
+	if err := store.impl.cleanupExternal(ctx, id); err != nil {
 		return err
 	}
 
