@@ -19,10 +19,10 @@ package channel2
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/pkg/errors"
 	"io"
 )
 
@@ -430,6 +430,9 @@ func unmarshalHeaders(headerData []byte) (map[int32][]byte, error) {
 		length, err := readInt32(headerData[i+4 : i+8])
 		if err != nil {
 			return nil, err
+		}
+		if length < 0 {
+			return nil, errors.Errorf("invalid header length %d, may not be negative", length)
 		}
 		if (i + 8 + int(length)) > len(headerData) {
 			return nil, fmt.Errorf("short header data (%d >= %d)", i+8+int(length), len(headerData))
