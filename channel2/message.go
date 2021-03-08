@@ -276,33 +276,13 @@ func readHelloV2(peer io.Reader) (*Message, error) {
 	if read != dataSectionV2-versionLen {
 		return nil, errors.New("short read")
 	}
-	headersLength, err := readInt32(messageSection[12:16])
-	if err != nil {
-		return nil, err
-	}
-	bodyLength, err := readInt32(messageSection[16:20])
-	if err != nil {
-		return nil, err
-	}
+	headersLength := readUint32(messageSection[12:16])
+	bodyLength := readUint32(messageSection[16:20])
 	if headersLength > 4192 || bodyLength > 4192 {
 		return nil, fmt.Errorf("hello message too big. header len: %v, body len: %v", headersLength, bodyLength)
 	}
-	headerAndBodySection := make([]byte, headersLength+bodyLength)
-	read, err = io.ReadFull(peer, headerAndBodySection)
-	if err != nil {
-		return nil, err
-	}
-	if read != int(headersLength+bodyLength) {
-		return nil, errors.New("short read")
-	}
-	m, err := unmarshalV2(messageSection, headerAndBodySection)
-	messageSection = nil
-	headerAndBodySection = nil
-	if err != nil {
-		return nil, err
-	}
 
-	return m, nil
+	return unmarshalV2(peer, messageSection, headersLength, bodyLength)
 }
 
 func ReadWSMessage(peer io.Reader) (*Message, error) {
@@ -335,68 +315,35 @@ func readV2(peer io.Reader) (*Message, error) {
 		return nil, err
 	}
 
-	headersLength, err := readInt32(messageSection[12:16])
-	if err != nil {
-		return nil, err
-	}
-	bodyLength, err := readInt32(messageSection[16:20])
-	if err != nil {
-		return nil, err
-	}
-	headerAndBodySection := make([]byte, headersLength+bodyLength)
-	read, err = io.ReadFull(peer, headerAndBodySection)
-	if err != nil {
-		return nil, err
-	}
-	if read != int(headersLength+bodyLength) {
-		return nil, errors.New("short read")
-	}
-	m, err := unmarshalV2(messageSection, headerAndBodySection)
-	messageSection = nil
-	headerAndBodySection = nil
-	if err != nil {
-		return nil, err
-	}
+	headersLength := readUint32(messageSection[12:16])
+	bodyLength := readUint32(messageSection[16:20])
 
-	return m, nil
+	return unmarshalV2(peer, messageSection, headersLength, bodyLength)
 }
 
 // unmarshalV2 converts a block of V2 wire format data into a *Message.
-func unmarshalV2(messageSectionData []byte, dataSectionData []byte) (*Message, error) {
+func unmarshalV2(peer io.Reader, messageSectionData []byte, headersLength, bodyLength uint32) (*Message, error) {
+	dataSectionData := make([]byte, headersLength+bodyLength)
+	read, err := io.ReadFull(peer, dataSectionData)
+	if err != nil {
+		return nil, err
+	}
+
+	if read != int(headersLength+bodyLength) {
+		return nil, errors.New("short read")
+	}
+
 	if len(messageSectionData) < dataSectionV2 {
 		return nil, errors.New("short data stream")
 	}
+
 	if !bytes.Equal(messageSectionData[0:4], magicV2) {
 		return nil, errors.New("signature mismatch")
 	}
-	headersLength, err := readInt32(messageSectionData[12:16])
-	if err != nil {
-		return nil, err
-	}
-	if headersLength < 0 {
-		return nil, errors.New("negative header length")
-	}
-	bodyLength, err := readInt32(messageSectionData[16:20])
-	if err != nil {
-		return nil, err
-	}
-	if bodyLength < 0 {
-		return nil, errors.New("negative body length")
-	}
-	if (len(messageSectionData) + (len(dataSectionData))) != int(dataSectionV2+headersLength+bodyLength) {
-		return nil, errors.New("data length mismatch")
-	}
-	contentType, err := readInt32(messageSectionData[4:8])
-	if err != nil {
-		return nil, err
-	}
-	sequence, err := readInt32(messageSectionData[8:12])
-	if err != nil {
-		return nil, err
-	}
+
 	var headers map[int32][]byte
 	if headersLength > 0 {
-		headers, err = unmarshalHeaders(dataSectionData[0:headersLength])
+		headers, err = unmarshalHeaders(dataSectionData[:headersLength])
 	} else {
 		headers = make(map[int32][]byte)
 	}
@@ -405,8 +352,8 @@ func unmarshalV2(messageSectionData []byte, dataSectionData []byte) (*Message, e
 	}
 	m := &Message{
 		MessageHeader: MessageHeader{
-			ContentType: contentType,
-			sequence:    sequence,
+			ContentType: readInt32(messageSectionData[4:8]),
+			sequence:    readInt32(messageSectionData[8:12]),
 			Headers:     headers,
 		},
 		Body: dataSectionData[headersLength:],
@@ -429,17 +376,12 @@ func unmarshalHeaders(headerData []byte) (map[int32][]byte, error) {
 	}
 	i := 0
 	for i < len(headerData) {
-		key, err := readInt32(headerData[i+0 : i+4])
-		if err != nil {
-			return nil, err
+		if (i + 8) > len(headerData) {
+			return nil, fmt.Errorf("short header meta-data (%d >= %d)", i+8, len(headerData))
 		}
-		length, err := readInt32(headerData[i+4 : i+8])
-		if err != nil {
-			return nil, err
-		}
-		if length < 0 {
-			return nil, errors.Errorf("invalid header length %d, may not be negative", length)
-		}
+
+		key := readInt32(headerData[i : i+4])
+		length := readUint32(headerData[i+4 : i+8])
 		if (i + 8 + int(length)) > len(headerData) {
 			return nil, fmt.Errorf("short header data (%d >= %d)", i+8+int(length), len(headerData))
 		}
@@ -528,10 +470,12 @@ func marshalHeaders(headers map[int32][]byte) ([]byte, error) {
 
 // readInt32 pulls a 4-byte int32 out of a byte array (or slice).
 //
-func readInt32(data []byte) (ret int32, err error) {
-	buf := bytes.NewBuffer(data)
-	err = binary.Read(buf, binary.LittleEndian, &ret)
-	return
+func readInt32(data []byte) int32 {
+	return int32(binary.LittleEndian.Uint32(data))
+}
+
+func readUint32(data []byte) uint32 {
+	return binary.LittleEndian.Uint32(data)
 }
 
 func writeUnknownVersionResponse(writer io.Writer) {
