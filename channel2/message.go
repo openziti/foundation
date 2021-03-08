@@ -373,9 +373,15 @@ func unmarshalV2(messageSectionData []byte, dataSectionData []byte) (*Message, e
 	if err != nil {
 		return nil, err
 	}
+	if headersLength < 0 {
+		return nil, errors.New("negative header length")
+	}
 	bodyLength, err := readInt32(messageSectionData[16:20])
 	if err != nil {
 		return nil, err
+	}
+	if bodyLength < 0 {
+		return nil, errors.New("negative body length")
 	}
 	if (len(messageSectionData) + (len(dataSectionData))) != int(dataSectionV2+headersLength+bodyLength) {
 		return nil, errors.New("data length mismatch")
