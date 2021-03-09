@@ -17,13 +17,14 @@
 package identity
 
 import (
-	"github.com/openziti/foundation/identity/certtools"
-	"github.com/openziti/foundation/util/tlz"
 	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"github.com/openziti/foundation/identity/certtools"
+	"github.com/openziti/foundation/util/tlz"
 	"io/ioutil"
+	"sync"
 )
 
 type Identity interface {
@@ -32,6 +33,7 @@ type Identity interface {
 	CA() *x509.CertPool
 	ServerTLSConfig() *tls.Config
 	ClientTLSConfig() *tls.Config
+	Reload() error
 }
 
 type IdentityConfig struct {
@@ -45,9 +47,28 @@ type IdentityConfig struct {
 type ID struct {
 	IdentityConfig
 
+	certLock sync.RWMutex
+
 	cert       *tls.Certificate
 	serverCert *tls.Certificate
 	ca         *x509.CertPool
+}
+
+func (id *ID) Reload() error {
+	id.certLock.Lock()
+	defer id.certLock.Unlock()
+
+	newId, err := LoadIdentity(id.IdentityConfig)
+
+	if err != nil {
+		return fmt.Errorf("failed to reload identity: %v", err)
+	}
+
+	id.ca = newId.CA()
+	id.cert = newId.Cert()
+	id.serverCert = newId.ServerCert()
+
+	return nil
 }
 
 func (id *ID) Cert() *tls.Certificate {
@@ -68,11 +89,11 @@ func (i *ID) ServerTLSConfig() *tls.Config {
 	}
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*i.ServerCert()},
-		RootCAs:      i.CA(),
-		ClientAuth:   tls.RequireAnyClientCert,
-		MinVersion:   tlz.GetMinTlsVersion(),
-		CipherSuites: tlz.GetCipherSuites(),
+		GetCertificate: i.GetServerCertificate,
+		RootCAs:        i.CA(),
+		ClientAuth:     tls.RequireAnyClientCert,
+		MinVersion:     tlz.GetMinTlsVersion(),
+		CipherSuites:   tlz.GetCipherSuites(),
 	}
 	tlsConfig.BuildNameToCertificate()
 	return tlsConfig
@@ -80,17 +101,32 @@ func (i *ID) ServerTLSConfig() *tls.Config {
 
 func (i *ID) ClientTLSConfig() *tls.Config {
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*i.Cert()},
-		RootCAs:      i.CA(),
+		GetClientCertificate: i.GetClientCertificate,
+		RootCAs:        i.CA(),
 	}
 	tlsConfig.BuildNameToCertificate()
 
 	return tlsConfig
 }
 
+func (i *ID) GetServerCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	i.certLock.RLock()
+	defer i.certLock.RUnlock()
+
+	return i.serverCert, nil
+}
+
+func (i *ID) GetClientCertificate(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	i.certLock.RLock()
+	defer i.certLock.RUnlock()
+
+	return i.cert, nil
+}
+
 func LoadIdentity(cfg IdentityConfig) (Identity, error) {
 	id := &ID{
-		cert: &tls.Certificate{},
+		IdentityConfig: cfg,
+		cert:           &tls.Certificate{},
 	}
 
 	var err error
@@ -196,5 +232,4 @@ func loadCABundle(caAddr string) (*x509.CertPool, error) {
 		pool.AppendCertsFromPEM(bundle)
 		return pool, nil
 	}
-
 }

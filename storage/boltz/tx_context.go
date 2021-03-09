@@ -28,6 +28,8 @@ type CommitAction interface {
 type MutateContext interface {
 	Tx() *bbolt.Tx
 	AddEvent(em events.EventEmmiter, name events.EventName, entity Entity)
+	IsSystemContext() bool
+	GetSystemContext() MutateContext
 }
 
 type mutateEvent struct {
@@ -55,6 +57,14 @@ type mutateContext struct {
 	events []CommitAction
 }
 
+func (context *mutateContext) GetSystemContext() MutateContext {
+	return NewSystemMutateContext(context)
+}
+
+func (context *mutateContext) IsSystemContext() bool {
+	return false
+}
+
 func (context *mutateContext) Tx() *bbolt.Tx {
 	return context.tx
 }
@@ -73,4 +83,33 @@ func (context *mutateContext) handleCommit() {
 			event.Exec()
 		}
 	}()
+}
+
+func NewSystemMutateContext(ctx MutateContext) MutateContext {
+	if ctx.IsSystemContext() {
+		return ctx
+	}
+	return &systemMutateContext{
+		wrapped: ctx,
+	}
+}
+
+type systemMutateContext struct {
+	wrapped MutateContext
+}
+
+func (self *systemMutateContext) GetSystemContext() MutateContext {
+	return self
+}
+
+func (self *systemMutateContext) Tx() *bbolt.Tx {
+	return self.wrapped.Tx()
+}
+
+func (self *systemMutateContext) AddEvent(em events.EventEmmiter, name events.EventName, entity Entity) {
+	self.wrapped.AddEvent(em, name, entity)
+}
+
+func (self *systemMutateContext) IsSystemContext() bool {
+	return true
 }

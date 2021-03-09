@@ -178,18 +178,6 @@ func (ctx *IndexingContext) ProcessBeforeDelete() {
 	}
 }
 
-func (ctx *IndexingContext) ProcessAfterDelete() {
-	if ctx.Parent != nil {
-		ctx.Parent.ProcessAfterDelete()
-	}
-
-	if !ctx.ErrHolder.HasError() {
-		for _, index := range ctx.constraints {
-			index.ProcessAfterDelete(ctx)
-		}
-	}
-}
-
 func (indexer *Indexer) InitializeIndexes(tx *bbolt.Tx, errorHolder errorz.ErrorHolder) {
 	if !errorHolder.HasError() {
 		for _, index := range indexer.constraints {
@@ -224,7 +212,6 @@ type Constraint interface {
 	ProcessBeforeUpdate(ctx *IndexingContext)
 	ProcessAfterUpdate(ctx *IndexingContext)
 	ProcessBeforeDelete(ctx *IndexingContext)
-	ProcessAfterDelete(ctx *IndexingContext)
 	Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder)
 	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 }
@@ -308,8 +295,6 @@ func (index *uniqueIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 		}
 	}
 }
-
-func (index *uniqueIndex) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *uniqueIndex) CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(error, bool)) error {
 	mutateCtx := NewMutateContext(tx)
@@ -510,8 +495,6 @@ func (index *setIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 	}
 }
 
-func (index *setIndex) ProcessAfterDelete(*IndexingContext) {}
-
 func (index *setIndex) Initialize(tx *bbolt.Tx, errorHolder errorz.ErrorHolder) {
 	if !errorHolder.HasError() {
 		bucket := GetOrCreatePath(tx, index.indexPath...)
@@ -657,8 +640,6 @@ func (index *fkIndex) ProcessBeforeDelete(ctx *IndexingContext) {
 	}
 }
 
-func (index *fkIndex) ProcessAfterDelete(*IndexingContext) {}
-
 func (index *fkIndex) getIndexBucket(tx *bbolt.Tx, fkId []byte) *TypedBucket {
 	fkStore := index.fkSymbol.GetStore()
 	entityBucket := fkStore.GetEntityBucket(tx, fkId)
@@ -794,8 +775,6 @@ func (index *fkDeleteConstraint) ProcessBeforeDelete(ctx *IndexingContext) {
 	}
 }
 
-func (index *fkDeleteConstraint) ProcessAfterDelete(*IndexingContext) {}
-
 func (index *fkDeleteConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
 }
@@ -848,7 +827,6 @@ func (index *fkConstraint) ProcessAfterUpdate(ctx *IndexingContext) {
 }
 
 func (index *fkConstraint) ProcessBeforeDelete(*IndexingContext) {}
-func (index *fkConstraint) ProcessAfterDelete(*IndexingContext)  {}
 
 func (index *fkConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location
@@ -922,8 +900,6 @@ func (index *fkDeleteCascadeConstraint) ProcessBeforeDelete(ctx *IndexingContext
 		}
 	}
 }
-
-func (index *fkDeleteCascadeConstraint) ProcessAfterDelete(*IndexingContext) {}
 
 func (index *fkDeleteCascadeConstraint) Initialize(*bbolt.Tx, errorz.ErrorHolder) {
 	// nothing to do, as this index has no static location

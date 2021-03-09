@@ -20,7 +20,6 @@ import (
 	"github.com/kataras/go-events"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/openziti/foundation/util/errorz"
-	"github.com/openziti/foundation/validation"
 	"go.etcd.io/bbolt"
 	"io"
 	"time"
@@ -36,10 +35,11 @@ const (
 	EventDelete events.EventName = "DELETE"
 	EventUpdate events.EventName = "UPDATE"
 
-	FieldId        = "id"
-	FieldCreatedAt = "createdAt"
-	FieldUpdatedAt = "updatedAt"
-	FieldTags      = "tags"
+	FieldId             = "id"
+	FieldCreatedAt      = "createdAt"
+	FieldUpdatedAt      = "updatedAt"
+	FieldTags           = "tags"
+	FieldIsSystemEntity = "isSystem"
 )
 
 type Db interface {
@@ -123,7 +123,7 @@ type CrudStore interface {
 	Update(ctx MutateContext, entity Entity, checker FieldChecker) error
 	DeleteById(ctx MutateContext, id string) error
 	DeleteWhere(ctx MutateContext, query string) error
-	CleanupExternal(ctx MutateContext, id string) error
+	cleanupExternal(ctx MutateContext, id string) error
 
 	CreateChild(ctx MutateContext, parentId string, entity Entity) error
 	UpdateChild(ctx MutateContext, parentId string, entity Entity, checker FieldChecker) error
@@ -179,7 +179,7 @@ func (ctx *PersistContext) GetAndSetString(field string, value string) (*string,
 func (ctx *PersistContext) SetRequiredString(field string, value string) {
 	if ctx.ProceedWithSet(field) {
 		if value == "" {
-			ctx.Bucket.SetError(validation.NewFieldError(field+" is required", field, value))
+			ctx.Bucket.SetError(errorz.NewFieldError(field+" is required", field, value))
 			return
 		}
 		ctx.Bucket.setTyped(TypeString, field, []byte(value))
@@ -246,6 +246,7 @@ type ExtEntity interface {
 	GetCreatedAt() time.Time
 	GetUpdatedAt() time.Time
 	GetTags() map[string]interface{}
+	IsSystemEntity() bool
 
 	SetCreatedAt(createdAt time.Time)
 	SetUpdatedAt(updatedAt time.Time)
@@ -259,22 +260,17 @@ type NamedExtEntity interface {
 
 func NewExtEntity(id string, tags map[string]interface{}) *BaseExtEntity {
 	return &BaseExtEntity{
-		Id: id,
-		ExtEntityFields: ExtEntityFields{
-			Tags: tags,
-		},
+		Id:   id,
+		Tags: tags,
 	}
 }
 
 type BaseExtEntity struct {
-	Id string
-	ExtEntityFields
-}
-
-type ExtEntityFields struct {
+	Id        string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Tags      map[string]interface{}
+	IsSystem  bool
 	Migrate   bool
 }
 
@@ -286,58 +282,66 @@ func (entity *BaseExtEntity) SetId(id string) {
 	entity.Id = id
 }
 
-func (entity *ExtEntityFields) GetCreatedAt() time.Time {
+func (entity *BaseExtEntity) GetCreatedAt() time.Time {
 	return entity.CreatedAt
 }
 
-func (entity *ExtEntityFields) GetUpdatedAt() time.Time {
+func (entity *BaseExtEntity) GetUpdatedAt() time.Time {
 	return entity.UpdatedAt
 }
 
-func (entity *ExtEntityFields) GetTags() map[string]interface{} {
+func (entity *BaseExtEntity) GetTags() map[string]interface{} {
 	return entity.Tags
 }
 
-func (entity *ExtEntityFields) SetCreatedAt(createdAt time.Time) {
+func (entity *BaseExtEntity) IsSystemEntity() bool {
+	return entity.IsSystem
+}
+
+func (entity *BaseExtEntity) SetCreatedAt(createdAt time.Time) {
 	entity.CreatedAt = createdAt
 }
 
-func (entity *ExtEntityFields) SetUpdatedAt(updatedAt time.Time) {
+func (entity *BaseExtEntity) SetUpdatedAt(updatedAt time.Time) {
 	entity.UpdatedAt = updatedAt
 }
 
-func (entity *ExtEntityFields) SetTags(tags map[string]interface{}) {
+func (entity *BaseExtEntity) SetTags(tags map[string]interface{}) {
 	entity.Tags = tags
 }
 
-func (entity *ExtEntityFields) LoadBaseValues(bucket *TypedBucket) {
+func (entity *BaseExtEntity) LoadBaseValues(bucket *TypedBucket) {
 	entity.CreatedAt = bucket.GetTimeOrError(FieldCreatedAt)
 	entity.UpdatedAt = bucket.GetTimeOrError(FieldUpdatedAt)
 	entity.Tags = bucket.GetMap(FieldTags)
+	entity.IsSystem = bucket.GetBoolWithDefault(FieldIsSystemEntity, false)
 }
 
-func (entity *ExtEntityFields) SetBaseValues(ctx *PersistContext) {
+func (entity *BaseExtEntity) SetBaseValues(ctx *PersistContext) {
 	if ctx.IsCreate {
-		entity.CreateBaseValues(ctx.Bucket)
+		entity.CreateBaseValues(ctx)
 	} else {
-		entity.UpdateBaseValues(ctx.Bucket, ctx.FieldChecker)
+		entity.UpdateBaseValues(ctx)
 	}
 }
 
-func (entity *ExtEntityFields) CreateBaseValues(bucket *TypedBucket) {
+func (entity *BaseExtEntity) CreateBaseValues(ctx *PersistContext) {
 	now := time.Now()
 	if entity.Migrate {
-		bucket.SetTimeP(FieldCreatedAt, &entity.CreatedAt, nil)
-		bucket.SetTimeP(FieldUpdatedAt, &entity.UpdatedAt, nil)
+		ctx.Bucket.SetTimeP(FieldCreatedAt, &entity.CreatedAt, nil)
+		ctx.Bucket.SetTimeP(FieldUpdatedAt, &entity.UpdatedAt, nil)
 	} else {
-		bucket.SetTimeP(FieldCreatedAt, &now, nil)
-		bucket.SetTimeP(FieldUpdatedAt, &now, nil)
+		ctx.Bucket.SetTimeP(FieldCreatedAt, &now, nil)
+		ctx.Bucket.SetTimeP(FieldUpdatedAt, &now, nil)
 	}
-	bucket.PutMap(FieldTags, entity.Tags, nil, false)
+	ctx.Bucket.PutMap(FieldTags, entity.Tags, nil, false)
+	if entity.IsSystem {
+		ctx.Bucket.SetBool(FieldIsSystemEntity, true, nil)
+	}
 }
 
-func (entity *ExtEntityFields) UpdateBaseValues(bucket *TypedBucket, fieldChecker FieldChecker) {
+func (entity *BaseExtEntity) UpdateBaseValues(ctx *PersistContext) {
 	now := time.Now()
-	bucket.SetTimeP(FieldUpdatedAt, &now, nil)
-	bucket.PutMap(FieldTags, entity.Tags, fieldChecker, false)
+	ctx.Bucket.SetTimeP(FieldUpdatedAt, &now, nil)
+	ctx.Bucket.PutMap(FieldTags, entity.Tags, ctx.FieldChecker, false)
 }
