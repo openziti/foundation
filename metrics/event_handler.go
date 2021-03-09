@@ -43,6 +43,12 @@ type Handler interface {
 	AcceptMetrics(message *metrics_pb.MetricsMessage)
 }
 
+type HandlerF func(message *metrics_pb.MetricsMessage)
+
+func (self HandlerF) AcceptMetrics(message *metrics_pb.MetricsMessage) {
+	self(message)
+}
+
 type NilHandler struct{}
 
 func (NilHandler) AcceptMetrics(message *metrics_pb.MetricsMessage) {}

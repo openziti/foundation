@@ -9,12 +9,14 @@ import (
 )
 
 type testData struct {
-	registry *usageRegistryImpl
-	events   []*metrics_pb.MetricsMessage
+	closeNotify chan struct{}
+	registry    *usageRegistryImpl
+	events      []*metrics_pb.MetricsMessage
 }
 
 func setUpTest(t *testing.T) *testData {
 	td := &testData{
+		closeNotify: make(chan struct{}),
 		registry: &usageRegistryImpl{
 			registryImpl: registryImpl{
 				sourceId:  t.Name(),
@@ -22,20 +24,12 @@ func setUpTest(t *testing.T) *testData {
 			},
 			intervalBucketChan: make(chan *bucketEvent, 1),
 		}}
-	td.registry.eventSink = td
+	td.registry.closeNotify = td.closeNotify
 	return td
 }
 
-func (t *testData) AddHandler(handler Handler) {
-	panic("implement me")
-}
-
-func (t *testData) RemoveHandler(handler Handler) {
-	panic("implement me")
-}
-
 func (t *testData) Shutdown() {
-	panic("implement me")
+	close(t.closeNotify)
 }
 
 func (t *testData) AcceptMetrics(e *metrics_pb.MetricsMessage) {
@@ -44,17 +38,20 @@ func (t *testData) AcceptMetrics(e *metrics_pb.MetricsMessage) {
 
 func TestEmpty(t *testing.T) {
 	td := setUpTest(t)
-	td.registry.report()
+	defer td.Shutdown()
+
+	td.registry.FlushToHandler(td)
 	assert.Len(t, td.events, 0)
 }
 
 func Test_Histogram(t *testing.T) {
 	td := setUpTest(t)
+	defer td.Shutdown()
 
 	hist := td.registry.Histogram("test.hist")
 	hist.Update(10)
 
-	td.registry.report()
+	td.registry.FlushToHandler(td)
 	assert.Len(t, td.events, 1)
 
 	ev := td.events[0]
@@ -72,6 +69,7 @@ func Test_Histogram(t *testing.T) {
 
 func Test_Timer(t *testing.T) {
 	td := setUpTest(t)
+	defer td.Shutdown()
 
 	timer := td.registry.Timer("test.timer")
 
@@ -81,7 +79,7 @@ func Test_Timer(t *testing.T) {
 		<-time.After(time.Second)
 	})
 
-	td.registry.report()
+	td.registry.FlushToHandler(td)
 	assert.Len(t, td.events, 1)
 
 	ev := td.events[0]

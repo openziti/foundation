@@ -81,6 +81,17 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 					return nil, err
 				}
 				cfg.ReportInterval = interval
+			case "msgQueueDepth":
+				val, ok := v.(string)
+				if !ok {
+					return nil, errors.New("metrics.reportInterval must be a string duration, for example: 15s")
+				}
+				interval, err := time.ParseDuration(val)
+				if err != nil {
+					return nil, err
+				}
+				cfg.ReportInterval = interval
+
 			}
 		}
 	}
