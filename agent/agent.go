@@ -204,7 +204,6 @@ func gracefulShutdown() {
 		// cleanup the socket on shutdown.
 		<-c
 		Close()
-		os.Exit(1)
 	}()
 }
 
