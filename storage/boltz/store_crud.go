@@ -128,7 +128,7 @@ func (store *BaseStore) NewIndexingContext(isCreate bool, ctx MutateContext, id 
 		RowId:      []byte(id),
 		ErrHolder:  holder,
 		AtomStates: map[Constraint][]byte{},
-		setStates:  map[Constraint][]FieldTypeAndValue{},
+		SetStates:  map[Constraint][]FieldTypeAndValue{},
 	}
 }
 

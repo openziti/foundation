@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/openziti/foundation/util/errorz"
+	"github.com/openziti/foundation/util/stringz"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
@@ -47,11 +48,47 @@ type IndexingContext struct {
 	RowId      []byte
 	ErrHolder  errorz.ErrorHolder
 	AtomStates map[Constraint][]byte
-	setStates  map[Constraint][]FieldTypeAndValue
+	SetStates  map[Constraint][]FieldTypeAndValue
 }
 
 func (ctx *IndexingContext) Tx() *bbolt.Tx {
 	return ctx.Ctx.Tx()
+}
+
+func (ctx *IndexingContext) PushState(constraint Constraint, fieldType FieldType, fieldValue []byte) {
+	states := ctx.SetStates[constraint]
+	ctx.SetStates[constraint] = append(states, FieldTypeAndValue{
+		FieldType: fieldType,
+		Value:     fieldValue,
+	})
+}
+
+func (ctx *IndexingContext) PopState(constraint Constraint) *FieldTypeAndValue {
+	states := ctx.SetStates[constraint]
+	if len(states) == 0 {
+		return nil
+	}
+	result := states[0]
+	ctx.SetStates[constraint] = states[1:]
+	return &result
+}
+
+func (ctx *IndexingContext) PopStateString(constraint Constraint) string {
+	fieldAndValue := ctx.PopState(constraint)
+	if fieldAndValue == nil {
+		return ""
+	}
+	result := FieldToString(fieldAndValue.FieldType, fieldAndValue.Value)
+	return stringz.OrEmpty(result)
+}
+
+func (ctx *IndexingContext) PopStateBool(constraint Constraint) bool {
+	fieldAndValue := ctx.PopState(constraint)
+	if fieldAndValue == nil {
+		return false
+	}
+	result := FieldToBool(fieldAndValue.FieldType, fieldAndValue.Value)
+	return result != nil && *result
 }
 
 func NewIndexer(basePath ...string) *Indexer {
@@ -442,13 +479,13 @@ func (index *setIndex) getCurrentValues(ctx *IndexingContext) []FieldTypeAndValu
 
 func (index *setIndex) ProcessBeforeUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		ctx.setStates[index] = index.getCurrentValues(ctx)
+		ctx.SetStates[index] = index.getCurrentValues(ctx)
 	}
 }
 
 func (index *setIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 	if !ctx.ErrHolder.HasError() {
-		oldValues := ctx.setStates[index]
+		oldValues := ctx.SetStates[index]
 		newValues := index.getCurrentValues(ctx)
 
 		changed := false
