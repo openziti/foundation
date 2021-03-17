@@ -1,40 +1,23 @@
-name: build
-
-on:
-  push:
-    branches:
-      - main
-      - release-*
+name: mattermost-ziti-webhook
+on: 
+  create:
+  delete:
+  issues:
+  issue_comment:
+  pull_request_review:
+  pull_request_review_comment:
   pull_request:
-  workflow_dispatch:
+  push:
+  fork:
+  release:
 
 jobs:
-  build:
-    runs-on: ubuntu-18.04
+  mattermost-ziti-webhook:
+    runs-on: macos-latest
+    name: POST Webhook
     steps:
-      - name: Git Checkout
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-
-
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: '^1.16.0'
-
-      - name: Install Ziti CI
-        uses: netfoundry/ziti-ci@v1
-
-      - name: Build and Test
-        run: go test ./...
-
-      - name: Release
-        env:
-          gh_ci_key: ${{ secrets.GH_CI_KEY }}
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-')
-        run: |
-          $(go env GOPATH)/bin/ziti-ci configure-git
-          $(go env GOPATH)/bin/ziti-ci tag -v -f version
-          $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/fabric update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
-          $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/sdk-golang update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
+    - uses: openziti/ziti-webhook-action@main
+      with:
+        ziti-id: ${{ secrets.ZITI_MATTERMOST_IDENTITY }}
+        webhook-url: ${{ secrets.ZITI_MATTERMOST_WEBHOOK_URL }}
+        webhook-secret: ${{ secrets.ZITI_MATTERMOSTI_WEBHOOK_SECRET }}
