@@ -293,9 +293,7 @@ func ReadWSMessage(peer io.Reader) (*Message, error) {
 func readV2(peer io.Reader) (*Message, error) {
 	messageSection := make([]byte, dataSectionV2)
 	read, err := io.ReadFull(peer, messageSection)
-
-	// short-circuit io.EOF, specifically
-	if err == io.EOF {
+	if err != nil {
 		return nil, err
 	}
 
@@ -311,11 +309,6 @@ func readV2(peer io.Reader) (*Message, error) {
 			return nil, readUnknownVersionResponse(messageSection[4:], peer)
 		}
 		return nil, errors.New("channel synchronization")
-	}
-
-	// any short read will result in an error
-	if err != nil {
-		return nil, err
 	}
 
 	headersLength := readUint32(messageSection[12:16])
