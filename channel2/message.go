@@ -48,6 +48,8 @@ const (
 	MaxReflectedHeader     = (1 << 8) - 1
 )
 
+const magicLength = 4
+
 type readFunction func(io.Reader) (*Message, error)
 type marshalFunction func(m *Message) ([]byte, []byte, error)
 
@@ -297,14 +299,14 @@ func readV2(peer io.Reader) (*Message, error) {
 		return nil, err
 	}
 
-	if read < 4 {
+	if read < magicLength {
 		return nil, errors.New("short read")
 	}
 
-	if !bytes.Equal(messageSection[0:4], magicV2) {
+	if !bytes.Equal(messageSection[0:magicLength], magicV2) {
 		log := pfxlog.Logger()
 		log.Debugf("received message version bytes: %v", messageSection[:4])
-		if bytes.Equal(messageSection[0:4], magicUnknownVersion) {
+		if bytes.Equal(messageSection[0:magicLength], magicUnknownVersion) {
 			log.Debug("message appears to be unknown version response")
 			return nil, readUnknownVersionResponse(messageSection[4:], peer)
 		}
@@ -333,8 +335,8 @@ func unmarshalV2(peer io.Reader, messageSectionData []byte, headersLength, bodyL
 		return nil, errors.New("short data stream")
 	}
 
-	if !bytes.Equal(messageSectionData[0:4], magicV2) {
-		return nil, errors.New("signature mismatch")
+	if !bytes.Equal(messageSectionData[0:magicLength], magicV2) {
+		return nil, errors.New("magic mismatch")
 	}
 
 	var headers map[int32][]byte
