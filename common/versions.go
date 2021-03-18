@@ -27,6 +27,7 @@ type VersionProvider interface {
 	Version() string
 	BuildDate() string
 	Revision() string
+	Branch() string
 	AsVersionInfo() *VersionInfo
 	EncoderDecoder() VersionEncDec
 }
@@ -120,6 +121,9 @@ func (self *VersionInfo) GetVersion() *SemVer {
 }
 
 func (self *VersionInfo) HasMinimumVersion(compareVersionStr string) bool {
+	if self == nil {
+		return false
+	}
 	compareVersion := ParseSemVer(compareVersionStr)
 	version := self.GetVersion()
 	return version.CompareTo(compareVersion) >= 0 || version.Equals(developmentVersion)

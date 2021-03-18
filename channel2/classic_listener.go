@@ -123,10 +123,8 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 					for _, h := range listener.handlers {
 						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
 							log.Errorf("connection handler error for [%s] (%v)", peer.Detail().Address, err)
-							if err := listener.ackHello(impl, request, false, err.Error()); err != nil {
-								log.Errorf("error acknowledging hello for [%s] (%v)", peer.Detail().Address, err)
-							}
-							break
+							_ = peer.Close()
+							return
 						}
 					}
 
