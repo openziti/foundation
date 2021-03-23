@@ -58,3 +58,21 @@ func TestCowSlice_Append(t *testing.T) {
 	tc = cur.([]testHandler)
 	req.Equal(0, len(tc))
 }
+
+func TestCloseSlice_Delete(t *testing.T) {
+
+	t.Run("adding and removing a single element succeeds", func(t *testing.T) {
+		cw := NewCowSlice(make([]testHandler, 0))
+
+		h := &testHandlerImpl{}
+		Append(cw, h)
+		Delete(cw, h)
+	})
+
+	t.Run("delete on empty cow slice does not fail", func(t *testing.T) {
+		cw := NewCowSlice(make([]testHandler, 0))
+
+		h := &testHandlerImpl{}
+		Delete(cw, h)
+	})
+}
