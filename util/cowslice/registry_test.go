@@ -62,17 +62,33 @@ func TestCowSlice_Append(t *testing.T) {
 func TestCloseSlice_Delete(t *testing.T) {
 
 	t.Run("adding and removing a single element succeeds", func(t *testing.T) {
+		req := require.New(t)
 		cw := NewCowSlice(make([]testHandler, 0))
 
 		h := &testHandlerImpl{}
 		Append(cw, h)
 		Delete(cw, h)
+
+		cur := cw.Value()
+		req.NotNil(cur)
+
+		tc, ok := cur.([]testHandler)
+		req.True(ok)
+		req.Equal(0, len(tc))
 	})
 
-	t.Run("delete on empty cow slice does not fail", func(t *testing.T) {
+	t.Run("delete on empty cow slice does not panic", func(t *testing.T) {
+		req := require.New(t)
 		cw := NewCowSlice(make([]testHandler, 0))
 
 		h := &testHandlerImpl{}
 		Delete(cw, h)
+
+		cur := cw.Value()
+		req.NotNil(cur)
+
+		tc, ok := cur.([]testHandler)
+		req.True(ok)
+		req.Equal(0, len(tc))
 	})
 }
