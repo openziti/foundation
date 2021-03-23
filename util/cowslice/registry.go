@@ -38,7 +38,13 @@ func Delete(registry *CowSlice, listener interface{}) {
 	t := reflect.TypeOf(currentSlice)
 	val := reflect.ValueOf(currentSlice)
 
-	newSlice := reflect.MakeSlice(t, 0, val.Len()-1)
+	cap := val.Len() - 1
+
+	if cap < 0 {
+		cap = 0
+	}
+
+	newSlice := reflect.MakeSlice(t, 0, cap)
 	for i := 0; i < val.Len(); i++ {
 		next := val.Index(i)
 		if next.Interface() != listener {
