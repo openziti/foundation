@@ -28,7 +28,7 @@ import (
 func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (transport.Connection, error) {
 	profileId := byte(0)
 	if tcfg != nil {
-		profile := &westworld3.Profile{}
+		profile := westworld3.NewBaselineProfile()
 		if err := profile.Load(cf.MapIToMapS(tcfg)); err != nil {
 			return nil, errors.Wrap(err, "load profile")
 		}

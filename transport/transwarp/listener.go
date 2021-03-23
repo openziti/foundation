@@ -32,7 +32,7 @@ func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, 
 
 	profileId := byte(0)
 	if tcfg != nil {
-		profile := &westworld3.Profile{}
+		profile := westworld3.NewBaselineProfile()
 		if err := profile.Load(cf.MapIToMapS(tcfg)); err != nil {
 			return nil, errors.Wrap(err, "load profile")
 		}
