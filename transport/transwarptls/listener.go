@@ -14,12 +14,14 @@
 	limitations under the License.
 */
 
-package transwarp
+package transwarptls
 
 import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/dilithium/cf"
+	"github.com/openziti/dilithium/protocol/westlsworld3"
 	"github.com/openziti/dilithium/protocol/westworld3"
+	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -27,8 +29,8 @@ import (
 	"net"
 )
 
-func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
-	log := pfxlog.ContextLogger(name + "/transwarp:" + bind.String())
+func Listen(bind *net.UDPAddr, name string, id *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
+	log := pfxlog.ContextLogger(name + "/transwarptls:" + bind.String())
 
 	profileId := byte(0)
 	if tcfg != nil {
@@ -44,7 +46,7 @@ func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, 
 	}
 	logrus.Infof("westworld3 profile = [\n%s\n]", westworld3.GetProfile(profileId).Dump())
 
-	listener, err := westworld3.Listen(bind, profileId)
+	listener, err := westlsworld3.Listen(bind, id.ServerTLSConfig(), profileId)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +71,7 @@ func acceptLoop(log *logrus.Entry, name string, listener net.Listener, incoming 
 		} else {
 			connection := &Connection{
 				detail: &transport.ConnectionDetail{
-					Address: "transwarp:" + socket.RemoteAddr().String(),
+					Address: "transwarptls:" + socket.RemoteAddr().String(),
 					InBound: true,
 					Name:    name,
 				},

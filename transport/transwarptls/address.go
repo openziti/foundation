@@ -14,7 +14,7 @@
 	limitations under the License.
 */
 
-package transwarp
+package transwarptls
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ type address struct {
 	port     uint16
 }
 
-func (self address) Dial(name string, _ *identity.TokenId, _ time.Duration, tcfg transport.Configuration) (transport.Connection, error) {
+func (self address) Dial(name string, id *identity.TokenId, _ time.Duration, tcfg transport.Configuration) (transport.Connection, error) {
 	endpoint, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
@@ -48,10 +48,10 @@ func (self address) Dial(name string, _ *identity.TokenId, _ time.Duration, tcfg
 			}
 		}
 	}
-	return Dial(endpoint, name, subc)
+	return Dial(endpoint, name, id, subc)
 }
 
-func (self address) Listen(name string, _ *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
+func (self address) Listen(name string, id *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) (io.Closer, error) {
 	bind, err := net.ResolveUDPAddr("udp", self.bindableAddress())
 	if err != nil {
 		return nil, errors.Wrap(err, "resolve udp")
@@ -64,11 +64,11 @@ func (self address) Listen(name string, _ *identity.TokenId, incoming chan trans
 			}
 		}
 	}
-	return Listen(bind, name, incoming, subc)
+	return Listen(bind, name, id, incoming, subc)
 }
 
-func (self address) MustListen(name string, i *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
-	closer, err := self.Listen(name, i, incoming, tcfg)
+func (self address) MustListen(name string, id *identity.TokenId, incoming chan transport.Connection, tcfg transport.Configuration) io.Closer {
+	closer, err := self.Listen(name, id, incoming, tcfg)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +76,7 @@ func (self address) MustListen(name string, i *identity.TokenId, incoming chan t
 }
 
 func (self address) String() string {
-	return fmt.Sprintf("transwarp:%s", self.bindableAddress())
+	return fmt.Sprintf("transwarptls:%s", self.bindableAddress())
 }
 
 func (self address) bindableAddress() string {
@@ -91,7 +91,7 @@ func (self AddressParser) Parse(s string) (transport.Address, error) {
 		return nil, errors.New("invalid format")
 	}
 
-	if tokens[0] == "transwarp" {
+	if tokens[0] == "transwarptls" {
 		if len(tokens) != 3 {
 			return nil, errors.New("invalid format")
 		}
