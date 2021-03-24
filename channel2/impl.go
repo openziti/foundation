@@ -46,7 +46,7 @@ type channelImpl struct {
 	peekHandlers        []PeekHandler
 	transformHandlers   []TransformHandler
 	receiveHandlers     map[int32]ReceiveHandler
-	receiveHandlersLock sync.Mutex
+	receiveHandlersLock sync.RWMutex
 	errorHandlers       []ErrorHandler
 	closeHandlers       []CloseHandler
 	userData            interface{}
@@ -177,8 +177,8 @@ func (channel *channelImpl) AddTransformHandler(h TransformHandler) {
 
 func (channel *channelImpl) AddReceiveHandler(h ReceiveHandler) {
 	channel.receiveHandlersLock.Lock()
-	defer channel.receiveHandlersLock.Unlock()
 	channel.receiveHandlers[h.ContentType()] = h
+	channel.receiveHandlersLock.Unlock()
 }
 
 func (channel *channelImpl) AddErrorHandler(h ErrorHandler) {
@@ -442,8 +442,7 @@ func (channel *channelImpl) rxer() {
 		}
 
 		if !handled {
-			channel.receiveHandlersLock.Lock()
-			defer channel.receiveHandlersLock.Unlock()
+			channel.receiveHandlersLock.RLock()
 
 			if receiveHandler, found := channel.receiveHandlers[m.ContentType]; found {
 				receiveHandler.HandleReceive(m, channel)
@@ -454,6 +453,8 @@ func (channel *channelImpl) rxer() {
 			} else {
 				log.Warnf("dropped message [%d]", m.ContentType)
 			}
+
+			channel.receiveHandlersLock.RUnlock()
 		}
 	}
 }
