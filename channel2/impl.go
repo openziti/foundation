@@ -33,23 +33,24 @@ import (
 )
 
 type channelImpl struct {
-	logicalName       string
-	underlay          Underlay
-	options           *Options
-	sequence          *sequence.Sequence
-	outQueue          chan *priorityMessage
-	outPriority       *priorityHeap
-	waiters           sync.Map
-	syncers           sync.Map
-	closed            bool
-	closeLock         sync.Mutex
-	peekHandlers      []PeekHandler
-	transformHandlers []TransformHandler
-	receiveHandlers   map[int32]ReceiveHandler
-	errorHandlers     []ErrorHandler
-	closeHandlers     []CloseHandler
-	userData          interface{}
-	lastActivity      int64
+	logicalName         string
+	underlay            Underlay
+	options             *Options
+	sequence            *sequence.Sequence
+	outQueue            chan *priorityMessage
+	outPriority         *priorityHeap
+	waiters             sync.Map
+	syncers             sync.Map
+	closed              bool
+	closeLock           sync.Mutex
+	peekHandlers        []PeekHandler
+	transformHandlers   []TransformHandler
+	receiveHandlers     map[int32]ReceiveHandler
+	receiveHandlersLock sync.RWMutex
+	errorHandlers       []ErrorHandler
+	closeHandlers       []CloseHandler
+	userData            interface{}
+	lastActivity        int64
 }
 
 func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Options) (Channel, error) {
@@ -175,7 +176,9 @@ func (channel *channelImpl) AddTransformHandler(h TransformHandler) {
 }
 
 func (channel *channelImpl) AddReceiveHandler(h ReceiveHandler) {
+	channel.receiveHandlersLock.Lock()
 	channel.receiveHandlers[h.ContentType()] = h
+	channel.receiveHandlersLock.Unlock()
 }
 
 func (channel *channelImpl) AddErrorHandler(h ErrorHandler) {
@@ -439,6 +442,8 @@ func (channel *channelImpl) rxer() {
 		}
 
 		if !handled {
+			channel.receiveHandlersLock.RLock()
+
 			if receiveHandler, found := channel.receiveHandlers[m.ContentType]; found {
 				receiveHandler.HandleReceive(m, channel)
 
@@ -448,6 +453,8 @@ func (channel *channelImpl) rxer() {
 			} else {
 				log.Warnf("dropped message [%d]", m.ContentType)
 			}
+
+			channel.receiveHandlersLock.RUnlock()
 		}
 	}
 }
