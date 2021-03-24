@@ -14,18 +14,20 @@
 	limitations under the License.
 */
 
-package transwarp
+package transwarptls
 
 import (
 	"github.com/openziti/dilithium/cf"
+	"github.com/openziti/dilithium/protocol/westlsworld3"
 	"github.com/openziti/dilithium/protocol/westworld3"
+	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"net"
 )
 
-func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (transport.Connection, error) {
+func Dial(endpoint *net.UDPAddr, name string, id *identity.TokenId, tcfg transport.Configuration) (transport.Connection, error) {
 	profileId := byte(0)
 	if tcfg != nil {
 		profile := westworld3.NewBaselineProfile()
@@ -39,16 +41,19 @@ func Dial(endpoint *net.UDPAddr, name string, tcfg transport.Configuration) (tra
 		profileId = newProfileId
 	}
 	logrus.Infof("westworld3 profile = [\n%s\n]", westworld3.GetProfile(profileId).Dump())
-	socket, err := westworld3.Dial(endpoint, profileId)
+
+	tlsConfig := id.ClientTLSConfig()
+	tlsConfig.ServerName = endpoint.IP.String()
+	socket, err := westlsworld3.Dial(endpoint, tlsConfig, profileId)
 	if err != nil {
 		return nil, errors.Wrap(err, "dial")
 	}
 
 	return &Connection{
 		detail: &transport.ConnectionDetail{
-			Address: "transwarp:" + endpoint.String(),
+			Address: "transwarptls:"+endpoint.String(),
 			InBound: false,
-			Name:    name,
+			Name: name,
 		},
 		socket: socket,
 	}, nil
