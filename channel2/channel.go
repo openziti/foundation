@@ -34,6 +34,7 @@ type Channel interface {
 	io.Closer
 	IsClosed() bool
 	Underlay() Underlay
+	StartRx()
 }
 
 type Identity interface {

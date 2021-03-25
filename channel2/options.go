@@ -41,6 +41,7 @@ type Options struct {
 	BindHandlers []BindHandler
 	PeekHandlers []PeekHandler
 	ConnectOptions
+	DelayRxStart bool
 }
 
 func DefaultOptions() *Options {

@@ -33,24 +33,24 @@ import (
 )
 
 type channelImpl struct {
-	logicalName         string
-	underlay            Underlay
-	options             *Options
-	sequence            *sequence.Sequence
-	outQueue            chan *priorityMessage
-	outPriority         *priorityHeap
-	waiters             sync.Map
-	syncers             sync.Map
-	closed              bool
-	closeLock           sync.Mutex
-	peekHandlers        []PeekHandler
-	transformHandlers   []TransformHandler
-	receiveHandlers     map[int32]ReceiveHandler
-	receiveHandlersLock sync.RWMutex
-	errorHandlers       []ErrorHandler
-	closeHandlers       []CloseHandler
-	userData            interface{}
-	lastActivity        int64
+	logicalName       string
+	underlay          Underlay
+	options           *Options
+	sequence          *sequence.Sequence
+	outQueue          chan *priorityMessage
+	outPriority       *priorityHeap
+	waiters           sync.Map
+	syncers           sync.Map
+	closed            bool
+	rxStarted         bool
+	peekHandlers      []PeekHandler
+	transformHandlers []TransformHandler
+	receiveHandlers   map[int32]ReceiveHandler
+	channelLock       sync.RWMutex
+	errorHandlers     []ErrorHandler
+	closeHandlers     []CloseHandler
+	userData          interface{}
+	lastActivity      int64
 }
 
 func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Options) (Channel, error) {
@@ -176,9 +176,9 @@ func (channel *channelImpl) AddTransformHandler(h TransformHandler) {
 }
 
 func (channel *channelImpl) AddReceiveHandler(h ReceiveHandler) {
-	channel.receiveHandlersLock.Lock()
+	channel.channelLock.Lock()
 	channel.receiveHandlers[h.ContentType()] = h
-	channel.receiveHandlersLock.Unlock()
+	channel.channelLock.Unlock()
 }
 
 func (channel *channelImpl) AddErrorHandler(h ErrorHandler) {
@@ -198,8 +198,8 @@ func (channel *channelImpl) GetUserData() interface{} {
 }
 
 func (channel *channelImpl) Close() error {
-	channel.closeLock.Lock()
-	defer channel.closeLock.Unlock()
+	channel.channelLock.Lock()
+	defer channel.channelLock.Unlock()
 
 	if !channel.closed {
 		pfxlog.ContextLogger(channel.Label()).Debug("closing channel")
@@ -385,11 +385,25 @@ func (channel *channelImpl) startMultiplex() {
 		peekHandler.Connect(channel, "")
 	}
 
-	go channel.rxer()
+	if !channel.options.DelayRxStart {
+		go channel.rxer()
+	}
 	go channel.txer()
 }
 
+func (channel *channelImpl) StartRx() {
+	go channel.rxer()
+}
+
 func (channel *channelImpl) rxer() {
+	channel.channelLock.Lock()
+	if channel.rxStarted {
+		channel.channelLock.Unlock()
+		return
+	}
+	channel.rxStarted = true
+	channel.channelLock.Unlock()
+
 	log := pfxlog.ContextLogger(channel.Label())
 	log.Debug("started")
 	defer log.Debug("exited")
@@ -442,7 +456,7 @@ func (channel *channelImpl) rxer() {
 		}
 
 		if !handled {
-			channel.receiveHandlersLock.RLock()
+			channel.channelLock.RLock()
 
 			if receiveHandler, found := channel.receiveHandlers[m.ContentType]; found {
 				receiveHandler.HandleReceive(m, channel)
@@ -454,7 +468,7 @@ func (channel *channelImpl) rxer() {
 				log.Warnf("dropped message [%d]", m.ContentType)
 			}
 
-			channel.receiveHandlersLock.RUnlock()
+			channel.channelLock.RUnlock()
 		}
 	}
 }
