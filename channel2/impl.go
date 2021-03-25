@@ -385,7 +385,7 @@ func (channel *channelImpl) startMultiplex() {
 		peekHandler.Connect(channel, "")
 	}
 
-	if !channel.options.DelayRxStart {
+	if channel.options == nil || !channel.options.DelayRxStart {
 		go channel.rxer()
 	}
 	go channel.txer()
