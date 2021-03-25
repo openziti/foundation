@@ -9,6 +9,9 @@ import (
 type NoopTestChannel struct {
 }
 
+func (ch *NoopTestChannel) StartRx() {
+}
+
 func (ch *NoopTestChannel) Id() *identity.TokenId {
 	panic("implement Id()")
 }
