@@ -32,10 +32,10 @@ func parseAddr(addr string) (*url.URL, error) {
 	// Don't try to parse "pem:" addresses which might contain newlines.
 	// As of go 1.12, url.Parse returns an error when given URLs that contain control characters.
 	// https://golang.org/doc/go1.12#net/url
-	if strings.HasPrefix(addr, "pem:") {
+	if strings.HasPrefix(addr, "pem:") || strings.HasPrefix(addr, "-----BEGIN") {
 		url := &url.URL{
-			Scheme:     "pem",
-			Opaque:     strings.TrimPrefix(addr, "pem:"),
+			Scheme: "pem",
+			Opaque: strings.TrimPrefix(addr, "pem:"),
 		}
 		return url, nil
 	}
