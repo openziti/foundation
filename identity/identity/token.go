@@ -17,7 +17,10 @@
 package identity
 
 import (
+	"crypto"
 	"crypto/tls"
+	"crypto/x509"
+	"sync"
 )
 
 type TokenId struct {
@@ -68,7 +71,6 @@ func LoadServerIdentity(clientCertPath, serverCertPath, keyPath, caCertPath stri
 }
 
 func LoadClientIdentity(certPath, keyPath, caCertPath string) (*TokenId, error) {
-
 	idCfg := IdentityConfig{
 		Key:  keyPath,
 		Cert: certPath,
@@ -80,4 +82,27 @@ func LoadClientIdentity(certPath, keyPath, caCertPath string) (*TokenId, error) 
 	} else {
 		return NewIdentity(id), nil
 	}
+}
+
+func NewClientTokenIdentity(clientCert *x509.Certificate, privateKey crypto.PrivateKey, caCerts []*x509.Certificate) *TokenId {
+	pool := x509.NewCertPool()
+
+	for _, ca := range caCerts {
+		pool.AddCert(ca)
+	}
+
+	id := &ID{
+		IdentityConfig: IdentityConfig{},
+		certLock:       sync.RWMutex{},
+		cert: &tls.Certificate{
+			Certificate: [][]byte{
+				clientCert.Raw,
+			},
+			Leaf:       clientCert,
+			PrivateKey: privateKey,
+		},
+		ca: pool,
+	}
+
+	return NewIdentity(id)
 }
