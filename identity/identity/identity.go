@@ -24,6 +24,7 @@ import (
 	"github.com/openziti/foundation/identity/certtools"
 	"github.com/openziti/foundation/util/tlz"
 	"io/ioutil"
+	"os"
 	"sync"
 )
 
@@ -34,6 +35,9 @@ type Identity interface {
 	ServerTLSConfig() *tls.Config
 	ClientTLSConfig() *tls.Config
 	Reload() error
+
+	SetCert(pem string) error
+	SetServerCert(ppem string) error
 }
 
 type IdentityConfig struct {
@@ -44,6 +48,8 @@ type IdentityConfig struct {
 	CA         string `json:"ca,omitempty" yaml:"ca,omitempty" mapstructure:"ca"`
 }
 
+var _ Identity = &ID{}
+
 type ID struct {
 	IdentityConfig
 
@@ -52,6 +58,52 @@ type ID struct {
 	cert       *tls.Certificate
 	serverCert *tls.Certificate
 	ca         *x509.CertPool
+}
+
+func (id *ID) SetCert(pem string) error {
+	f, err := os.OpenFile(id.IdentityConfig.Cert, os.O_RDWR, 0664)
+	if err != nil {
+		return fmt.Errorf("could not update client certificate [%s]: %v", id.IdentityConfig.Cert, err)
+	}
+
+	defer f.Close()
+
+	err = f.Truncate(0)
+
+	if err != nil {
+		return fmt.Errorf("could not truncate client certificate [%s]: %v", id.IdentityConfig.Cert, err)
+	}
+
+	_, err = fmt.Fprint(f, pem)
+
+	if err != nil {
+		return fmt.Errorf("error writing new client certificate [%s]: %v", id.IdentityConfig.Cert, err)
+	}
+
+	return nil
+}
+
+func (id *ID) SetServerCert(pem string) error {
+	f, err := os.OpenFile(id.IdentityConfig.ServerCert, os.O_RDWR, 0664)
+	if err != nil {
+		return fmt.Errorf("could not update server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
+	}
+
+	defer f.Close()
+
+	err = f.Truncate(0)
+
+	if err != nil {
+		return fmt.Errorf("could not truncate server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
+	}
+
+	_, err = fmt.Fprint(f, pem)
+
+	if err != nil {
+		return fmt.Errorf("error writing new server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
+	}
+
+	return nil
 }
 
 func (id *ID) Reload() error {
@@ -102,7 +154,7 @@ func (i *ID) ServerTLSConfig() *tls.Config {
 func (i *ID) ClientTLSConfig() *tls.Config {
 	tlsConfig := &tls.Config{
 		GetClientCertificate: i.GetClientCertificate,
-		RootCAs:        i.CA(),
+		RootCAs:              i.CA(),
 	}
 	tlsConfig.BuildNameToCertificate()
 
