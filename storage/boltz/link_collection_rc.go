@@ -112,7 +112,8 @@ func (collection *rcLinkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) e
 		cursor := fieldBucket.Cursor()
 		for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
 			_, key := GetTypeAndValue(val)
-			if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
+			// We don't need to remove the local entry because the parent bucket is getting deleted
+			if err := collection.otherField.unlink(tx, key, bId); err != nil {
 				return err
 			}
 		}
@@ -175,13 +176,6 @@ func (collection *rcLinkCollectionImpl) decrementLinkCount(tx *bbolt.Tx, fieldBu
 	}
 
 	return newVal, nil
-}
-
-func (collection *rcLinkCollectionImpl) unlinkCursor(tx *bbolt.Tx, cursor *bbolt.Cursor, id []byte, associatedId []byte) error {
-	if err := cursor.Delete(); err != nil {
-		return err
-	}
-	return collection.otherField.unlink(tx, associatedId, id)
 }
 
 type RefCountedLinkedSetSymbol struct {
