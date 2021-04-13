@@ -232,6 +232,114 @@ func TestCrud(t *testing.T) {
 	t.Run("composite symbol", test.testCompositeSymbol)
 }
 
+func TestCursorDeleteNotBuggy(t *testing.T) {
+	test := &crudTest{}
+	test.Assertions = require.New(t)
+	test.init(false)
+	defer test.cleanup()
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		bucket, err := tx.CreateBucket([]byte("test-delete"))
+		if err != nil {
+			return err
+		}
+		if err := bucket.Put([]byte("a"), nil); err != nil {
+			return err
+		}
+		if err := bucket.Put([]byte("b"), nil); err != nil {
+			return err
+		}
+		return nil
+	})
+	test.NoError(err)
+
+	var vals []string
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("test-delete"))
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			vals = append(vals, string(key))
+		}
+		return nil
+	})
+	test.NoError(err)
+	test.Equal([]string{"a", "b"}, vals)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("test-delete"))
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if err := cursor.Delete(); err != nil {
+				return nil
+			}
+		}
+		return nil
+	})
+	test.NoError(err)
+
+	vals = nil
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("test-delete"))
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			vals = append(vals, string(key))
+		}
+		return nil
+	})
+	test.NoError(err)
+	test.Nil(vals)
+}
+
+func TestCursorDeleteBuggy(t *testing.T) {
+	test := &crudTest{}
+	test.Assertions = require.New(t)
+	test.init(false)
+	defer test.cleanup()
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		bucket, err := tx.CreateBucket([]byte("test-delete"))
+		if err != nil {
+			return err
+		}
+		if err := bucket.Put([]byte("a"), nil); err != nil {
+			return err
+		}
+		if err := bucket.Put([]byte("b"), nil); err != nil {
+			return err
+		}
+
+		var vals []string
+		bucket = tx.Bucket([]byte("test-delete"))
+		cursor := bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			vals = append(vals, string(key))
+		}
+
+		test.NoError(err)
+		test.Equal([]string{"a", "b"}, vals)
+
+		bucket = tx.Bucket([]byte("test-delete"))
+		cursor = bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			if err := cursor.Delete(); err != nil {
+				return nil
+			}
+		}
+
+		vals = nil
+		bucket = tx.Bucket([]byte("test-delete"))
+		cursor = bucket.Cursor()
+		for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
+			vals = append(vals, string(key))
+		}
+
+		test.NoError(err)
+		test.Equal([]string{"b"}, vals)
+		return nil
+	})
+	test.NoError(err)
+}
+
 func TestLinkCollectionImpl_CheckIntegrity(t *testing.T) {
 	test := &crudTest{}
 	test.Assertions = require.New(t)

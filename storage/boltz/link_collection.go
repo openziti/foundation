@@ -108,10 +108,10 @@ func (collection *linkCollectionImpl) RemoveLink(tx *bbolt.Tx, id []byte, key []
 
 func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []string) error {
 	sort.Strings(keys)
-	bId := []byte(id)
 	fieldBucket := collection.getFieldBucketForStringId(tx, id)
 
 	var toAdd []string
+	var toRemove []string
 
 	if !fieldBucket.HasError() {
 		cursor := fieldBucket.Cursor()
@@ -129,9 +129,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 						keys = keys[1:]
 					}
 				} else if compare > cursorCurrent {
-					if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
-						return err
-					}
+					toRemove = append(toRemove, string(val))
 					rowHandled = true
 					break
 				} else {
@@ -142,9 +140,7 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 			}
 
 			if !rowHandled {
-				if err := collection.unlinkCursor(tx, cursor, bId, val); err != nil {
-					return err
-				}
+				toRemove = append(toRemove, string(val))
 				continue
 			}
 		}
@@ -153,6 +149,11 @@ func (collection *linkCollectionImpl) SetLinks(tx *bbolt.Tx, id string, keys []s
 	if fieldBucket.HasError() {
 		return fieldBucket.Err
 	}
+
+	if err := collection.RemoveLinks(tx, id, toRemove...); err != nil {
+		return err
+	}
+
 	toAdd = append(toAdd, keys...)
 	return collection.AddLinks(tx, id, toAdd...)
 }
@@ -165,7 +166,8 @@ func (collection *linkCollectionImpl) EntityDeleted(tx *bbolt.Tx, id string) err
 		cursor := fieldBucket.Cursor()
 		for val, _ := cursor.First(); val != nil; val, _ = cursor.Next() {
 			_, key := GetTypeAndValue(val)
-			if err := collection.unlinkCursor(tx, cursor, bId, key); err != nil {
+			// We don't need to delete the local entry b/c the parent bucket is getting deleted
+			if err := collection.otherField.RemoveLink(tx, key, bId); err != nil {
 				return err
 			}
 		}
@@ -273,13 +275,6 @@ func (collection *linkCollectionImpl) checkAndUnlink(tx *bbolt.Tx, fieldBucket *
 func (collection *linkCollectionImpl) unlink(tx *bbolt.Tx, fieldBucket *TypedBucket, id []byte, associatedId []byte) error {
 	if fieldBucket.DeleteListEntry(TypeString, associatedId).Err != nil {
 		return fieldBucket.Err
-	}
-	return collection.otherField.RemoveLink(tx, associatedId, id)
-}
-
-func (collection *linkCollectionImpl) unlinkCursor(tx *bbolt.Tx, cursor *bbolt.Cursor, id []byte, associatedId []byte) error {
-	if err := cursor.Delete(); err != nil {
-		return err
 	}
 	return collection.otherField.RemoveLink(tx, associatedId, id)
 }

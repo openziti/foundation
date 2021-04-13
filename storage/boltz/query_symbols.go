@@ -174,6 +174,8 @@ func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(ctx *Map
 	var newValues []*FieldTypeAndValue
 	cursor := listBucket.Cursor()
 	ctx := &MapContext{}
+
+	var toDelete [][]byte
 	for key, _ := cursor.First(); key != nil; key, _ = cursor.Next() {
 		ctx.next(GetTypeAndValue(key))
 		f(ctx)
@@ -181,9 +183,7 @@ func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(ctx *Map
 			return ctx.GetError()
 		}
 		if ctx.replace {
-			if err := cursor.Delete(); err != nil {
-				return err
-			}
+			toDelete = append(toDelete, key)
 			if ctx.newVal != nil {
 				newValues = append(newValues, &FieldTypeAndValue{FieldType: ctx.newType, Value: ctx.newVal})
 			}
@@ -192,6 +192,13 @@ func (symbol *entitySetSymbolImpl) Map(tx *bbolt.Tx, key []byte, f func(ctx *Map
 			break
 		}
 	}
+
+	for _, key := range toDelete {
+		if err := listBucket.Delete(key); err != nil {
+			return err
+		}
+	}
+
 	for _, val := range newValues {
 		listBucket.SetListEntry(val.FieldType, val.Value)
 	}
