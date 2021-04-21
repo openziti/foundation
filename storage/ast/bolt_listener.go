@@ -684,7 +684,12 @@ func (bl *ToBoltListener) ExitQueryStmt(c *zitiql.QueryStmtContext) {
 		bl.popStack()
 	}
 
-	result.predicate = bl.popNode()
+	if _, ok := bl.peekStack().(Node); ok {
+		result.predicate = bl.popNode()
+	} else {
+		result.predicate = BoolNodeTrue
+	}
+
 	if !bl.HasError() {
 		bl.pushStack(result)
 	}
