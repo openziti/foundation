@@ -111,7 +111,12 @@ datetimeArray: LBRACKET WS* DATETIME (WS* ',' WS* DATETIME)* WS* RBRACKET;
 
 start: WS* query* WS* EOF #End;
 
-query: boolExpr (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt;
+query:
+    boolExpr (WS+ sortBy)? (WS+ skip)? (WS+ limit)? #QueryStmt
+    | sortBy (WS+ skip)? (WS+ limit)? #QueryStmt
+    | skip (WS+ limit)? #QueryStmt
+    | limit #QueryStmt;
+
 
 skip: SKIP_ROWS WS+ NUMBER #SkipExpr;
 

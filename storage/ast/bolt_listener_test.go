@@ -635,6 +635,7 @@ func TestSortingPaging(t *testing.T) {
 		{"defaults", "a=1", nil, nil, nil, true},
 
 		{"one sort", "a=1 sort by a", sorts("a", true), nil, nil, true},
+		{"one sort no predicate", "sort by a", sorts("a", true), nil, nil, true},
 		{"one sort asc", "a=1 sort by a asc", sorts("a", true), nil, nil, true},
 		{"one sort desc", "a=1 sort by a desc", sorts("a", false), nil, nil, true},
 		{"two sorts", "a=1 sort by a,b", sorts("a", true, "b", true), nil, nil, true},
@@ -643,7 +644,9 @@ func TestSortingPaging(t *testing.T) {
 		{"two sorts default, desc", "a=1 sort by a, b desc", sorts("a", true, "b", false), nil, nil, true},
 
 		{"skip 10", "a=1 skip 10", nil, &ten, nil, true},
+		{"skip 10 no predicate", "skip 10", nil, &ten, nil, true},
 		{"limit 10", "a=1 limit 10", nil, nil, &ten, true},
+		{"limit 10 no predicate", "limit 10", nil, nil, &ten, true},
 		{"limit none", "a=1 limit none", nil, nil, &negOne, true},
 
 		{"sort plus skip", "a=1 SORT BY c desc, d, a desc SKIP 10", sorts("c", false, "d", true, "a", false), &ten, nil, true},
