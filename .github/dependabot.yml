@@ -1,0 +1,29 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: github.com/lucas-clemente/quic-go
+    versions:
+    - "> 0.17.1, < 0.18"
+  - dependency-name: github.com/lucas-clemente/quic-go
+    versions:
+    - "> 0.18.1"
+  - dependency-name: github.com/golang/protobuf
+    versions:
+    - 1.5.1
+    - 1.5.2
+  - dependency-name: github.com/sirupsen/logrus
+    versions:
+    - 1.8.0
+    - 1.8.1
+  - dependency-name: github.com/google/go-cmp
+    versions:
+    - 0.5.5
+  - dependency-name: github.com/spf13/cobra
+    versions:
+    - 1.1.2
+    - 1.1.3
