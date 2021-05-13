@@ -146,12 +146,12 @@ type Connection struct {
 	incoming                 chan transport.Connection
 	readCallDepth            int32
 	writeCallDepth           int32
+	connid                   int64
 }
 
 // Read implements io.Reader by wrapping websocket messages in a buffer.
 func (c *Connection) Read(p []byte) (n int, err error) {
 	currentDepth := atomic.AddInt32(&c.readCallDepth, 1)
-	c.log.Tracef("Read() start currentDepth[%d]", currentDepth)
 
 	if c.rxbuf.Len() == 0 {
 		var r io.Reader
@@ -175,24 +175,24 @@ func (c *Connection) Read(p []byte) (n int, err error) {
 			if c.tlsConnHandshakeComplete && currentDepth == 1 {
 				n, err = c.tlsConn.Read(p)
 				atomic.SwapInt32(&c.readCallDepth, (c.readCallDepth - 1))
-				c.log.Tracef("Read() end currentDepth[%d]", currentDepth)
 				return n, err
 			} else {
 				_, r, err = c.ws.NextReader()
 			}
 		}
 		if err != nil {
+			c.log.Errorf("Read() connid[%d] ************** err[%v]", c.connid, err)
 			return n, err
 		}
 		_, err = io.Copy(c.rxbuf, r)
 		if err != nil {
+			c.log.Errorf("Read() connid[%d] ************** err[%v]", c.connid, err)
 			return n, err
 		}
+		c.log.Tracef("Read() connid[%d] after io.Copy currentDepth[%d] c.rxbuf.Len[%d]", c.connid, currentDepth, c.rxbuf.Len())
 	}
 
 	atomic.SwapInt32(&c.readCallDepth, (c.readCallDepth - 1))
-
-	c.log.Tracef("Read() end currentDepth[%d]", currentDepth)
 
 	return c.rxbuf.Read(p)
 }

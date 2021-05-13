@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
+	"time"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -34,6 +35,7 @@ type wsListener struct {
 	log      *logrus.Entry
 	incoming chan transport.Connection
 	cfg      *WSConfig
+	ctr      int64
 }
 
 /**
@@ -48,6 +50,12 @@ func (listener *wsListener) handleWebsocket(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.WithField("err", err).Error("websocket upgrade failed. Failure not recoverable.")
 	} else {
+
+		var zero time.Time
+		c.SetReadDeadline(zero)
+		c.SetReadLimit(int64(listener.cfg.readBufferSize))
+
+		listener.ctr++
 
 		connection := &Connection{
 			detail: &transport.ConnectionDetail{
@@ -64,9 +72,13 @@ func (listener *wsListener) handleWebsocket(w http.ResponseWriter, r *http.Reque
 			done:     make(chan struct{}),
 			cfg:      listener.cfg,
 			incoming: listener.incoming,
+			connid:   listener.ctr,
 		}
 
+		log.Debug("starting tlsHandshake()")
+
 		err := connection.tlsHandshake() // Do not proceed until the JS client can successfully complete a TLS handshake
+		log.Debugf("tlsHandshake() returned [%v]", err)
 		if err == nil {
 			go connection.pinger()
 			listener.incoming <- connection // pass the Websocket to the goroutine that will validate the HELLO handshake
@@ -101,6 +113,7 @@ func wslistener(log *logrus.Entry, bindAddress string, cfg *WSConfig, name strin
 		log:      log,
 		incoming: incoming,
 		cfg:      cfg,
+		ctr:      0,
 	}
 
 	// Set up the HTTP -> Websocket upgrader options (once, before we start listening)
