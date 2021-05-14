@@ -59,29 +59,25 @@ func (dialer *reconnectingDialer) Create(timeout time.Duration, tcfg transport.C
 
 	dialer.tcfg = tcfg
 
-	retryCount := 0
 	version := uint32(2)
 
-	for {
-		peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, timeout, tcfg)
-		if err != nil {
-			return nil, err
-		}
-
-		impl := newReconnectingImpl(peer, dialer, timeout)
-		impl.setProtocolVersion(version)
-
-		if err := dialer.sendHello(impl); err != nil {
-			if retryCount == 0 {
-				return nil, err
-			}
-			retryCount++
-			version, _ = getRetryVersion(err)
-			log.Warnf("Retrying initial dial with protocol version %v", version)
-			continue
-		}
-		return impl, nil
+	peer, err := dialer.endpoint.Dial("reconnecting", dialer.identity, timeout, tcfg)
+	if err != nil {
+		return nil, err
 	}
+
+	impl := newReconnectingImpl(peer, dialer, timeout)
+	impl.setProtocolVersion(version)
+
+	if err := dialer.sendHello(impl); err != nil {
+		_ = peer.Close()
+		// If we bump channel2 protocol and need to handle multiple versions,
+		// we'll need to reintroduce version handling code here
+		// version, _ = getRetryVersion(err)
+		return nil, err
+	}
+
+	return impl, nil
 }
 
 func (dialer *reconnectingDialer) Reconnect(impl *reconnectingImpl) error {
@@ -131,12 +127,12 @@ func (dialer *reconnectingDialer) sendHello(impl *reconnectingImpl) error {
 		request.Headers[ConnectionIdHeader] = []byte(impl.connectionId)
 		log.Debugf("adding connectionId header [%s]", impl.connectionId)
 	}
-	if err := impl.Tx(request); err != nil {
+	if err := impl.tx(request); err != nil {
 		_ = impl.peer.Close()
 		return err
 	}
 
-	response, err := impl.Rx()
+	response, err := impl.rx()
 	if err != nil {
 		return err
 	}
