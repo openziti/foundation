@@ -53,7 +53,6 @@ func (listener *wsListener) handleWebsocket(w http.ResponseWriter, r *http.Reque
 
 		var zero time.Time
 		c.SetReadDeadline(zero)
-		c.SetReadLimit(int64(listener.cfg.readBufferSize))
 
 		listener.ctr++
 
