@@ -108,7 +108,7 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 				if err := peer.SetReadTimeout(listener.connectOptions.ConnectTimeout()); err != nil {
 					log.Errorf("could not set read timeout for [%s] (%v)", peer.Detail().Address, err)
 					_ = peer.Close()
-					return
+					continue
 				}
 
 				request, hello, err := listener.receiveHello(impl)
@@ -117,15 +117,19 @@ func (listener *classicListener) listener(incoming chan transport.Connection) {
 					if err = peer.ClearReadTimeout(); err != nil {
 						log.Errorf("could not clear read timeout for [%s] (%v)", peer.Detail().Address, err)
 						_ = peer.Close()
-						return
+						continue
 					}
 
 					for _, h := range listener.handlers {
-						if err := h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
-							log.Errorf("connection handler error for [%s] (%v)", peer.Detail().Address, err)
-							_ = peer.Close()
-							return
+						if err = h.HandleConnection(hello, peer.PeerCertificates()); err != nil {
+							break
 						}
+					}
+
+					if err != nil {
+						log.Errorf("connection handler error for [%s] (%v)", peer.Detail().Address, err)
+						_ = peer.Close()
+						continue
 					}
 
 					impl.id = &identity.TokenId{Token: hello.IdToken}
