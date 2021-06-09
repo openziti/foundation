@@ -370,7 +370,8 @@ func (store *BaseStore) IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.Seekab
 	if entitiesBucket == nil {
 		return ast.EmptyCursor
 	}
-	return newFilteredCursor(tx, store, entitiesBucket.OpenSeekableCursor(), filter)
+	cursor := newFilteredCursor(tx, store, entitiesBucket.OpenSeekableCursor(), filter)
+	return cursor
 }
 
 func (store *BaseStore) IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SetCursor {

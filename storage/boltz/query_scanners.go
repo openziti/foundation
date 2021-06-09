@@ -81,6 +81,11 @@ func newFilteredCursor(tx *bbolt.Tx, store ListStore, cursor ast.SeekableSetCurs
 		rowCursor: newRowCursor(store, tx),
 		filter:    filter,
 	}
+
+	if query, ok := filter.(ast.Query); ok {
+		result.setPaging(query)
+	}
+
 	result.Next()
 	return result
 }
@@ -103,7 +108,7 @@ func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.S
 		return nil, 0, nil
 	}
 
-	scanner.Next()
+	scanner.nextUnpaged()
 
 	var result []string
 	for scanner.IsValid() {
@@ -117,7 +122,7 @@ func (scanner *uniqueIndexScanner) ScanCursor(tx *bbolt.Tx, cursorProvider ast.S
 			}
 		}
 		scanner.count++
-		scanner.Next()
+		scanner.nextUnpaged()
 	}
 	return result, scanner.count, nil
 }
@@ -131,6 +136,38 @@ func (scanner *uniqueIndexScanner) Current() []byte {
 }
 
 func (scanner *uniqueIndexScanner) Next() {
+	cursor := scanner.cursor
+	rowCursor := scanner.rowCursor
+	for {
+		if !cursor.IsValid() {
+			scanner.current = nil
+			return
+		}
+
+		if scanner.collected >= scanner.targetLimit {
+			scanner.current = nil
+			return
+		}
+
+		scanner.current = cursor.Current()
+		cursor.Next()
+		if scanner.store.IsChildStore() && !scanner.store.IsEntityPresent(rowCursor.Tx(), string(scanner.current)) && !scanner.store.IsExtended() {
+			continue
+		}
+		rowCursor.NextRow(scanner.current)
+		match := scanner.filter.EvalBool(rowCursor)
+		if match {
+			if scanner.offset < scanner.targetOffset {
+				scanner.offset++
+			} else {
+				scanner.collected++
+				return
+			}
+		}
+	}
+}
+
+func (scanner *uniqueIndexScanner) nextUnpaged() {
 	cursor := scanner.cursor
 	rowCursor := scanner.rowCursor
 	for {
