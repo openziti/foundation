@@ -239,6 +239,7 @@ func TestQuery(t *testing.T) {
 	t.Run("iterate ids", tests.testIterateIds)
 	t.Run("iterate ids paging", tests.testIterateIdsPaging)
 	t.Run("iterate seek ids", tests.testIterateIdsScan)
+	t.Run("test read isolation", tests.testReadIsolation)
 }
 
 type boltQueryTests struct {
@@ -642,4 +643,84 @@ func (test *boltQueryTests) testIterateIdsScan(t *testing.T) {
 		delete(iterIdMap, key)
 	}
 	test.Equal(0, len(iterIdMap))
+}
+
+func (test *boltQueryTests) testReadIsolation(t *testing.T) {
+	test.switchTestContext(t)
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		_ = tx.DeleteBucket([]byte("read-isolation"))
+		bucket, err := tx.CreateBucket([]byte("read-isolation"))
+		if err != nil {
+			return err
+		}
+		tb := newTypedBucket(nil, bucket)
+		tb.PutValue([]byte("a"), nil)
+		tb.PutValue([]byte("b"), nil)
+		tb.PutValue([]byte("c"), nil)
+		tb.PutValue([]byte("d"), nil)
+		tb.PutValue([]byte("e"), nil)
+		return tb.GetError()
+	})
+
+	ch := make(chan string, 20)
+
+	go func() {
+		err = test.db.View(func(tx *bbolt.Tx) error {
+			time.Sleep(50 * time.Millisecond)
+			bucket := tx.Bucket([]byte("read-isolation"))
+			cursor := bucket.Cursor()
+			k, _ := cursor.First()
+			for k != nil {
+				ch <- string(k)
+				fmt.Printf("read: %v\n", string(k))
+				time.Sleep(50 * time.Millisecond)
+				k, _ = cursor.Next()
+			}
+			close(ch)
+			return nil
+		})
+	}()
+
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("read-isolation"))
+		tb := newTypedBucket(nil, bucket)
+		tb.PutValue([]byte("aa"), nil)
+		tb.PutValue([]byte("f"), nil)
+		fmt.Println("wrote aa")
+		fmt.Println("wrote f")
+		return nil
+	})
+	test.NoError(err)
+	time.Sleep(50 * time.Millisecond)
+
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("read-isolation"))
+		tb := newTypedBucket(nil, bucket)
+		tb.PutValue([]byte("aaa"), nil)
+		tb.PutValue([]byte("g"), nil)
+		fmt.Println("wrote aaa")
+		fmt.Println("wrote g")
+		return nil
+	})
+	test.NoError(err)
+	time.Sleep(50 * time.Millisecond)
+
+	err = test.db.View(func(tx *bbolt.Tx) error {
+		bucket := tx.Bucket([]byte("read-isolation"))
+		tb := newTypedBucket(nil, bucket)
+		tb.PutValue([]byte("aaaa"), nil)
+		tb.PutValue([]byte("h"), nil)
+		fmt.Println("wrote aaaa")
+		fmt.Println("wrote h")
+		return nil
+	})
+	test.NoError(err)
+
+	var vals []string
+	for v := range ch {
+		fmt.Println(v)
+		vals = append(vals, v)
+	}
+	test.Equal([]string{"a", "b", "c", "d", "e"}, vals)
 }
