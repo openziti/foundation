@@ -105,7 +105,7 @@ type ListStore interface {
 
 	IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SeekableSetCursor
 
-	// Skips non-present entities in extended stores
+	// IterateValidIds skips non-present entities in extended stores
 	IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SetCursor
 }
 

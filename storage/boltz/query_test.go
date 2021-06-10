@@ -237,6 +237,7 @@ func TestQuery(t *testing.T) {
 	t.Run("map queries", tests.testMapQueries)
 	t.Run("sub queries", tests.testSubQueries)
 	t.Run("iterate ids", tests.testIterateIds)
+	t.Run("iterate ids paging", tests.testIterateIdsPaging)
 	t.Run("iterate seek ids", tests.testIterateIdsScan)
 }
 
@@ -552,6 +553,7 @@ func (test *boltQueryTests) testIterateIds(t *testing.T) {
 	test.switchTestContext(t)
 
 	ids, count := test.query("true")
+	fmt.Printf("%v ids\n", count)
 
 	iterIdMap := map[string]struct{}{}
 	err := test.db.View(func(tx *bbolt.Tx) error {
@@ -567,6 +569,39 @@ func (test *boltQueryTests) testIterateIds(t *testing.T) {
 	})
 	test.NoError(err)
 	test.Equal(int(count), len(iterIdMap))
+
+	for _, key := range ids {
+		_, found := iterIdMap[key]
+		test.True(found)
+		delete(iterIdMap, key)
+	}
+	test.Equal(0, len(iterIdMap))
+
+}
+
+func (test *boltQueryTests) testIterateIdsPaging(t *testing.T) {
+	test.switchTestContext(t)
+
+	ids, _ := test.query("skip 5 limit 5")
+
+	iterIdMap := map[string]struct{}{}
+	err := test.db.View(func(tx *bbolt.Tx) error {
+		query, err := ast.Parse(test.peopleStore, "skip 5 limit 5")
+		if err != nil {
+			return err
+		}
+		cursor := test.peopleStore.IterateIds(tx, query)
+		test.NotNil(cursor)
+		for ; cursor.IsValid(); cursor.Next() {
+			id := cursor.Current()
+			_, found := iterIdMap[string(id)]
+			test.False(found)
+			iterIdMap[string(id)] = struct{}{}
+		}
+		return nil
+	})
+	test.NoError(err)
+	test.Equal(len(ids), len(iterIdMap))
 
 	for _, key := range ids {
 		_, found := iterIdMap[key]
