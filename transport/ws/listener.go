@@ -137,6 +137,7 @@ func wslistener(log *logrus.Entry, bindAddress string, cfg *WSConfig, name strin
 		Handler:      router,
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{cert},
+			MaxVersion:   tls.VersionTLS12,
 			MinVersion:   tlz.GetMinTlsVersion(),
 			CipherSuites: tlz.GetCipherSuites(),
 		},
