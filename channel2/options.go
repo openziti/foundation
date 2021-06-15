@@ -42,7 +42,6 @@ type Options struct {
 	PeekHandlers []PeekHandler
 	ConnectOptions
 	DelayRxStart bool
-	ReadTimeout  time.Duration
 }
 
 func DefaultOptions() *Options {
