@@ -29,6 +29,7 @@ import (
 	"github.com/openziti/foundation/util/sequence"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -51,6 +52,7 @@ type channelImpl struct {
 	closeHandlers     []CloseHandler
 	userData          interface{}
 	lastActivity      int64
+	lastRead          int64
 }
 
 func NewChannel(logicalName string, underlayFactory UnderlayFactory, options *Options) (Channel, error) {
@@ -427,6 +429,7 @@ func (channel *channelImpl) rxer() {
 			return
 		}
 		channel.lastActivity = info.NowInMilliseconds()
+		atomic.StoreInt64(&channel.lastRead, channel.lastActivity)
 
 		for _, transformHandler := range channel.transformHandlers {
 			transformHandler.Rx(m, channel)
@@ -601,4 +604,8 @@ func (channel *channelImpl) keepalive() {
 			}
 		}
 	}
+}
+
+func (ch *channelImpl) GetTimeSinceLastRead() time.Duration {
+	return time.Duration(info.NowInMilliseconds()-atomic.LoadInt64(&ch.lastRead)) * time.Millisecond
 }

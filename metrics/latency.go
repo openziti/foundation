@@ -73,6 +73,12 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 			}
 		case <-time.After(timeout):
 			log.Errorf("latency timeout after [%s]", timeout)
+			if ch.GetTimeSinceLastRead() > interval {
+				// No traffic on channel, no response. Close the channel
+				log.Error("no read traffic on channel since before latency probe was sent, closing channel")
+				_ = ch.Close()
+				return
+			}
 		}
 	}
 }

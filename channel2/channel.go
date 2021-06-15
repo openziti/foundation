@@ -35,6 +35,7 @@ type Channel interface {
 	IsClosed() bool
 	Underlay() Underlay
 	StartRx()
+	GetTimeSinceLastRead() time.Duration
 }
 
 type Identity interface {
