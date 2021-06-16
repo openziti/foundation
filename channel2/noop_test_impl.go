@@ -129,3 +129,7 @@ func (ch *NoopTestChannel) IsClosed() bool {
 func (ch *NoopTestChannel) Underlay() Underlay {
 	panic("implement Underlay")
 }
+
+func (ch *NoopTestChannel) GetTimeSinceLastRead() time.Duration {
+	return 0
+}
