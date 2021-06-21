@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/openziti/foundation/util/errorz"
 	"github.com/pkg/errors"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -36,6 +37,9 @@ type Map interface {
 	Duration(key string, defaultValue time.Duration) time.Duration
 	GetDuration(key string) (time.Duration, bool)
 	RequireDuration(key string) time.Duration
+
+	GetUrl(key string) (*url.URL, bool)
+	RequireUrl(key string) *url.URL
 
 	Child(key string) Map
 	RequireChild(key string) Map
@@ -127,6 +131,38 @@ func (self *mapImpl) RequireInt(key string) int {
 	return 0
 }
 
+func (self *mapImpl) GetFloat64(key string) (float64, bool) {
+	v, found := self.Get(key)
+	if !found {
+		return 0, false
+	}
+	if typedVal, ok := v.(float64); ok {
+		return typedVal, true
+	}
+	if typedVal, ok := v.(int); ok {
+		return float64(typedVal), true
+	}
+	self.ErrorHolder.SetError(errors.Errorf("required value %v had incorrect type %v instead of int", append(self.path, key), reflect.TypeOf(v)))
+	return 0, false
+}
+
+func (self *mapImpl) Float64(key string, defaultValue int) int {
+	val, found := self.GetFloat64(key)
+	if found {
+		return val
+	}
+	return defaultValue
+}
+
+func (self *mapImpl) RequireInt(key string) int {
+	v, found := self.GetInt(key)
+	if found {
+		return v
+	}
+	self.ErrorHolder.SetError(errors.Errorf("required value %v not found", append(self.path, key)))
+	return 0
+}
+
 func (self *mapImpl) GetDuration(key string) (time.Duration, bool) {
 	v, found := self.GetString(key)
 	if !found {
@@ -153,8 +189,33 @@ func (self *mapImpl) RequireDuration(key string) time.Duration {
 	if found {
 		return v
 	}
-	self.ErrorHolder.SetError(errors.Errorf("required value %v not found", append(self.path, key)))
+	self.ErrorHolder.SetError(errors.Errorf("required duration %v not found", append(self.path, key)))
 	return 0
+}
+
+func (self *mapImpl) GetUrl(key string) (*url.URL, bool) {
+	v, found := self.GetString(key)
+	if !found {
+		return nil, false
+	}
+	val, err := url.Parse(v)
+	if err == nil {
+		return val, true
+	}
+	self.ErrorHolder.SetError(errors.Wrapf(err, "error while parsing url %v", append(self.path, key)))
+	return nil, false
+}
+
+func (self *mapImpl) RequireUrl(key string) *url.URL {
+	v, found := self.GetUrl(key)
+	if found {
+		return v
+	}
+	self.ErrorHolder.SetError(errors.Errorf("required url %v not found", append(self.path, key)))
+	return &url.URL{
+		Scheme: "http",
+		Host:   "thisisaninvaliddomainname.invalid",
+	}
 }
 
 func (self *mapImpl) Child(key string) Map {
