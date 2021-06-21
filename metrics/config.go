@@ -17,9 +17,8 @@
 package metrics
 
 import (
-	"errors"
-	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/config"
 	"time"
 )
 
@@ -31,70 +30,45 @@ type Config struct {
 	EventSink      Handler
 }
 
-func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
+func LoadConfig(metricsConfig config.Map) *Config {
 	cfg := &Config{
 		handlers:       make(map[Handler]Handler),
-		ReportInterval: 15 * time.Second,
+		ReportInterval: metricsConfig.Duration("reportInterval", 15*time.Second),
 	}
 
 	pfxlog.Logger().Infof("Loading metrics configs")
 
-	for k, v := range srcmap {
-		if name, ok := k.(string); ok {
-			switch name {
-			case string(HandlerTypeJSONFile), string(HandlerTypeFile):
-				if submap, ok := v.(map[interface{}]interface{}); ok {
-					if outputFileConfig, err := LoadOutputFileConfig(submap); err == nil {
-						if outputFileHandler, err := NewOutputFileMetricsHandler(outputFileConfig); err == nil {
-							cfg.handlers[outputFileHandler] = outputFileHandler
-							pfxlog.Logger().Infof("added metrics output file handler")
-						} else {
-							return nil, fmt.Errorf("error creating metrics output file handler (%s)", err)
-						}
-					} else {
-						pfxlog.Logger().Warnf("error loading the metrics output file handler: (%s)", err)
-					}
-				} else {
-					return nil, errors.New("invalid config for metrics output file handler ")
-				}
+	fileConfig := metricsConfig.Child(string(HandlerTypeJSONFile))
+	if fileConfig == nil {
+		fileConfig = metricsConfig.Child(string(HandlerTypeFile))
+	}
 
-			case string(HandlerTypeInfluxDB):
-				if submap, ok := v.(map[interface{}]interface{}); ok {
-					if influxCfg, err := LoadInfluxConfig(submap); err == nil {
-						if influxHandler, err := NewInfluxDBMetricsHandler(influxCfg); err == nil {
-							cfg.handlers[influxHandler] = influxHandler
-							pfxlog.Logger().Infof("added influx handler")
-						} else {
-							return nil, fmt.Errorf("error creating influx handler (%s)", err)
-						}
-					}
-				} else {
-					return nil, errors.New("invalid influx stanza")
-				}
-			case "reportInterval":
-				val, ok := v.(string)
-				if !ok {
-					return nil, errors.New("metrics.reportInterval must be a string duration, for example: 15s")
-				}
-				interval, err := time.ParseDuration(val)
-				if err != nil {
-					return nil, err
-				}
-				cfg.ReportInterval = interval
-			case "msgQueueDepth":
-				val, ok := v.(string)
-				if !ok {
-					return nil, errors.New("metrics.reportInterval must be a string duration, for example: 15s")
-				}
-				interval, err := time.ParseDuration(val)
-				if err != nil {
-					return nil, err
-				}
-				cfg.ReportInterval = interval
+	if fileConfig != nil {
+		outputFileConfig := LoadOutputFileConfig(fileConfig)
+		if !fileConfig.HasError() {
+			outputFileHandler := NewOutputFileMetricsHandler(outputFileConfig)
+			cfg.handlers[outputFileHandler] = outputFileHandler
+			pfxlog.Logger().Infof("added metrics output file handler")
+		}
+	}
 
+	if childMap := metricsConfig.Child(string(HandlerTypeInfluxDB)); childMap != nil {
+		influxCfg := &influxConfig{
+			url:      *childMap.RequireUrl("url"),
+			database: childMap.RequireString("database"),
+			username: childMap.RequireString("username"),
+			password: childMap.RequireString("password"),
+		}
+
+		if !childMap.HasError() {
+			if influxHandler, err := NewInfluxDBMetricsHandler(influxCfg); err == nil {
+				cfg.handlers[influxHandler] = influxHandler
+				pfxlog.Logger().Infof("added influx handler")
+			} else {
+				metricsConfig.SetError(err)
 			}
 		}
 	}
 
-	return cfg, nil
+	return cfg
 }

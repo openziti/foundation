@@ -17,12 +17,11 @@
 package metrics
 
 import (
-	"errors"
-	"fmt"
 	"github.com/golang/protobuf/ptypes"
 	influxdb "github.com/influxdata/influxdb1-client"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/metrics/metrics_pb"
+	"github.com/pkg/errors"
 	"net/url"
 	"time"
 )
@@ -52,7 +51,7 @@ func NewInfluxDBMetricsHandler(cfg *influxConfig) (Handler, error) {
 	}
 
 	if err := rep.makeClient(); err != nil {
-		return nil, fmt.Errorf("unable to make HandlerTypeInfluxDB influxdb. err=%v", err)
+		return nil, errors.Wrapf(err, "unable to make HandlerTypeInfluxDB influxdb")
 	}
 
 	go rep.run()
@@ -192,50 +191,4 @@ type influxConfig struct {
 	database string
 	username string
 	password string
-}
-
-func LoadInfluxConfig(src map[interface{}]interface{}) (*influxConfig, error) {
-	cfg := &influxConfig{}
-
-	if value, found := src["url"]; found {
-		if urlSrc, ok := value.(string); ok {
-			if url, err := url.Parse(urlSrc); err == nil {
-				cfg.url = *url
-			} else {
-				return nil, fmt.Errorf("cannot parse influx 'url' value (%s)", err)
-			}
-		} else {
-			return nil, errors.New("invalid influx 'url' value")
-		}
-	} else {
-		return nil, errors.New("missing influx 'url' config")
-	}
-
-	if value, found := src["database"]; found {
-		if database, ok := value.(string); ok {
-			cfg.database = database
-		} else {
-			return nil, errors.New("invalid influx 'database' value")
-		}
-	} else {
-		return nil, errors.New("missing influx 'database' config")
-	}
-
-	if value, found := src["username"]; found {
-		if username, ok := value.(string); ok {
-			cfg.username = username
-		} else {
-			return nil, errors.New("invalid influx 'username' value")
-		}
-	}
-
-	if value, found := src["password"]; found {
-		if password, ok := value.(string); ok {
-			cfg.password = password
-		} else {
-			return nil, errors.New("invalid influx 'password' value")
-		}
-	}
-
-	return cfg, nil
 }

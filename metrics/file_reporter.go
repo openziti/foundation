@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/config"
 	"github.com/openziti/foundation/metrics/metrics_pb"
 	"github.com/pkg/errors"
 	"os"
@@ -21,7 +22,7 @@ func (reporter *ouputFileReporter) AcceptMetrics(message *metrics_pb.MetricsMess
 }
 
 // Message handler that write node and link metrics to a file in json format
-func NewOutputFileMetricsHandler(cfg *outputfileConfig) (Handler, error) {
+func NewOutputFileMetricsHandler(cfg *outputfileConfig) Handler {
 	rep := &ouputFileReporter{
 		path:        cfg.path,
 		maxsize:     cfg.maxsizemb,
@@ -30,7 +31,7 @@ func NewOutputFileMetricsHandler(cfg *outputfileConfig) (Handler, error) {
 	}
 
 	go rep.run()
-	return rep, nil
+	return rep
 }
 
 func (reporter *ouputFileReporter) run() {
@@ -78,53 +79,31 @@ type outputfileConfig struct {
 	formatter Formatter
 }
 
-func LoadOutputFileConfig(src map[interface{}]interface{}) (*outputfileConfig, error) {
+func LoadOutputFileConfig(configMap config.Map) *outputfileConfig {
 	cfg := &outputfileConfig{
 		formatter: &JsonFormatter{},
+		path:      configMap.RequireString("path"),
+		maxsizemb: configMap.RequireInt("maxsizemb"),
 	}
 
-	if value, found := src["path"]; found {
-		if path, ok := value.(string); ok {
-			// check path writablility
-			cfg.path = path
-
-			f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
-			if err != nil {
-				return nil, fmt.Errorf("cannot write to log file path: %s", path)
-			} else {
-				_ = f.Close()
-			}
+	if !configMap.HasError() {
+		f, err := os.OpenFile(cfg.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0664)
+		if err != nil {
+			configMap.SetError(fmt.Errorf("cannot write to log file path: %s", cfg.path))
 		} else {
-			return nil, errors.New("invalid jsonFileReporter 'path' value")
-		}
-	} else {
-		return nil, errors.New("missing required 'path' config for JSONFileReporter")
-	}
-
-	if value, found := src["maxsizemb"]; found {
-		if maxsizemb, ok := value.(int); ok {
-			cfg.maxsizemb = maxsizemb
-		} else {
-			// just set a default
-			return nil, errors.New("invalid 'maxsizemb' config for JSONFileReporter")
-		}
-	} else {
-		return nil, errors.New("missing jsonFileReporter 'maxsizemb' config")
-	}
-
-	if value, found := src["format"]; found {
-		if format, ok := value.(string); ok {
-			if strings.EqualFold("json", format) {
-				cfg.formatter = &JsonFormatter{}
-			} else if strings.EqualFold("plain", format) {
-				cfg.formatter = &PlainTextFormatter{}
-			} else {
-				return nil, errors.Errorf("invalid 'format' for metrics output file: %v", format)
-			}
-		} else {
-			return nil, errors.New("invalid 'format' for metrics output file")
+			_ = f.Close()
 		}
 	}
 
-	return cfg, nil
+	if format, found := configMap.GetString("format"); found {
+		if strings.EqualFold("json", format) {
+			cfg.formatter = &JsonFormatter{}
+		} else if strings.EqualFold("plain", format) {
+			cfg.formatter = &PlainTextFormatter{}
+		} else {
+			configMap.SetError(errors.Errorf("invalid 'format' for metrics output file: %v", format))
+		}
+	}
+
+	return cfg
 }
