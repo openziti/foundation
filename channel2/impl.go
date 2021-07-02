@@ -19,7 +19,6 @@ package channel2
 import (
 	"container/heap"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/michaelquigley/pfxlog"
@@ -27,6 +26,7 @@ import (
 	"github.com/openziti/foundation/transport"
 	"github.com/openziti/foundation/util/info"
 	"github.com/openziti/foundation/util/sequence"
+	"github.com/pkg/errors"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -295,7 +295,7 @@ func (channel *channelImpl) SendPrioritizedWithTimeout(m *Message, p Priority, t
 	case err := <-syncC:
 		return err
 	case <-time.After(timeout):
-		return errors.New("write deadline exceeded")
+		return errors.Errorf("write %v deadline exceeded", timeout)
 	}
 }
 
@@ -312,7 +312,7 @@ func (channel *channelImpl) SendPrioritizedAndWaitWithTimeout(m *Message, p Prio
 	case replyMsg := <-replyChan:
 		return replyMsg, nil
 	case <-time.After(timeout):
-		return nil, errors.New("timeout waiting for response")
+		return nil, errors.Errorf("timeout waiting for response after %v", timeout)
 	}
 }
 
@@ -359,7 +359,7 @@ func (channel *channelImpl) SendForReply(msg TypedMessage, timeout time.Duration
 	case responseMsg := <-waitCh:
 		return responseMsg, nil
 	case <-time.After(timeout):
-		return nil, fmt.Errorf("timed out waiting for response to request of type %v", msg.GetContentType())
+		return nil, errors.Errorf("timed out after %v waiting for response to request of type %v", timeout, msg.GetContentType())
 	}
 }
 
@@ -369,7 +369,7 @@ func (channel *channelImpl) SendForReplyAndDecode(msg TypedMessage, timeout time
 		return err
 	}
 	if responseMsg.ContentType != result.GetContentType() {
-		return fmt.Errorf("unexpected response type %v to request of type %v. expected %v",
+		return errors.Errorf("unexpected response type %v to request of type %v. expected %v",
 			responseMsg.ContentType, msg.GetContentType(), result.GetContentType())
 	}
 	if err := proto.Unmarshal(responseMsg.Body, result); err != nil {
