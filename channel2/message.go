@@ -100,46 +100,76 @@ func (header *MessageHeader) IsReplyingTo(sequence int32) bool {
 
 func (header *MessageHeader) PutUint64Header(key int32, value uint64) {
 	encoded := make([]byte, 8)
-	binary.LittleEndian.PutUint64(encoded, value)
+	encoded = encoded[:0]
+	for value > 0 {
+		encoded = append(encoded, byte(value))
+		value = value >> 8
+	}
 	header.Headers[key] = encoded
 }
 
 func (header *MessageHeader) GetUint64Header(key int32) (uint64, bool) {
 	encoded, ok := header.Headers[key]
-	if !ok || len(encoded) != 8 {
+	if !ok {
 		return 0, ok
 	}
-	result := binary.LittleEndian.Uint64(encoded)
+	if len(encoded) > 8 {
+		encoded = encoded[0:8]
+	}
+	var result uint64
+	for i, b := range encoded {
+		result += uint64(b) << (i * 8)
+	}
 	return result, true
 }
 
 func (header *MessageHeader) PutUint32Header(key int32, value uint32) {
 	encoded := make([]byte, 4)
-	binary.LittleEndian.PutUint32(encoded, value)
+	encoded = encoded[:0]
+	for value > 0 {
+		encoded = append(encoded, byte(value))
+		value = value >> 8
+	}
 	header.Headers[key] = encoded
 }
 
 func (header *MessageHeader) GetUint32Header(key int32) (uint32, bool) {
 	encoded, ok := header.Headers[key]
-	if !ok || len(encoded) != 4 {
-		return 0, false
+	if !ok {
+		return 0, ok
 	}
-	result := binary.LittleEndian.Uint32(encoded)
+	if len(encoded) > 4 {
+		encoded = encoded[0:4]
+	}
+	var result uint32
+	for i, b := range encoded {
+		result += uint32(b) << (i * 8)
+	}
 	return result, true
 }
 
 func (header *MessageHeader) PutUint16Header(key int32, value uint16) {
 	encoded := make([]byte, 2)
-	binary.LittleEndian.PutUint16(encoded, value)
+	encoded = encoded[:0]
+	for value > 0 {
+		encoded = append(encoded, byte(value))
+		value = value >> 8
+	}
 	header.Headers[key] = encoded
 }
 
 func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
 	encoded, ok := header.Headers[key]
-	if !ok || len(encoded) != 2 {
-		return 0, false
+	if !ok {
+		return 0, ok
 	}
-	result := binary.LittleEndian.Uint16(encoded)
+	if len(encoded) > 2 {
+		encoded = encoded[0:2]
+	}
+	var result uint16
+	for i, b := range encoded {
+		result += uint16(b) << (i * 8)
+	}
 	return result, true
 }
 
