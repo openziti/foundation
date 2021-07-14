@@ -256,6 +256,12 @@ func (store *BaseStore) AddSetSymbol(name string, nodeType ast.NodeType) EntityS
 	return store.addSetSymbol(name, nodeType, nil)
 }
 
+func (store *BaseStore) AddPublicSetSymbol(name string, nodeType ast.NodeType) EntitySetSymbol {
+	result := store.addSetSymbol(name, nodeType, nil)
+	store.publicSymbols = append(store.publicSymbols, name)
+	return result
+}
+
 func (store *BaseStore) AddFkSetSymbol(name string, listStore ListStore) EntitySetSymbol {
 	return store.addSetSymbol(name, ast.NodeTypeString, listStore)
 }
