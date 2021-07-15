@@ -16,7 +16,11 @@
 
 package sequence
 
-import "testing"
+import (
+	"fmt"
+	"github.com/pkg/errors"
+	"testing"
+)
 
 func TestSequence(t *testing.T) {
 	s := NewSequence()
@@ -35,5 +39,53 @@ func TestSequence(t *testing.T) {
 	if len(h0) != 4 {
 		t.Errorf("expected 4-character hash, got [%s]", h0)
 		return
+	}
+}
+
+func TestDups(t *testing.T) {
+	s := NewSequence()
+
+	results := make(chan map[string]struct{}, 4)
+	errs := make(chan error, 4)
+
+	for i := 0; i < 4; i++ {
+		idx := i
+		go func() {
+			result := map[string]struct{}{}
+			for j := 0; j < 100_000; j++ {
+				next, err := s.NextHash()
+				if err != nil {
+					errs <- err
+					return
+				}
+				if _, found := result[next]; found {
+					errs <- errors.Errorf("id %v created twice", next)
+					return
+				}
+				result[next] = struct{}{}
+			}
+			errs <- nil
+			results <- result
+			fmt.Printf("%v: key generation done\n", idx)
+		}()
+	}
+
+	for i := 0; i < 4; i++ {
+		err := <-errs
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	result := map[string]struct{}{}
+	for i := 0; i < 4; i++ {
+		next := <-results
+		for id := range next {
+			if _, found := result[id]; found {
+				t.Error(errors.Errorf("id %v created twice", next))
+			}
+			result[id] = struct{}{}
+		}
+		fmt.Printf("%v: no dups found\n", i)
 	}
 }
