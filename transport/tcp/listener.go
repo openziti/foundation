@@ -17,8 +17,8 @@
 package tcp
 
 import (
-	"github.com/openziti/foundation/transport"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/transport"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
@@ -32,7 +32,7 @@ func Listen(bindAddress, name string, incoming chan transport.Connection) (io.Cl
 		return nil, err
 	}
 
-	go acceptLoop(log, name, listener, incoming)
+	go acceptLoop(log.Entry, name, listener, incoming)
 
 	return listener, nil
 }

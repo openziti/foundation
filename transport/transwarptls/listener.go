@@ -51,7 +51,7 @@ func Listen(bind *net.UDPAddr, name string, id *identity.TokenId, incoming chan 
 		return nil, err
 	}
 
-	go acceptLoop(log, name, listener, incoming)
+	go acceptLoop(log.Entry, name, listener, incoming)
 
 	return listener, nil
 }
