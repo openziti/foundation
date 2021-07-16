@@ -80,7 +80,7 @@ func Listen(bindAddress string, name string, incoming chan transport.Connection,
 	}
 	logrus.Infof(cfg.Dump())
 
-	go wsslistener(log, bindAddress, cfg, name, incoming)
+	go wsslistener(log.Entry, bindAddress, cfg, name, incoming)
 
 	return nil, nil
 }

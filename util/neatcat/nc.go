@@ -29,8 +29,7 @@ import (
 )
 
 func init() {
-	pfxlog.Global(logrus.InfoLevel)
-	pfxlog.SetPrefix("github.com/openziti/")
+	pfxlog.GlobalInit(logrus.InfoLevel, pfxlog.DefaultOptions().SetTrimPrefix("github.com/openziti/"))
 }
 
 func init() {
@@ -49,7 +48,7 @@ var root = &cobra.Command{
 
 		switch logFormatter {
 		case "pfxlog":
-			logrus.SetFormatter(pfxlog.NewFormatterStartingToday())
+			logrus.SetFormatter(pfxlog.NewFormatter(pfxlog.DefaultOptions().StartingToday()))
 		case "json":
 			logrus.SetFormatter(&logrus.JSONFormatter{})
 		case "text":
@@ -72,7 +71,7 @@ func main() {
 	}
 }
 
-func runFunc(cmd *cobra.Command, args []string) {
+func runFunc(_ *cobra.Command, args []string) {
 
 	log := pfxlog.Logger()
 

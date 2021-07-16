@@ -17,10 +17,10 @@
 package tls
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"crypto/tls"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
@@ -34,7 +34,7 @@ func Listen(bindAddress, name string, i *identity.TokenId, incoming chan transpo
 		return nil, err
 	}
 
-	go acceptLoop(log, name, listener, incoming)
+	go acceptLoop(log.Entry, name, listener, incoming)
 
 	return listener, nil
 }
