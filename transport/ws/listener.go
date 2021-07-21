@@ -85,7 +85,7 @@ func Listen(bindAddress string, name string, incoming chan transport.Connection,
 	}
 	logrus.Infof(cfg.Dump())
 
-	go wslistener(log, bindAddress, cfg, name, incoming)
+	go wslistener(log.Entry, bindAddress, cfg, name, incoming)
 
 	return nil, nil
 }

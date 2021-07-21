@@ -49,7 +49,7 @@ func Listen(bind *net.UDPAddr, name string, incoming chan transport.Connection, 
 		return nil, err
 	}
 
-	go acceptLoop(log, name, listener, incoming)
+	go acceptLoop(log.Entry, name, listener, incoming)
 
 	return listener, nil
 }

@@ -17,10 +17,10 @@
 package tls
 
 import (
-	"github.com/openziti/foundation/identity/identity"
-	"github.com/openziti/foundation/transport"
 	"crypto/tls"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
+	"github.com/openziti/foundation/transport"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net"
