@@ -79,6 +79,7 @@ type ListStore interface {
 	AddFkSymbolWithKey(name string, key string, linkedType ListStore, path ...string) EntitySymbol
 	AddMapSymbol(name string, nodeType ast.NodeType, key string, path ...string)
 	AddSetSymbol(name string, nodeType ast.NodeType) EntitySetSymbol
+	AddPublicSetSymbol(name string, nodeType ast.NodeType) EntitySetSymbol
 	AddFkSetSymbol(name string, linkedType ListStore) EntitySetSymbol
 	NewEntitySymbol(name string, nodeType ast.NodeType) EntitySymbol
 	AddExtEntitySymbols()

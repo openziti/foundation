@@ -42,7 +42,7 @@ func Listen(bindAddress, name string, i *identity.TokenId, incoming chan transpo
 		return nil, err
 	}
 
-	go acceptLoop(log, name, listener, incoming)
+	go acceptLoop(log.Entry, name, listener, incoming)
 
 	return listener, nil
 }

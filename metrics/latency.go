@@ -19,6 +19,7 @@ package metrics
 import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/channel2"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -29,15 +30,45 @@ const (
 // send regular latency probes
 //
 func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Duration, timeout time.Duration) {
+	config := &LatencyProbeConfig{
+		Channel:  ch,
+		Interval: interval,
+		Timeout:  timeout,
+		ResultHandler: func(resultNanos int64) {
+			histogram.Update(resultNanos)
+		},
+		TimeoutHandler: func() {
+			logrus.Errorf("latency timeout after [%s]", timeout)
+		},
+		ExitHandler: func() {
+			histogram.Dispose()
+		},
+	}
+	ProbeLatencyConfigurable(config)
+}
+
+type LatencyProbeConfig struct {
+	Channel        channel2.Channel
+	Interval       time.Duration
+	Timeout        time.Duration
+	ResultHandler  func(resultNanos int64)
+	TimeoutHandler func()
+	ExitHandler    func()
+}
+
+func ProbeLatencyConfigurable(config *LatencyProbeConfig) {
+	ch := config.Channel
 	log := pfxlog.ContextLogger(ch.Label())
 	log.Debug("started")
 	defer log.Debug("exited")
 	defer func() {
-		histogram.Dispose()
+		if config.ExitHandler != nil {
+			config.ExitHandler()
+		}
 	}()
 
 	for {
-		time.Sleep(interval)
+		time.Sleep(config.Interval)
 		if ch.IsClosed() {
 			return
 		}
@@ -61,7 +92,9 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 				if result.Success {
 					if sentTime, ok := response.GetUint64Header(latencyProbeTime); ok {
 						latency := time.Now().UnixNano() - int64(sentTime)
-						histogram.Update(latency)
+						if config.ResultHandler != nil {
+							config.ResultHandler(latency)
+						}
 					} else {
 						log.Error("no send time")
 					}
@@ -71,8 +104,10 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 			} else {
 				log.Errorf("unexpected latency response [%d]", response.ContentType)
 			}
-		case <-time.After(timeout):
-			log.Errorf("latency timeout after [%s]", timeout)
+		case <-time.After(config.Timeout):
+			if config.TimeoutHandler != nil {
+				config.TimeoutHandler()
+			}
 		}
 	}
 }
