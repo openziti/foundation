@@ -53,4 +53,10 @@ const (
 
 	// CustomOp reserved for application specific operations
 	CustomOp = byte(0x12)
+
+	// SetChannelLogLevel sets the log level for a channel
+	SetChannelLogLevel = byte(0x13)
+
+	// ClearChannelLogLevel clears the log level for a channel
+	ClearChannelLogLevel = byte(0x14)
 )
