@@ -17,7 +17,7 @@
 package transwarp
 
 import (
-	"github.com/openziti/dilithium/cf"
+	"github.com/openziti-incubator/cf"
 	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"

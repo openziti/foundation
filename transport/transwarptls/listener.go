@@ -18,7 +18,7 @@ package transwarptls
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/dilithium/cf"
+	"github.com/openziti-incubator/cf"
 	"github.com/openziti/dilithium/protocol/westlsworld3"
 	"github.com/openziti/dilithium/protocol/westworld3"
 	"github.com/openziti/foundation/identity/identity"
