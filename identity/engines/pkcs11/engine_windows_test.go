@@ -18,7 +18,8 @@ package pkcs11
 
 import "os"
 
-func getPkcs11Lib() (string) {
+func getPkcs11Lib() string {
 	return os.Getenv(softHsmEnvVar)
 }
+
 const initScript = "init-test-data.bat"

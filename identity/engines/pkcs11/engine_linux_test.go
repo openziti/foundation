@@ -18,7 +18,7 @@ package pkcs11
 
 import "os"
 
-func getPkcs11Lib() (string) {
+func getPkcs11Lib() string {
 	libFromEnv := os.Getenv(softHsmEnvVar)
 
 	if len(libFromEnv) > 0 {
@@ -27,4 +27,5 @@ func getPkcs11Lib() (string) {
 		return "/usr/lib/softhsm/libsofthsm2.so"
 	}
 }
+
 const initScript = "./init-test-data.sh"

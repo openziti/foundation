@@ -17,11 +17,11 @@
 package channel2
 
 import (
-	"github.com/openziti/foundation/identity/identity"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/identity/identity"
 	"io"
 	"sync"
 )

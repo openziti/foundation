@@ -17,13 +17,13 @@
 package identity
 
 import (
-	"github.com/openziti/foundation/identity/certtools"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"github.com/openziti/foundation/identity/certtools"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"

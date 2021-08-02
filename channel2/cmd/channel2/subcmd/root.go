@@ -28,7 +28,7 @@ func init() {
 }
 
 var Root = &cobra.Command{
-	Use: filepath.Base(os.Args[0]),
+	Use:   filepath.Base(os.Args[0]),
 	Short: "Channel2 Toolbox",
 	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		if verbose {

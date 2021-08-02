@@ -34,7 +34,7 @@ type PooledBuffer interface {
 }
 
 type DefaultPooledBuffer struct {
-	Buf []byte
+	Buf     []byte
 	release func()
 }
 
@@ -47,13 +47,13 @@ func (buffer *DefaultPooledBuffer) Release() {
 }
 
 func NewPool(poolSize int, bufSize int) Pool {
-	pool := &pool {
-		bufChan : make(chan *DefaultPooledBuffer, poolSize),
+	pool := &pool{
+		bufChan: make(chan *DefaultPooledBuffer, poolSize),
 	}
 	for i := 0; i < poolSize; i++ {
 		buffer := make([]byte, bufSize)
 		pooled := &DefaultPooledBuffer{
-			Buf:  buffer,
+			Buf: buffer,
 		}
 		pooled.release = func() {
 			pooled.Buf = buffer

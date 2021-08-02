@@ -17,11 +17,11 @@
 package underlay
 
 import (
+	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/channel2"
 	"github.com/openziti/foundation/channel2/cmd/channel2/subcmd"
 	"github.com/openziti/foundation/identity/dotziti"
 	"github.com/openziti/foundation/identity/identity"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/spf13/cobra"
 	"time"
 )

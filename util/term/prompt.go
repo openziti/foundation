@@ -64,4 +64,3 @@ func Prompt(prompt string) (string, error) {
 
 	return text, nil
 }
-

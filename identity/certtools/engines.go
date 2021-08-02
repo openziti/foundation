@@ -17,9 +17,9 @@
 package certtools
 
 import (
-	"github.com/openziti/foundation/identity/engines/pkcs11"
 	"crypto"
 	"fmt"
+	"github.com/openziti/foundation/identity/engines/pkcs11"
 	"net/url"
 )
 

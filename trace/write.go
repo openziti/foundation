@@ -17,11 +17,11 @@
 package trace
 
 import (
-	"github.com/openziti/foundation/trace/pb"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"github.com/golang/protobuf/proto"
+	"github.com/openziti/foundation/trace/pb"
 	"io"
 )
 

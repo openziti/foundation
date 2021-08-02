@@ -34,7 +34,6 @@ import (
 func mkCert(cn string, dns []string) (crypto.Signer, *x509.Certificate) {
 	key, _ := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
 
-
 	cert := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: cn,
