@@ -333,8 +333,61 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		newLevel := logrus.Level(param)
 		logrus.SetLevel(newLevel)
 
-		pfxlog.Logger().Infof("Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
-		_, _ = fmt.Fprintf(conn, "Log level set to %v. Previous value was %v.\n", newLevel, oldLevel)
+		pfxlog.Logger().Infof("log level set to from %v to %v", oldLevel, newLevel)
+		_, _ = fmt.Fprintf(conn, "log level set from %v to %v\n", oldLevel, newLevel)
+
+	case SetChannelLogLevel:
+		reader := bufio.NewReader(conn)
+		channel, err := self.readVarString(reader, 1024)
+		if err != nil {
+			return err
+		}
+
+		level, err := reader.ReadByte()
+		if err != nil {
+			return err
+		}
+
+		if level < byte(logrus.PanicLevel) || level > byte(logrus.TraceLevel) {
+			return errors.Errorf("invalid log level %v", level)
+		}
+
+		var prevLevel string
+		newLevel := logrus.Level(level)
+		pfxlog.MapGlobalOptions(func(options *pfxlog.Options) *pfxlog.Options {
+			if val, found := options.ChannelLogLevelOverrides[channel]; found {
+				prevLevel = val.String()
+			} else {
+				prevLevel = "default"
+			}
+			options.SetChannelLogLevel(channel, newLevel)
+			return options
+		})
+
+		pfxlog.Logger().Infof("log level for channel %v set from %v to %v", channel, prevLevel, newLevel)
+		_, _ = fmt.Fprintf(conn, "log level for channel %v set from %v to %v\n", channel, prevLevel, newLevel)
+
+	case ClearChannelLogLevel:
+		reader := bufio.NewReader(conn)
+		channel, err := self.readVarString(reader, 1024)
+		if err != nil {
+			return err
+		}
+
+		var prevLevel string
+		pfxlog.MapGlobalOptions(func(options *pfxlog.Options) *pfxlog.Options {
+			if val, found := options.ChannelLogLevelOverrides[channel]; found {
+				prevLevel = val.String()
+			} else {
+				prevLevel = "default"
+			}
+			options.ClearChannelLogLevel(channel)
+			return options
+		})
+
+		pfxlog.Logger().Infof("log level for channel %v cleared, was %v", channel, prevLevel)
+		_, _ = fmt.Fprintf(conn, "log level for channel %v cleared, was %v\n", channel, prevLevel)
+
 	default:
 		if self.options.CustomOps != nil {
 			if customHandler, found := self.options.CustomOps[op]; found {
@@ -343,4 +396,24 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		}
 	}
 	return nil
+}
+
+func (self *handler) readVarString(reader *bufio.Reader, maxLen int64) (string, error) {
+	strLen, err := binary.ReadVarint(reader)
+	if err != nil {
+		return "", err
+	}
+
+	if strLen > maxLen {
+		return "", errors.Errorf("string exceeds max length of %v", maxLen)
+	}
+
+	buf := make([]byte, strLen)
+
+	_, err = io.ReadFull(reader, buf)
+	if err != nil {
+		return "", err
+	}
+
+	return string(buf), nil
 }

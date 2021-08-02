@@ -36,7 +36,7 @@ const (
 const (
 	InvalidFilterCode       string = "INVALID_FILTER"
 	InvalidFilterMessage    string = "The filter query supplied is invalid"
-	httpStatusInvalidFilter        = 480
+	httpStatusInvalidFilter        = http.StatusBadRequest
 	InvalidFilterStatus     int    = httpStatusInvalidFilter
 
 	InvalidPaginationCode    string = "INVALID_PAGINATION"
