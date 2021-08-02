@@ -23,6 +23,7 @@ require (
 	github.com/michaelquigley/pfxlog v0.6.0
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/go-ps v1.0.0
+	github.com/openziti-incubator/cf v0.0.3 // indirect
 	github.com/openziti/dilithium v0.3.3
 	github.com/orcaman/concurrent-map v0.0.0-20190826125027-8c72a8bb44f6
 	github.com/pkg/errors v0.9.1
