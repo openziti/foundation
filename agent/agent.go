@@ -354,7 +354,7 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 
 		var prevLevel string
 		newLevel := logrus.Level(level)
-		pfxlog.MapGlobalOptions(func(options *pfxlog.Options) *pfxlog.Options {
+		pfxlog.GlobalConfig(func(options *pfxlog.Options) *pfxlog.Options {
 			if val, found := options.ChannelLogLevelOverrides[channel]; found {
 				prevLevel = val.String()
 			} else {
@@ -375,7 +375,7 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		}
 
 		var prevLevel string
-		pfxlog.MapGlobalOptions(func(options *pfxlog.Options) *pfxlog.Options {
+		pfxlog.GlobalConfig(func(options *pfxlog.Options) *pfxlog.Options {
 			if val, found := options.ChannelLogLevelOverrides[channel]; found {
 				prevLevel = val.String()
 			} else {
