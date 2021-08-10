@@ -410,7 +410,12 @@ func (channel *channelImpl) rxer() {
 	log.Debug("started")
 	defer log.Debug("exited")
 
-	defer func() { _ = channel.Close() }()
+	defer func() {
+		if r := recover(); r != nil {
+			panic(r)
+		}
+		_ = channel.Close()
+	}()
 	defer func() {
 		channel.waiters.Range(func(k, v interface{}) bool {
 			channel.waiters.Delete(k)
