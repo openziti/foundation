@@ -83,6 +83,7 @@ type ListStore interface {
 	AddFkSetSymbol(name string, linkedType ListStore) EntitySetSymbol
 	NewEntitySymbol(name string, nodeType ast.NodeType) EntitySymbol
 	AddExtEntitySymbols()
+	MakeSymbolPublic(name string)
 
 	NewRowComparator(sort []ast.SortField) (RowComparator, error)
 	GetPublicSymbols() []string

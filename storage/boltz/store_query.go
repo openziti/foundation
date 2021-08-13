@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"fmt"
+	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/util/stringz"
 	"strings"
 
@@ -25,6 +26,14 @@ import (
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
 )
+
+func (store *BaseStore) MakeSymbolPublic(symbol string) {
+	if store.GetSymbol(symbol) != nil {
+		store.publicSymbols = append(store.publicSymbols, symbol)
+	} else {
+		pfxlog.Logger().Errorf("%v can't mark unknown symbol %v public", store.GetEntityType(), symbol)
+	}
+}
 
 func (store *BaseStore) GetPublicSymbols() []string {
 	return store.publicSymbols
