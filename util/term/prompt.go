@@ -19,7 +19,7 @@ package term
 import (
 	"bufio"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"os"
 	"strings"
 	"syscall"
@@ -33,7 +33,7 @@ func PromptPassword(prompt string, allowEmpty bool) (string, error) {
 
 		//Be aware that debugging this on windows in GoLand will cause this to error w/ an invalid
 		//stdin handler. To debug compile w/o optimizations and attach to the process
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 		println("")
 		if err != nil {
 			return "", err
@@ -51,8 +51,11 @@ func PromptPassword(prompt string, allowEmpty bool) (string, error) {
 	return password, nil
 }
 
+// Prompt will output the given prompt and return the line entered by the user.
+//        The line will be trimmed of white-space.
 func Prompt(prompt string) (string, error) {
 	fmt.Print(prompt)
+
 	reader := bufio.NewReader(os.Stdin)
 	text, err := reader.ReadString('\n')
 
@@ -60,8 +63,7 @@ func Prompt(prompt string) (string, error) {
 		return "", err
 	}
 
-	text = strings.Replace(text, "\n", "", -1)
+	text = strings.TrimSpace(text)
 
 	return text, nil
 }
-
