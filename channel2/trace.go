@@ -19,7 +19,6 @@ package channel2
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/trace"
 	"github.com/openziti/foundation/trace/pb"
 	"github.com/sirupsen/logrus"
@@ -34,7 +33,7 @@ type TraceHandler struct {
 	logTraces bool
 }
 
-func NewTraceHandler(path string, id *identity.TokenId) (*TraceHandler, error) {
+func NewTraceHandler(path string, id string) (*TraceHandler, error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -42,7 +41,7 @@ func NewTraceHandler(path string, id *identity.TokenId) (*TraceHandler, error) {
 
 	return &TraceHandler{
 		f:        f,
-		id:       id.Token,
+		id:       id,
 		decoders: make([]TraceMessageDecoder, 0),
 	}, nil
 }

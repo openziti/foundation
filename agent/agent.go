@@ -187,7 +187,7 @@ func (self *handler) handleConnection(conn net.Conn) {
 	}
 
 	if !bytes.Equal(Magic, buf[:len(Magic)]) {
-		logger.Error("invalid magic number on gops connection", hex.Dump(buf))
+		logger.Error("invalid magic number on gops connection", hex.Dump(buf[:len(Magic)]))
 		return
 	}
 
