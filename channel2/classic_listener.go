@@ -21,6 +21,7 @@ import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
+	"github.com/openziti/foundation/util/concurrenz"
 	"io"
 	"time"
 )
@@ -35,6 +36,7 @@ type classicListener struct {
 	connectOptions ConnectOptions
 	tcfg           transport.Configuration
 	headers        map[int32][]byte
+	closed         concurrenz.AtomicBoolean
 }
 
 func NewClassicListener(identity *identity.TokenId, endpoint transport.Address, connectOptions ConnectOptions, headers map[int32][]byte) UnderlayListener {
@@ -70,11 +72,15 @@ func (listener *classicListener) Listen(handlers ...ConnectionHandler) error {
 }
 
 func (listener *classicListener) Close() error {
-	close(listener.close)
-	if err := listener.socket.Close(); err != nil {
-		return err
+	if listener.closed.CompareAndSwap(false, true) {
+		close(listener.close)
+		if socket := listener.socket; socket != nil {
+			if err := socket.Close(); err != nil {
+				return err
+			}
+		}
+		listener.socket = nil
 	}
-	listener.socket = nil
 	return nil
 }
 
