@@ -1,6 +1,8 @@
 syntax = "proto3";
 
-package metrics.pb;
+package ziti.metrics.pb;
+
+option go_package = "github.com/openziti/foundation/metrics/metrics_pb";
 
 import "google/protobuf/timestamp.proto";
 
