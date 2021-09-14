@@ -1,4 +1,4 @@
-//go:generate protoc -I ./ ./metrics.proto --go_out=paths=source_relative:./
+//go:generate protoc -I ./ ./ziti_metrics.proto --go_out=paths=source_relative:./
 
 package metrics_pb
 
