@@ -34,7 +34,7 @@ func Dial(destination, name string, i *identity.TokenId, timeout time.Duration) 
 		tlsConfig = &tls.Config{}
 	}
 	tlsConfig.NextProtos = append(tlsConfig.NextProtos, "ziti-channel")
-	session, err := quicgo.DialAddr(destination, tlsConfig, &quicgo.Config{HandshakeTimeout: timeout})
+	session, err := quicgo.DialAddr(destination, tlsConfig, &quicgo.Config{HandshakeIdleTimeout: timeout})
 	if err != nil {
 		return nil, err
 	}
