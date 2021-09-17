@@ -38,7 +38,7 @@ func (self *Connection) Detail() *transport.ConnectionDetail {
 }
 
 func (self *Connection) PeerCertificates() []*x509.Certificate {
-	return self.session.ConnectionState().PeerCertificates
+	return self.session.ConnectionState().TLS.PeerCertificates
 }
 
 // Reader method on the transport.Connection interface.
