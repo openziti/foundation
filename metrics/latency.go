@@ -38,7 +38,7 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 			histogram.Update(resultNanos)
 		},
 		TimeoutHandler: func() {
-			logrus.Errorf("latency timeout after [%s] on channel [%s]", timeout, ch)
+			logrus.Errorf("latency timeout after [%s] on channel [%s]", timeout, ch.LogicalName())
 		},
 		ExitHandler: func() {
 			histogram.Dispose()
