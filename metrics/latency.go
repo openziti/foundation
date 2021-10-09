@@ -19,7 +19,6 @@ package metrics
 import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/channel2"
-	"github.com/sirupsen/logrus"
 	"time"
 )
 
