@@ -19,7 +19,6 @@ package metrics
 import (
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/channel2"
-	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -38,7 +37,7 @@ func ProbeLatency(ch channel2.Channel, histogram Histogram, interval time.Durati
 			histogram.Update(resultNanos)
 		},
 		TimeoutHandler: func() {
-			logrus.Errorf("latency timeout after [%s]", timeout)
+			pfxlog.ContextLogger(ch.Label()).Errorf("latency timeout after [%s] on channel [%s]", timeout, ch.Label())
 		},
 		ExitHandler: func() {
 			histogram.Dispose()
