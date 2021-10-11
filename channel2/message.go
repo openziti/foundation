@@ -57,7 +57,7 @@ type MessageHeader struct {
 	ContentType int32
 	sequence    int32
 	replyFor    *int32
-	Headers     map[int32][]byte
+	Headers     Headers
 }
 
 func (header *MessageHeader) Sequence() int32 {
@@ -105,7 +105,59 @@ func (header *MessageHeader) PutUint64Header(key int32, value uint64) {
 }
 
 func (header *MessageHeader) GetUint64Header(key int32) (uint64, bool) {
-	encoded, ok := header.Headers[key]
+	return header.Headers.GetUint64Header(key)
+}
+
+func (header *MessageHeader) PutUint32Header(key int32, value uint32) {
+	header.Headers.PutUint32Header(key, value)
+}
+
+func (header *MessageHeader) GetUint32Header(key int32) (uint32, bool) {
+	return header.Headers.GetUint32Header(key)
+}
+
+func (header *MessageHeader) PutUint16Header(key int32, value uint16) {
+	header.Headers.PutUint16Header(key, value)
+}
+
+func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
+	return header.Headers.GetUint16Header(key)
+}
+
+func (header *MessageHeader) PutByteHeader(key int32, value byte) {
+	header.Headers.PutByteHeader(key, value)
+}
+
+func (header *MessageHeader) PutStringHeader(key int32, value string) {
+	header.Headers.PutStringHeader(key, value)
+}
+
+func (header *MessageHeader) GetByteHeader(key int32) (byte, bool) {
+	return header.Headers.GetByteHeader(key)
+}
+
+func (header *MessageHeader) PutBoolHeader(key int32, value bool) {
+	header.Headers.PutBoolHeader(key, value)
+}
+
+func (header *MessageHeader) GetBoolHeader(key int32) (bool, bool) {
+	return header.Headers.GetBoolHeader(key)
+}
+
+func (header *MessageHeader) GetStringHeader(key int32) (string, bool) {
+	return header.Headers.GetStringHeader(key)
+}
+
+type Headers map[int32][]byte
+
+func (self Headers) PutUint64Header(key int32, value uint64) {
+	encoded := make([]byte, 8)
+	binary.LittleEndian.PutUint64(encoded, value)
+	self[key] = encoded
+}
+
+func (self Headers) GetUint64Header(key int32) (uint64, bool) {
+	encoded, ok := self[key]
 	if !ok || len(encoded) != 8 {
 		return 0, ok
 	}
@@ -113,14 +165,14 @@ func (header *MessageHeader) GetUint64Header(key int32) (uint64, bool) {
 	return result, true
 }
 
-func (header *MessageHeader) PutUint32Header(key int32, value uint32) {
+func (self Headers) PutUint32Header(key int32, value uint32) {
 	encoded := make([]byte, 4)
 	binary.LittleEndian.PutUint32(encoded, value)
-	header.Headers[key] = encoded
+	self[key] = encoded
 }
 
-func (header *MessageHeader) GetUint32Header(key int32) (uint32, bool) {
-	encoded, ok := header.Headers[key]
+func (self Headers) GetUint32Header(key int32) (uint32, bool) {
+	encoded, ok := self[key]
 	if !ok || len(encoded) != 4 {
 		return 0, false
 	}
@@ -128,14 +180,14 @@ func (header *MessageHeader) GetUint32Header(key int32) (uint32, bool) {
 	return result, true
 }
 
-func (header *MessageHeader) PutUint16Header(key int32, value uint16) {
+func (self Headers) PutUint16Header(key int32, value uint16) {
 	encoded := make([]byte, 2)
 	binary.LittleEndian.PutUint16(encoded, value)
-	header.Headers[key] = encoded
+	self[key] = encoded
 }
 
-func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
-	encoded, ok := header.Headers[key]
+func (self Headers) GetUint16Header(key int32) (uint16, bool) {
+	encoded, ok := self[key]
 	if !ok || len(encoded) != 2 {
 		return 0, false
 	}
@@ -143,28 +195,32 @@ func (header *MessageHeader) GetUint16Header(key int32) (uint16, bool) {
 	return result, true
 }
 
-func (header *MessageHeader) PutByteHeader(key int32, value byte) {
-	header.Headers[key] = []byte{value}
+func (self Headers) PutByteHeader(key int32, value byte) {
+	self[key] = []byte{value}
 }
 
-func (header *MessageHeader) GetByteHeader(key int32) (byte, bool) {
-	encoded, ok := header.Headers[key]
+func (self Headers) PutStringHeader(key int32, value string) {
+	self[key] = []byte(value)
+}
+
+func (self Headers) GetByteHeader(key int32) (byte, bool) {
+	encoded, ok := self[key]
 	if !ok || len(encoded) < 1 {
 		return 0, ok
 	}
 	return encoded[0], true
 }
 
-func (header *MessageHeader) PutBoolHeader(key int32, value bool) {
+func (self Headers) PutBoolHeader(key int32, value bool) {
 	byteVal := byte(0)
 	if value {
 		byteVal = 1
 	}
-	header.Headers[key] = []byte{byteVal}
+	self[key] = []byte{byteVal}
 }
 
-func (header *MessageHeader) GetBoolHeader(key int32) (bool, bool) {
-	encoded, ok := header.Headers[key]
+func (self Headers) GetBoolHeader(key int32) (bool, bool) {
+	encoded, ok := self[key]
 	if !ok {
 		return false, ok
 	}
@@ -172,8 +228,8 @@ func (header *MessageHeader) GetBoolHeader(key int32) (bool, bool) {
 	return result, true
 }
 
-func (header *MessageHeader) GetStringHeader(key int32) (string, bool) {
-	encoded, ok := header.Headers[key]
+func (self Headers) GetStringHeader(key int32) (string, bool) {
+	encoded, ok := self[key]
 	return string(encoded), ok
 }
 
@@ -414,9 +470,7 @@ func marshalWithVersion(m *Message, version []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 	if m.replyFor != nil {
-		replyForHeader := make([]byte, 4)
-		binary.LittleEndian.PutUint32(replyForHeader, uint32(*m.replyFor))
-		m.Headers[ReplyForHeader] = replyForHeader
+		m.PutUint32Header(ReplyForHeader, uint32(*m.replyFor))
 	}
 	headersData, err := marshalHeaders(m.Headers)
 	if err != nil {
