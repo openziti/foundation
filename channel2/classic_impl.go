@@ -55,17 +55,12 @@ func (impl *classicImpl) Tx(m *Message) error {
 		return errors.New("underlay closed")
 	}
 
-	data, body, err := impl.marshalF(m)
+	data, err := impl.marshalF(m)
 	if err != nil {
 		return err
 	}
 
 	_, err = impl.peer.Writer().Write(data)
-	if err != nil {
-		return err
-	}
-
-	_, err = impl.peer.Writer().Write(body)
 	if err != nil {
 		return err
 	}
