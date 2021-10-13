@@ -30,11 +30,11 @@ import (
  * Message headers notes
  * 0-127 reserved for channel
  * 128-255 reserved for headers that need to be reflected back to sender on responses
- *  128 is used for a message UUID for tracing
+ * 128 is used for a message UUID for tracing
  * 1000-1099 reserved for edge messages
  * 1100-1199 is reserved for control plane messages
  * 2000-2500 is reserved for xgress messages
- *   2000-2255 is reserved for xgress implementation headers
+ * 2000-2255 is reserved for xgress implementation headers
  */
 const (
 	ConnectionIdHeader              = 0
@@ -51,7 +51,7 @@ const (
 const magicLength = 4
 
 type readFunction func(io.Reader) (*Message, error)
-type marshalFunction func(m *Message) ([]byte, []byte, error)
+type marshalFunction func(m *Message) ([]byte, error)
 
 type MessageHeader struct {
 	ContentType int32
@@ -447,57 +447,56 @@ func unmarshalHeaders(headerData []byte) (map[int32][]byte, error) {
 }
 
 // marshalV2 converts a *Message into a block of V2 wire format data.
-func marshalV2(m *Message) ([]byte, []byte, error) {
+func marshalV2(m *Message) ([]byte, error) {
 	return marshalWithVersion(m, magicV2)
 }
 
 // marshalTest converts a *Message into a block of V3 wire format data.
 // this is only here for testing, so we can test selection of an earlier
 // supported version
-func marshalV3(m *Message) ([]byte, []byte, error) {
+func marshalV3(m *Message) ([]byte, error) {
 	return marshalWithVersion(m, magicV3)
 }
 
 // marshalWithVersion converts a *Message into a block of V2 wire format data.
-func marshalWithVersion(m *Message, version []byte) ([]byte, []byte, error) {
+func marshalWithVersion(m *Message, version []byte) ([]byte, error) {
 	data := new(bytes.Buffer)
-	bodyData := new(bytes.Buffer)
 	data.Write(version)
 	if err := binary.Write(data, binary.LittleEndian, m.ContentType); err != nil { // content-type
-		return nil, nil, err
+		return nil, err
 	}
 	if err := binary.Write(data, binary.LittleEndian, m.sequence); err != nil { // sequence
-		return nil, nil, err
+		return nil, err
 	}
 	if m.replyFor != nil {
 		m.PutUint32Header(ReplyForHeader, uint32(*m.replyFor))
 	}
 	headersData, err := marshalHeaders(m.Headers)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := binary.Write(data, binary.LittleEndian, int32(len(headersData))); err != nil { // header-length
-		return nil, nil, err
+		return nil, err
 	}
 	if err := binary.Write(data, binary.LittleEndian, int32(len(m.Body))); err != nil { // body-length
-		return nil, nil, err
+		return nil, err
 	}
-	n, err := bodyData.Write(headersData)
+	n, err := data.Write(headersData)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if n != len(headersData) {
-		return nil, nil, errors.New("short headers write")
+		return nil, errors.New("short headers write")
 	}
-	n, err = bodyData.Write(m.Body)
+	n, err = data.Write(m.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if n != len(m.Body) {
-		return nil, nil, errors.New("short body write")
+		return nil, errors.New("short body write")
 	}
-	return data.Bytes(), bodyData.Bytes(), nil
+	return data.Bytes(), nil
 }
 
 func marshalHeaders(headers map[int32][]byte) ([]byte, error) {

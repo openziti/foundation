@@ -140,17 +140,12 @@ func (impl *reconnectingImpl) rx() (*Message, error) {
 }
 
 func (impl *reconnectingImpl) tx(m *Message) error {
-	data, body, err := impl.marshalF(m)
+	data, err := impl.marshalF(m)
 	if err != nil {
 		return err
 	}
 
 	_, err = impl.peer.Writer().Write(data)
-	if err != nil {
-		return err
-	}
-
-	_, err = impl.peer.Writer().Write(body)
 	if err != nil {
 		return err
 	}
