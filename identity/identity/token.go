@@ -23,40 +23,42 @@ import (
 	"sync"
 )
 
+var _ Identity = &TokenId{}
+
 type TokenId struct {
-	Id    Identity
+	Identity
 	Token string
 	Data  map[uint32][]byte
 }
 
 func (i *TokenId) ClientTLSConfig() *tls.Config {
-	if i.Id != nil {
-		return i.Id.ClientTLSConfig()
+	if i.Identity != nil {
+		return i.Identity.ClientTLSConfig()
 	}
 	return nil
 }
 
 func (i *TokenId) ServerTLSConfig() *tls.Config {
-	if i.Id != nil {
-		return i.Id.ServerTLSConfig()
+	if i.Identity != nil {
+		return i.Identity.ServerTLSConfig()
 	}
 	return nil
 }
 
 func NewIdentity(id Identity) *TokenId {
 	token := id.Cert().Leaf.Subject.CommonName
-	return &TokenId{Id: id, Token: token}
+	return &TokenId{Identity: id, Token: token}
 }
 
 func (i *TokenId) ShallowCloneWithNewToken(token string) *TokenId {
 	return &TokenId{
-		Id:    i.Id,
+		Identity:    i.Identity,
 		Token: token,
 	}
 }
 
 func LoadServerIdentity(clientCertPath, serverCertPath, keyPath, caCertPath string) (*TokenId, error) {
-	idCfg := IdentityConfig{
+	idCfg := Config{
 		Key:        keyPath,
 		Cert:       clientCertPath,
 		ServerCert: serverCertPath,
@@ -71,7 +73,7 @@ func LoadServerIdentity(clientCertPath, serverCertPath, keyPath, caCertPath stri
 }
 
 func LoadClientIdentity(certPath, keyPath, caCertPath string) (*TokenId, error) {
-	idCfg := IdentityConfig{
+	idCfg := Config{
 		Key:  keyPath,
 		Cert: certPath,
 		CA:   caCertPath,
@@ -92,8 +94,8 @@ func NewClientTokenIdentity(clientCert *x509.Certificate, privateKey crypto.Priv
 	}
 
 	id := &ID{
-		IdentityConfig: IdentityConfig{},
-		certLock:       sync.RWMutex{},
+		Config:   Config{},
+		certLock: sync.RWMutex{},
 		cert: &tls.Certificate{
 			Certificate: [][]byte{
 				clientCert.Raw,
