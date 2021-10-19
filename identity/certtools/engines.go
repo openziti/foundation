@@ -17,9 +17,10 @@
 package certtools
 
 import (
-	"github.com/openziti/foundation/identity/engines/pkcs11"
 	"crypto"
 	"fmt"
+	"github.com/openziti/foundation/identity/engines/parsec"
+	"github.com/openziti/foundation/identity/engines/pkcs11"
 	"net/url"
 )
 
@@ -32,6 +33,7 @@ var engines = map[string]Engine{}
 
 func init() {
 	engines[pkcs11.EngineId] = pkcs11.Engine
+	engines[parsec.EngineId] = parsec.Engine
 }
 
 func ListEngines() []string {
