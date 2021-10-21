@@ -14,23 +14,23 @@
 	limitations under the License.
 */
 
-package quic
+package udp
 
 import (
+	"bytes"
 	"crypto/x509"
-	"github.com/lucas-clemente/quic-go"
+	"fmt"
 	"github.com/openziti/foundation/transport"
+	"github.com/pkg/errors"
 	"io"
 	"net"
 	"time"
 )
 
-// Connection represents a concrete QUIC connection.
-//
 type Connection struct {
-	detail  *transport.ConnectionDetail
-	session quic.Session
-	stream  quic.Stream
+	detail *transport.ConnectionDetail
+	socket net.Conn
+	reader io.Reader
 }
 
 func (self *Connection) Detail() *transport.ConnectionDetail {
@@ -38,55 +38,65 @@ func (self *Connection) Detail() *transport.ConnectionDetail {
 }
 
 func (self *Connection) PeerCertificates() []*x509.Certificate {
-	return self.session.ConnectionState().TLS.PeerCertificates
-}
-
-// Reader method on the transport.Connection interface.
-//
-func (self *Connection) Reader() io.Reader {
-	return self.stream
-}
-
-// Writer method on the transport.Connection interface.
-//
-func (self *Connection) Writer() io.Writer {
-	return self.stream
-}
-
-// QUIC doesn't provide an underlying net.Conn
-//
-func (self *Connection) Conn() net.Conn {
 	return nil
 }
 
-// SetReadTimeout sets the read timeout to the provided duration.
-//
+func (self *Connection) Reader() io.Reader {
+	return self.reader
+}
+
+func (self *Connection) Writer() io.Writer {
+	return self.socket
+}
+
+func (self *Connection) Conn() net.Conn {
+	return self.socket
+}
+
 func (self *Connection) SetReadTimeout(t time.Duration) error {
-	return self.stream.SetReadDeadline(time.Now().Add(t))
+	return self.socket.SetReadDeadline(time.Now().Add(t))
 }
 
-// SetWriteTimeout sets the write timeout to the provided duration.
-//
 func (self *Connection) SetWriteTimeout(t time.Duration) error {
-	return self.stream.SetWriteDeadline(time.Now().Add(t))
+	return self.socket.SetWriteDeadline(time.Now().Add(t))
 }
 
-// ClearReadTimeout clears the read time for all current and future reads
-//
 func (self *Connection) ClearReadTimeout() error {
 	var zero time.Time
-	return self.stream.SetReadDeadline(zero)
+	return self.socket.SetReadDeadline(zero)
 }
 
-// ClearWriteTimeout clears the write timeout for all current and future writes
-//
 func (self *Connection) ClearWriteTimeout() error {
 	var zero time.Time
-	return self.stream.SetWriteDeadline(zero)
+	return self.socket.SetWriteDeadline(zero)
 }
 
-// Close method on the transport.Connection interface.
-//
 func (self *Connection) Close() error {
-	return self.stream.Close()
+	return self.socket.Close()
+}
+
+type loggingWriter struct{ io.Writer }
+
+func (w loggingWriter) Write(b []byte) (int, error) {
+	fmt.Printf("Wrote: %v byte to underlay\n", len(b))
+	if n, err := w.Writer.Write(b); err != nil {
+		panic(err)
+	} else {
+		return n, nil
+	}
+}
+
+type loggingReader struct{ io.Reader }
+
+func (w loggingReader) Read(b []byte) (int, error) {
+	n, err := w.Reader.Read(b)
+	if err != nil {
+		return n, err
+	}
+	fmt.Printf("Read: %v bytes from underlay\n", n)
+	magicV2 := []byte{0x03, 0x06, 0x09, 0x0c}
+	if len(b) > 20 && bytes.Equal(magicV2, b[:4]) {
+		panic(errors.New("no good"))
+	}
+	return n, err
 }

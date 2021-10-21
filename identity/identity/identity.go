@@ -28,6 +28,11 @@ import (
 	"sync"
 )
 
+const (
+	StorageFile = "file"
+	StoragePem  = "pem"
+)
+
 type Identity interface {
 	Cert() *tls.Certificate
 	ServerCert() *tls.Certificate
@@ -37,21 +42,15 @@ type Identity interface {
 	Reload() error
 
 	SetCert(pem string) error
-	SetServerCert(ppem string) error
-}
+	SetServerCert(pem string) error
 
-type IdentityConfig struct {
-	Key        string `json:"key" yaml:"key" mapstructure:"key"`
-	Cert       string `json:"cert" yaml:"cert" mapstructure:"cert"`
-	ServerCert string `json:"server_cert,omitempty" yaml:"server_cert,omitempty" mapstructure:"server_cert,omitempty"`
-	ServerKey  string `json:"server_key,omitempty" yaml:"server_key,omitempty" mapstructure:"server_key,omitempty"`
-	CA         string `json:"ca,omitempty" yaml:"ca,omitempty" mapstructure:"ca"`
+	GetConfig() *Config
 }
 
 var _ Identity = &ID{}
 
 type ID struct {
-	IdentityConfig
+	Config
 
 	certLock sync.RWMutex
 
@@ -60,57 +59,86 @@ type ID struct {
 	ca         *x509.CertPool
 }
 
+// SetCert persists a new PEM as the ID's client certificate.
 func (id *ID) SetCert(pem string) error {
-	f, err := os.OpenFile(id.IdentityConfig.Cert, os.O_RDWR, 0664)
-	if err != nil {
-		return fmt.Errorf("could not update client certificate [%s]: %v", id.IdentityConfig.Cert, err)
-	}
+	if certUrl, err := parseAddr(id.Config.Cert); err != nil {
+		return err
+	} else {
+		switch certUrl.Scheme {
+		case StoragePem:
+			id.Config.Cert = StoragePem + ":" + pem
+			return fmt.Errorf("could not save client certificate, location scheme not supported for saving (%s):\n%s", id.Config.Cert, pem)
+		case StorageFile, "":
+			f, err := os.OpenFile(id.Config.Cert, os.O_RDWR, 0664)
+			if err != nil {
+				return fmt.Errorf("could not update client certificate [%s]: %v", id.Config.Cert, err)
+			}
 
-	defer f.Close()
+			defer func() { _ = f.Close() }()
 
-	err = f.Truncate(0)
+			err = f.Truncate(0)
 
-	if err != nil {
-		return fmt.Errorf("could not truncate client certificate [%s]: %v", id.IdentityConfig.Cert, err)
-	}
+			if err != nil {
+				return fmt.Errorf("could not truncate client certificate [%s]: %v", id.Config.Cert, err)
+			}
 
-	_, err = fmt.Fprint(f, pem)
+			_, err = fmt.Fprint(f, pem)
 
-	if err != nil {
-		return fmt.Errorf("error writing new client certificate [%s]: %v", id.IdentityConfig.Cert, err)
+			if err != nil {
+				return fmt.Errorf("error writing new client certificate [%s]: %v", id.Config.Cert, err)
+			}
+		default:
+			return fmt.Errorf("could not save client certificate, location scheme not supported (%s) or address not defined (%s):\n%s", certUrl.Scheme, id.Config.Cert, pem)
+		}
 	}
 
 	return nil
 }
 
+// SetServerCert persists a new PEM as the ID's server certificate.
 func (id *ID) SetServerCert(pem string) error {
-	f, err := os.OpenFile(id.IdentityConfig.ServerCert, os.O_RDWR, 0664)
-	if err != nil {
-		return fmt.Errorf("could not update server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
-	}
+	if certUrl, err := parseAddr(id.Config.ServerCert); err != nil {
+		return err
+	} else {
+		switch certUrl.Scheme {
+		case StoragePem:
+			id.Config.ServerCert = StoragePem + ":" + pem
+			return fmt.Errorf("could not save client certificate, location scheme not supported for saving (%s): \n %s", id.Config.Cert, pem)
+		case StorageFile, "":
+			f, err := os.OpenFile(id.Config.ServerCert, os.O_RDWR, 0664)
+			if err != nil {
+				return fmt.Errorf("could not update server certificate [%s]: %v", id.Config.ServerCert, err)
+			}
 
-	defer f.Close()
+			defer func() { _ = f.Close() }()
 
-	err = f.Truncate(0)
+			err = f.Truncate(0)
 
-	if err != nil {
-		return fmt.Errorf("could not truncate server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
-	}
+			if err != nil {
+				return fmt.Errorf("could not truncate server certificate [%s]: %v", id.Config.ServerCert, err)
+			}
 
-	_, err = fmt.Fprint(f, pem)
+			_, err = fmt.Fprint(f, pem)
 
-	if err != nil {
-		return fmt.Errorf("error writing new server certificate [%s]: %v", id.IdentityConfig.ServerCert, err)
+			if err != nil {
+				return fmt.Errorf("error writing new server certificate [%s]: %v", id.Config.ServerCert, err)
+			}
+		default:
+			return fmt.Errorf("could not save server certificate, location scheme not supported (%s) or address not defined (%s):\n%s", certUrl.Scheme, id.Config.ServerCert, pem)
+		}
 	}
 
 	return nil
 }
 
+// Reload re-interprets the internal Config that was used to create this ID. This instance of the
+// ID is updated with new client, server, and ca configuration. All tls.Config's generated
+// from this ID will use the newly loaded values for new connections.
 func (id *ID) Reload() error {
 	id.certLock.Lock()
 	defer id.certLock.Unlock()
 
-	newId, err := LoadIdentity(id.IdentityConfig)
+	newId, err := LoadIdentity(id.Config)
 
 	if err != nil {
 		return fmt.Errorf("failed to reload identity: %v", err)
@@ -123,62 +151,118 @@ func (id *ID) Reload() error {
 	return nil
 }
 
+// Cert returns the ID's current client certificate that is used by all tls.Config's generated from it.
 func (id *ID) Cert() *tls.Certificate {
+	id.certLock.RLock()
+	defer id.certLock.RUnlock()
+
 	return id.cert
 }
 
+// ServerCert returns the ID's current server certificate that is used by all tls.Config's generated from it.
 func (id *ID) ServerCert() *tls.Certificate {
+	id.certLock.RLock()
+	defer id.certLock.RUnlock()
+
 	return id.serverCert
 }
 
+// CA returns the ID's current CA certificate pool that is used by all tls.Config's generated from it.
 func (id *ID) CA() *x509.CertPool {
+	id.certLock.RLock()
+	defer id.certLock.RUnlock()
+
 	return id.ca
 }
 
-func (i *ID) ServerTLSConfig() *tls.Config {
-	if i.serverCert == nil {
+// ServerTLSConfig returns a new tls.Config instance that will delegate server certificate lookup to the current ID.
+// Calling Reload on the source ID will update which server certificate is used if the internal Config is altered
+// by calling Config or if the values the Config points to are altered (i.e. file update).
+//
+// Generating multiple tls.Config's by calling this method will return tls.Config's that are all tied to this ID's
+// Config.
+func (id *ID) ServerTLSConfig() *tls.Config {
+	if id.serverCert == nil {
 		return nil
 	}
 
 	tlsConfig := &tls.Config{
-		GetCertificate: i.GetServerCertificate,
-		RootCAs:        i.CA(),
+		GetCertificate: id.GetServerCertificate,
+		RootCAs:        id.ca,
 		ClientAuth:     tls.RequireAnyClientCert,
 		MinVersion:     tlz.GetMinTlsVersion(),
 		CipherSuites:   tlz.GetCipherSuites(),
 	}
-	tlsConfig.BuildNameToCertificate()
-	return tlsConfig
-}
 
-func (i *ID) ClientTLSConfig() *tls.Config {
-	tlsConfig := &tls.Config{
-		GetClientCertificate: i.GetClientCertificate,
-		RootCAs:              i.CA(),
+	//for servers, CAs can be updated for new connections by intercepting
+	//on new client connections via GetConfigForClient
+	tlsConfig.GetConfigForClient = func(info *tls.ClientHelloInfo) (*tls.Config, error) {
+		return id.GetConfigForClient(tlsConfig, info)
 	}
-	tlsConfig.BuildNameToCertificate()
 
 	return tlsConfig
 }
 
-func (i *ID) GetServerCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	i.certLock.RLock()
-	defer i.certLock.RUnlock()
+// ClientTLSConfig returns a new tls.Config instance that will delegate client certificate lookup to the current ID.
+// Calling Reload on the source ID can update which client certificate is used if the internal Config is altered
+// by calling Config or if the values the Config points to are altered (i.e. file update).
+//
+// Generating multiple tls.Config's by calling this method will return tls.Config's that are all tied to this ID's
+// Config and client certificates.
+func (id *ID) ClientTLSConfig() *tls.Config {
+	tlsConfig := &tls.Config{
+		RootCAs: id.ca,
+	}
 
-	return i.serverCert, nil
+	tlsConfig.GetClientCertificate = func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		return id.GetClientCertificate(tlsConfig, info)
+	}
+
+	return tlsConfig
 }
 
-func (i *ID) GetClientCertificate(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-	i.certLock.RLock()
-	defer i.certLock.RUnlock()
+// GetServerCertificate is used to satisfy tls.Config's GetCertificate requirements.
+// Allows server certificates to be updated after enrollment extensions without stopping
+// listeners and disconnecting clients. New settings are used for all new incoming connection.
+func (id *ID) GetServerCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	id.certLock.RLock()
+	defer id.certLock.RUnlock()
 
-	return i.cert, nil
+	return id.serverCert, nil
 }
 
-func LoadIdentity(cfg IdentityConfig) (Identity, error) {
+// GetClientCertificate is used to satisfy tls.Config's GetClientCertificate requirements.
+// Allows client certificates to be updated after enrollment extensions without disconnecting
+// the current client. New settings will be used on re-connect.
+func (id *ID) GetClientCertificate(config *tls.Config, _ *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	id.certLock.RLock()
+	defer id.certLock.RUnlock()
+
+	//root cas updated here because during the client connection process on the client side
+	//tls.Config.GetConfigForClient is not called
+	config.RootCAs = id.ca
+
+	return id.cert, nil
+}
+
+// GetConfig returns the internally stored copy of the Config that was used to create
+// the ID. The returned Config can be used to create additional IDs but those IDs
+// will not share the same Config.
+func (id *ID) GetConfig() *Config {
+	return &id.Config
+}
+
+// GetConfigForClient is used to satisfy tls.Config's GetConfigForClient requirements.
+// Allows servers to have up-to-date CA chains after enrollment extension.
+func (id *ID) GetConfigForClient(config *tls.Config, _ *tls.ClientHelloInfo) (*tls.Config, error) {
+	config.RootCAs = id.ca
+	return config, nil
+}
+
+func LoadIdentity(cfg Config) (Identity, error) {
 	id := &ID{
-		IdentityConfig: cfg,
-		cert:           &tls.Certificate{},
+		Config: cfg,
+		cert:   &tls.Certificate{},
 	}
 
 	var err error
@@ -236,9 +320,9 @@ func LoadKey(keyAddr string) (crypto.PrivateKey, error) {
 	} else {
 
 		switch keyUrl.Scheme {
-		case "pem":
+		case StoragePem:
 			return certtools.LoadPrivateKey([]byte(keyUrl.Opaque))
-		case "file", "":
+		case StorageFile, "":
 			return certtools.GetKey(nil, keyUrl.Path, "")
 		default:
 			// engine key format: "{engine_id}:{engine_opts} see specific engine for supported options
@@ -253,9 +337,9 @@ func loadCert(certAddr string) ([]*x509.Certificate, error) {
 		return nil, err
 	} else {
 		switch certUrl.Scheme {
-		case "pem":
+		case StoragePem:
 			return certtools.LoadCert([]byte(certUrl.Opaque))
-		case "file", "":
+		case StorageFile, "":
 			return certtools.LoadCertFromFile(certUrl.Path)
 		default:
 			return nil, fmt.Errorf("could not load cert, location scheme not supported (%s) or address not defined (%s)", certUrl.Scheme, certAddr)
@@ -270,10 +354,10 @@ func loadCABundle(caAddr string) (*x509.CertPool, error) {
 		pool := x509.NewCertPool()
 		var bundle []byte
 		switch caUrl.Scheme {
-		case "pem":
+		case StoragePem:
 			bundle = []byte(caUrl.Opaque)
 
-		case "file", "":
+		case StorageFile, "":
 			if bundle, err = ioutil.ReadFile(caUrl.Path); err != nil {
 				return nil, err
 			}

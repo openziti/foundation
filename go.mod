@@ -1,6 +1,6 @@
 module github.com/openziti/foundation
 
-go 1.16
+go 1.17
 
 // replace github.com/openziti/dilithium => ../dilithium
 
@@ -19,8 +19,8 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
-	github.com/lucas-clemente/quic-go v0.18.1
-	github.com/michaelquigley/pfxlog v0.6.1
+	github.com/lucas-clemente/quic-go v0.23.0
+	github.com/michaelquigley/pfxlog v0.6.2
 	github.com/miekg/pkcs11 v1.0.3
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/openziti/dilithium v0.3.3
@@ -32,8 +32,33 @@ require (
 	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
-	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
-	google.golang.org/protobuf v1.26.0
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/cheekybits/genny v1.0.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/marten-seemann/qtls-go1-16 v0.1.4 // indirect
+	github.com/marten-seemann/qtls-go1-17 v0.1.0 // indirect
+	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
+	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/onsi/ginkgo v1.16.4 // indirect
+	github.com/parallaxsecond/parsec-client-go v0.0.0-20210416104105-e2d188152601 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
+	golang.org/x/mod v0.4.2 // indirect
+	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
+	golang.org/x/tools v0.1.2 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

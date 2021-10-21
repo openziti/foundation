@@ -66,7 +66,7 @@ func TestLoadIdentityWithPEM(t *testing.T) {
 		Bytes: certDer,
 	}
 
-	cfg := IdentityConfig{
+	cfg := Config{
 		Key:  "pem:" + string(pem.EncodeToMemory(keyPem)),
 		Cert: "pem:" + string(pem.EncodeToMemory(certPem)),
 	}
@@ -103,7 +103,7 @@ func TestLoadIdentityWithPEMChain(t *testing.T) {
 		Bytes: certDer,
 	}
 
-	cfg := IdentityConfig{
+	cfg := Config{
 		Key:  "pem:" + string(pem.EncodeToMemory(keyPem)),
 		Cert: "pem:" + string(pem.EncodeToMemory(certPem)) + string(pem.EncodeToMemory(parentPem)),
 	}
@@ -159,7 +159,7 @@ func TestLoadIdentityWithFile(t *testing.T) {
 	pem.Encode(keyFile, keyPem)
 	pem.Encode(certFile, certPem)
 
-	cfg := IdentityConfig{
+	cfg := Config{
 		Key:  "file://" + keyFile.Name(),
 		Cert: "file://" + certFile.Name(),
 	}
