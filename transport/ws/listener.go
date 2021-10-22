@@ -80,7 +80,6 @@ func (listener *wsListener) handleWebsocket(w http.ResponseWriter, r *http.Reque
 		err := connection.tlsHandshake() // Do not proceed until the JS client can successfully complete a TLS handshake
 		log.Debugf("tlsHandshake() returned [%v]", err)
 		if err == nil {
-			go connection.pinger()
 			listener.incoming <- connection // pass the Websocket to the goroutine that will validate the HELLO handshake
 		}
 	}

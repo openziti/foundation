@@ -366,11 +366,10 @@ func (c *Connection) tlsHandshake() error {
 	tlzCipherSuites = append(tlzCipherSuites, jsSdkSuites...)
 
 	cfg := &tls.Config{
-		ClientCAs:    caCertPool,
-		Certificates: []tls.Certificate{cert},
-		CipherSuites: tlzCipherSuites,
-		// ClientAuth:               tls.RequireAndVerifyClientCert,
-		ClientAuth:               tls.RequireAnyClientCert, //TEMP
+		ClientCAs:                caCertPool,
+		Certificates:             []tls.Certificate{cert},
+		CipherSuites:             tlzCipherSuites,
+		ClientAuth:               tls.RequireAndVerifyClientCert,
 		MaxVersion:               tls.VersionTLS12,
 		MinVersion:               tls.VersionTLS12,
 		PreferServerCipherSuites: true,
