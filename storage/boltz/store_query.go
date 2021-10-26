@@ -389,8 +389,8 @@ func (store *BaseStore) IterateIds(tx *bbolt.Tx, filter ast.BoolNode) ast.Seekab
 	return cursor
 }
 
-func (store *BaseStore) IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SetCursor {
-	var result ast.SetCursor = store.IterateIds(tx, filter)
+func (store *BaseStore) IterateValidIds(tx *bbolt.Tx, filter ast.BoolNode) ast.SeekableSetCursor {
+	result := store.IterateIds(tx, filter)
 	if store.isExtended {
 		validIdsCursor := &ValidIdsCursors{
 			tx:      tx,
@@ -413,7 +413,14 @@ func (store *BaseStore) QueryWithCursorC(tx *bbolt.Tx, cursorProvider ast.SetCur
 type ValidIdsCursors struct {
 	tx      *bbolt.Tx
 	store   *BaseStore
-	wrapped ast.SetCursor
+	wrapped ast.SeekableSetCursor
+}
+
+func (cursor *ValidIdsCursors) Seek(bytes []byte) {
+	cursor.wrapped.Seek(bytes)
+	for cursor.IsValid() && !cursor.IsExtendedDataPresent() {
+		cursor.wrapped.Next()
+	}
 }
 
 func (cursor *ValidIdsCursors) Next() {
