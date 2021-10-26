@@ -920,19 +920,27 @@ func (index *fkDeleteCascadeConstraint) ProcessBeforeDelete(ctx *IndexingContext
 		}
 		targetStore := index.symbol.GetStore().(*BaseStore)
 		mutateCtx := NewMutateContext(ctx.Tx())
-		for cursor := targetStore.IterateValidIds(ctx.Tx(), filter); cursor.IsValid(); cursor.Next() {
-			entityId := string(cursor.Current())
 
-			if index.cascadeType == CascadeDelete {
-				if ctx.ErrHolder.SetError(targetStore.DeleteById(mutateCtx, entityId)) {
-					return
-				}
-			} else if index.cascadeType == CascadeNone {
+		if index.cascadeType == CascadeNone {
+			for cursor := targetStore.IterateValidIds(ctx.Tx(), filter); cursor.IsValid(); cursor.Next() {
 				ctx.ErrHolder.SetError(errors.Errorf("cannot delete %v with id %v is referenced by %v with id %v, field %v",
 					index.symbol.GetLinkedType().GetSingularEntityType(), string(ctx.RowId),
-					index.symbol.GetStore().GetSingularEntityType(), entityId,
+					index.symbol.GetStore().GetSingularEntityType(), string(cursor.Current()),
 					index.symbol.GetName()))
 				return
+			}
+		}
+
+		if index.cascadeType == CascadeDelete {
+			cursor := targetStore.IterateValidIds(ctx.Tx(), filter)
+			for cursor.IsValid() {
+				if ctx.ErrHolder.SetError(targetStore.DeleteById(mutateCtx, string(cursor.Current()))) {
+					return
+				}
+
+				// There is a bug in bolt where cursor next will sometimes skip the next row if you delete the
+				// current row, either via cursor delete or just bucket delete. Using seek works around this
+				cursor.Seek(cursor.Current())
 			}
 		}
 	}
