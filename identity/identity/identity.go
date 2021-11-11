@@ -189,7 +189,8 @@ func (id *ID) ServerTLSConfig() *tls.Config {
 	tlsConfig := &tls.Config{
 		GetCertificate: id.GetServerCertificate,
 		RootCAs:        id.ca,
-		ClientAuth:     tls.RequireAnyClientCert,
+		ClientCAs:      id.ca,
+		ClientAuth:     tls.RequireAndVerifyClientCert,
 		MinVersion:     tlz.GetMinTlsVersion(),
 		CipherSuites:   tlz.GetCipherSuites(),
 	}
