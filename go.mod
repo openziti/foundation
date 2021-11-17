@@ -9,7 +9,7 @@ go 1.17
 // replace github.com/michaelquigley/pfxlog => ../pfxlog
 
 require (
-	github.com/antlr/antlr4 v0.0.0-20210114010855-d34d2e1c271a
+	github.com/antlr/antlr4/runtime/Go/antlr v0.0.0-20211106181442-e4c1a74c66bd
 	github.com/biogo/store v0.0.0-20190426020002-884f370e325d
 	github.com/emirpasic/gods v1.12.0
 	github.com/golang/protobuf v1.5.2
