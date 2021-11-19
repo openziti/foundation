@@ -40,13 +40,13 @@ type TestContext interface {
 
 type BaseTestContext struct {
 	require.Assertions
-	t             *testing.T
+	t             testing.TB
 	ReferenceTime time.Time
 	Impl          TestContext
 	dbFile        *os.File
 }
 
-func NewTestContext(t *testing.T) *BaseTestContext {
+func NewTestContext(t testing.TB) *BaseTestContext {
 	return &BaseTestContext{
 		Assertions:    *require.New(t),
 		t:             t,
