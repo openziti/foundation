@@ -486,6 +486,8 @@ func (channel *channelImpl) txer() {
 	defer log.Debug("exited")
 	log.Debug("started")
 
+	defer func() { _ = channel.Close() }()
+
 	for {
 		done := false
 		selecting := true
