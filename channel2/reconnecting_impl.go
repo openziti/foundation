@@ -36,7 +36,10 @@ func (impl *reconnectingImpl) Rx() (*Message, error) {
 		if connected {
 			m, err := impl.rx()
 			if err != nil {
-				log.Errorf("rx error (%s). starting reconnection process", err)
+				if closeErr := impl.peer.Close(); closeErr != nil {
+					log.WithError(closeErr).Error("error closing peer after rx error")
+				}
+				log.WithError(err).Error("rx error. closed peer and starting reconnection process")
 				connected = false
 			} else {
 				return m, nil
