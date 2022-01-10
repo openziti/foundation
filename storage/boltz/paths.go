@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"go.etcd.io/bbolt"
+	"strings"
 )
 
 func Path(tx *bbolt.Tx, path ...string) *TypedBucket {
@@ -125,10 +126,11 @@ func Traverse(tx *bbolt.Tx, visitor BoltVisitor) {
 	}
 }
 
-func ValidateDeleted(tx *bbolt.Tx, id string) error {
+func ValidateDeleted(tx *bbolt.Tx, id string, ignorePaths ...string) error {
 	visitor := &deletedIdScanner{
 		key:         []byte(id),
 		fieldAndKey: PrependFieldType(TypeString, []byte(id)),
+		ignorePaths: ignorePaths,
 	}
 	Traverse(tx, visitor)
 	return visitor.err
@@ -138,6 +140,7 @@ type deletedIdScanner struct {
 	key         []byte
 	fieldAndKey []byte
 	err         error
+	ignorePaths []string
 }
 
 func (visitor *deletedIdScanner) VisitBucket(path string, key []byte, _ *bbolt.Bucket) bool {
@@ -153,6 +156,12 @@ func (visitor *deletedIdScanner) VisitBucket(path string, key []byte, _ *bbolt.B
 }
 
 func (visitor *deletedIdScanner) VisitKeyValue(path string, key, value []byte) bool {
+	for _, ignorePath := range visitor.ignorePaths {
+		if strings.HasPrefix(path, ignorePath) {
+			return true
+		}
+	}
+
 	if !visitor.VisitBucket(path, key, nil) {
 		return false
 	}

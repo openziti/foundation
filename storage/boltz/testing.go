@@ -125,9 +125,9 @@ func (ctx *BaseTestContext) Reload(entity Entity) error {
 	})
 }
 
-func (ctx *BaseTestContext) ValidateDeleted(id string) {
+func (ctx *BaseTestContext) ValidateDeleted(id string, ignorePaths ...string) {
 	err := ctx.GetDb().View(func(tx *bbolt.Tx) error {
-		return ValidateDeleted(tx, id)
+		return ValidateDeleted(tx, id, ignorePaths...)
 	})
 	ctx.NoError(err)
 }
