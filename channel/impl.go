@@ -393,15 +393,26 @@ func (channel *channelImpl) txer() {
 
 			channel.waiters.AddWaiter(sendCtx)
 
-			err := channel.underlay.Tx(m)
-			if err != nil {
-				log.WithError(err).Errorf("write error")
-				sendCtx.NotifyErr(err)
-				done = true
+			var err error
+			if timeout := channel.options.WriteTimeout; timeout > 0 {
+				if err = channel.underlay.SetWriteTimeout(timeout); err != nil {
+					log.WithError(err).Errorf("unable to set write timeout")
+					sendCtx.NotifyErr(err)
+					done = true
+				}
 			}
 
-			for _, peekHandler := range channel.peekHandlers {
-				peekHandler.Tx(m, channel)
+			if !done {
+				err = channel.underlay.Tx(m)
+				if err != nil {
+					log.WithError(err).Errorf("write error")
+					sendCtx.NotifyErr(err)
+					done = true
+				} else {
+					for _, peekHandler := range channel.peekHandlers {
+						peekHandler.Tx(m, channel)
+					}
+				}
 			}
 
 			if err != nil {

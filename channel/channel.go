@@ -107,6 +107,7 @@ type Underlay interface {
 	io.Closer
 	IsClosed() bool
 	Headers() map[int32][]byte
+	SetWriteTimeout(duration time.Duration) error
 }
 
 type Sender interface {

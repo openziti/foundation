@@ -23,6 +23,7 @@ import (
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"sync"
+	"time"
 )
 
 type wsImpl struct {
@@ -34,6 +35,10 @@ type wsImpl struct {
 	closed       bool
 	readF        readFunction
 	marshalF     marshalFunction
+}
+
+func (impl *wsImpl) SetWriteTimeout(duration time.Duration) error {
+	return impl.peer.SetWriteTimeout(duration)
 }
 
 func (impl *wsImpl) rxHello() (*Message, error) {

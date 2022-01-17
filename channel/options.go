@@ -19,6 +19,7 @@ package channel
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -42,6 +43,7 @@ type Options struct {
 	PeekHandlers []PeekHandler
 	ConnectOptions
 	DelayRxStart bool
+	WriteTimeout time.Duration
 }
 
 func DefaultOptions() *Options {
@@ -59,7 +61,7 @@ func DefaultConnectOptions() ConnectOptions {
 	}
 }
 
-func LoadOptions(data map[interface{}]interface{}) *Options {
+func LoadOptions(data map[interface{}]interface{}) (*Options, error) {
 	options := DefaultOptions()
 
 	if value, found := data["outQueueSize"]; found {
@@ -86,7 +88,19 @@ func LoadOptions(data map[interface{}]interface{}) *Options {
 		}
 	}
 
-	return options
+	if value, found := data["writeTimeout"]; found {
+		if strVal, ok := value.(string); ok {
+			if d, err := time.ParseDuration(strVal); err == nil {
+				options.WriteTimeout = d
+			} else {
+				return nil, errors.Wrapf(err, "invalid value for writeTimeout: %v", value)
+			}
+		} else {
+			return nil, errors.Errorf("invalid (non-string) value for writeTimeout: %v", value)
+		}
+	}
+
+	return options, nil
 }
 
 func (o Options) String() string {

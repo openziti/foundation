@@ -23,6 +23,7 @@ import (
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/openziti/foundation/transport"
 	"sync"
+	"time"
 )
 
 type classicImpl struct {
@@ -34,6 +35,10 @@ type classicImpl struct {
 	closed       bool
 	readF        readFunction
 	marshalF     marshalFunction
+}
+
+func (impl *classicImpl) SetWriteTimeout(duration time.Duration) error {
+	return impl.peer.SetWriteTimeout(duration)
 }
 
 func (impl *classicImpl) rxHello() (*Message, error) {

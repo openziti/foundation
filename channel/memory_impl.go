@@ -24,6 +24,7 @@ import (
 	"github.com/openziti/foundation/identity/identity"
 	"io"
 	"sync"
+	"time"
 )
 
 type memoryImpl struct {
@@ -34,6 +35,10 @@ type memoryImpl struct {
 	headers      map[int32][]byte
 	closeLock    sync.Mutex
 	closed       bool
+}
+
+func (impl *memoryImpl) SetWriteTimeout(time.Duration) error {
+	panic("SetWriteTimeout not implemented")
 }
 
 func (impl *memoryImpl) Rx() (*Message, error) {

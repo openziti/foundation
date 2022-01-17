@@ -197,6 +197,10 @@ func (impl *reconnectingImpl) Reconnect() error {
 	}
 }
 
+func (impl *reconnectingImpl) SetWriteTimeout(duration time.Duration) error {
+	return impl.peer.SetWriteTimeout(duration)
+}
+
 type reconnectingImpl struct {
 	peer                transport.Connection
 	id                  *identity.TokenId
