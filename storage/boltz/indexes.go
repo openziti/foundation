@@ -823,8 +823,9 @@ func (index *fkDeleteConstraint) CheckIntegrity(*bbolt.Tx, bool, func(error, boo
 type CascadeType int
 
 const (
-	CascadeNone   = 1
-	CascadeDelete = 2
+	CascadeNone         = 1
+	CascadeDelete       = 2
+	CascadeCreateUpdate = 3
 )
 
 type fkConstraint struct {
