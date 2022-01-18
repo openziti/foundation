@@ -19,7 +19,7 @@ package underlay
 import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/foundation/channel2"
+	"github.com/openziti/foundation/channel"
 	"github.com/openziti/foundation/identity/dotziti"
 	"github.com/openziti/foundation/transport"
 	"github.com/spf13/cobra"
@@ -57,10 +57,10 @@ func runListener(_ *cobra.Command, _ []string) {
 		panic(err)
 	}
 
-	var listener channel2.UnderlayListener
+	var listener channel.UnderlayListener
 	switch listenerUnderlay {
 	case "classic":
-		listener = channel2.NewClassicListener(id, endpoint, channel2.DefaultConnectOptions(), nil)
+		listener = channel.NewClassicListener(id, endpoint, channel.DefaultConnectOptions(), nil)
 	case "reconnecting":
 		panic("not implemented")
 	default:
@@ -72,11 +72,11 @@ func runListener(_ *cobra.Command, _ []string) {
 	}
 
 	log := pfxlog.Logger()
-	options := channel2.DefaultOptions()
-	options.BindHandlers = []channel2.BindHandler{&bindHandler{}}
+	options := channel.DefaultOptions()
+	options.BindHandlers = []channel.BindHandler{&bindHandler{}}
 
 	for {
-		ch, err := channel2.NewChannel("channel", listener, options)
+		ch, err := channel.NewChannel("channel", listener, options)
 		if err != nil {
 			panic(err)
 		}
@@ -86,7 +86,7 @@ func runListener(_ *cobra.Command, _ []string) {
 	}
 }
 
-func handleChannel(ch channel2.Channel) {
+func handleChannel(ch channel.Channel) {
 	log := pfxlog.ContextLogger(ch.Label())
 	for i := 0; i < listenerMessageCount; i++ {
 		if err := ch.Send(newMessage(i)); err != nil {

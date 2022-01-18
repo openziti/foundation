@@ -18,8 +18,8 @@ package underlay
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/foundation/channel2"
-	"github.com/openziti/foundation/channel2/cmd/channel2/subcmd"
+	"github.com/openziti/foundation/channel"
+	"github.com/openziti/foundation/channel/cmd/channel/subcmd"
 	"github.com/openziti/foundation/identity/dotziti"
 	"github.com/openziti/foundation/identity/identity"
 	"github.com/spf13/cobra"
@@ -49,7 +49,7 @@ func runMemory(_ *cobra.Command, _ []string) {
 		panic(err)
 	}
 
-	ctx := channel2.NewMemoryContext()
+	ctx := channel.NewMemoryContext()
 	go handleDialer(id, ctx)
 	go runListener(id, ctx)
 
@@ -63,14 +63,14 @@ func runMemory(_ *cobra.Command, _ []string) {
 	/* */
 }
 
-func handleDialer(identity *identity.TokenId, ctx *channel2.MemoryContext) {
+func handleDialer(identity *identity.TokenId, ctx *channel.MemoryContext) {
 	log := pfxlog.Logger()
 
-	options := channel2.DefaultOptions()
-	options.BindHandlers = []channel2.BindHandler{&bindHandler{}}
+	options := channel.DefaultOptions()
+	options.BindHandlers = []channel.BindHandler{&bindHandler{}}
 
-	dialer := channel2.NewMemoryDialer(identity, nil, ctx)
-	ch, err := channel2.NewChannel("memory", dialer, options)
+	dialer := channel.NewMemoryDialer(identity, nil, ctx)
+	ch, err := channel.NewChannel("memory", dialer, options)
 	if err != nil {
 		panic(err)
 	}
@@ -92,18 +92,18 @@ func handleDialer(identity *identity.TokenId, ctx *channel2.MemoryContext) {
 	close(dialerDone)
 }
 
-func runListener(identity *identity.TokenId, ctx *channel2.MemoryContext) {
+func runListener(identity *identity.TokenId, ctx *channel.MemoryContext) {
 	log := pfxlog.Logger()
 
-	listener := channel2.NewMemoryListener(identity, ctx)
+	listener := channel.NewMemoryListener(identity, ctx)
 	if err := listener.Listen(); err != nil {
 		panic(err)
 	}
 
-	options := channel2.DefaultOptions()
-	options.BindHandlers = []channel2.BindHandler{&bindHandler{}}
+	options := channel.DefaultOptions()
+	options.BindHandlers = []channel.BindHandler{&bindHandler{}}
 
-	ch, err := channel2.NewChannel("memory", listener, options)
+	ch, err := channel.NewChannel("memory", listener, options)
 	if err != nil {
 		panic(err)
 	}
@@ -116,7 +116,7 @@ func runListener(identity *identity.TokenId, ctx *channel2.MemoryContext) {
 	}
 }
 
-func handleListener(ch channel2.Channel) {
+func handleListener(ch channel.Channel) {
 	log := pfxlog.ContextLogger(ch.Label())
 	for i := 0; i < memoryCount; i++ {
 		if err := ch.Send(newMessage(i)); err != nil {

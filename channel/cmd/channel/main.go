@@ -18,9 +18,9 @@ package main
 
 import (
 	"github.com/michaelquigley/pfxlog"
-	"github.com/openziti/foundation/channel2/cmd/channel2/subcmd"
-	_ "github.com/openziti/foundation/channel2/cmd/channel2/subcmd/memory"
-	_ "github.com/openziti/foundation/channel2/cmd/channel2/subcmd/underlay"
+	"github.com/openziti/foundation/channel/cmd/channel/subcmd"
+	_ "github.com/openziti/foundation/channel/cmd/channel/subcmd/memory"
+	_ "github.com/openziti/foundation/channel/cmd/channel/subcmd/underlay"
 	"github.com/openziti/foundation/transport"
 	"github.com/openziti/foundation/transport/quic"
 	"github.com/openziti/foundation/transport/tcp"

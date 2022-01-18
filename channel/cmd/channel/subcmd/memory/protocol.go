@@ -17,7 +17,7 @@
 package underlay
 
 import (
-	"github.com/openziti/foundation/channel2"
+	"github.com/openziti/foundation/channel"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 )
@@ -25,15 +25,15 @@ import (
 const contentType = 99
 const header = 101
 
-func newMessage(count int) *channel2.Message {
-	msg := channel2.NewMessage(contentType, nil)
+func newMessage(count int) *channel.Message {
+	msg := channel.NewMessage(contentType, nil)
 	msg.Headers[header] = []byte(fmt.Sprintf("%d", count))
 	return msg
 }
 
 type bindHandler struct{}
 
-func (h *bindHandler) BindChannel(ch channel2.Channel) error {
+func (h *bindHandler) BindChannel(ch channel.Channel) error {
 	ch.AddReceiveHandler(&receiveHandler{})
 	return nil
 }
@@ -44,6 +44,6 @@ func (h *receiveHandler) ContentType() int32 {
 	return int32(contentType)
 }
 
-func (h *receiveHandler) HandleReceive(m *channel2.Message, ch channel2.Channel) {
+func (h *receiveHandler) HandleReceive(m *channel.Message, ch channel.Channel) {
 	pfxlog.ContextLogger(ch.Label()).Infof("header = [%s]", m.Headers[header])
 }
