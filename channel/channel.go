@@ -45,7 +45,6 @@ type SendContext interface {
 	WithPriority(p Priority) SendContext
 	Context() context.Context
 	WithTimeout(duration time.Duration) TimeoutSendContext
-	Sequence() int32
 	NotifyBeforeWrite()
 	NotifyAfterWrite()
 	NotifyErr(err error)

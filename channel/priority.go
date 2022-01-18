@@ -36,7 +36,7 @@ func (pq priorityHeap) Len() int {
 //
 func (pq priorityHeap) Less(i, j int) bool {
 	if pq[i].Priority() == pq[j].Priority() {
-		return pq[i].Sequence() < pq[j].Sequence()
+		return pq[i].Msg().Sequence() < pq[j].Msg().Sequence()
 
 	} else {
 		return pq[i].Priority() > pq[j].Priority()

@@ -163,10 +163,6 @@ func (self *ErrorSendContext) Context() context.Context {
 	return self.ctx
 }
 
-func (self *ErrorSendContext) Sequence() int32 {
-	return 0
-}
-
 func (self *ErrorSendContext) NotifyBeforeWrite() {}
 
 func (self *ErrorSendContext) NotifyAfterWrite() {}

@@ -51,7 +51,6 @@ type channelImpl struct {
 	peekHandlers      []PeekHandler
 	transformHandlers []TransformHandler
 	receiveHandlers   *receiveHandlerCopyOnWriteMap
-	channelLock       sync.RWMutex
 	errorHandlers     []ErrorHandler
 	closeHandlers     []CloseHandler
 	userData          interface{}
@@ -235,11 +234,11 @@ func (channel *channelImpl) Send(sendCtx SendContext) error {
 	channel.stampSequence(sendCtx.Msg())
 
 	select {
-	case channel.outQueue <- sendCtx:
-	case <-channel.closeNotify:
-		return errors.New("channel closed")
 	case <-sendCtx.Context().Done():
 		return errors.Errorf("msg send queuing failed")
+	case <-channel.closeNotify:
+		return errors.New("channel closed")
+	case channel.outQueue <- sendCtx:
 	}
 	return nil
 }
@@ -478,7 +477,7 @@ type waiterMap struct {
 }
 
 func (self *waiterMap) Size() int32 {
-	return self.size
+	return atomic.LoadInt32(&self.size)
 }
 
 func (self *waiterMap) AddWaiter(sendCtx SendContext) {
@@ -493,7 +492,7 @@ func (self *waiterMap) AddWaiter(sendCtx SendContext) {
 			w.ttlMs = info.NowInMilliseconds() + 30_000
 		}
 
-		self.m.Store(sendCtx.Sequence(), w)
+		self.m.Store(sendCtx.Msg().Sequence(), w)
 		atomic.AddInt32(&self.size, 1)
 	}
 }
@@ -513,7 +512,6 @@ func (self *waiterMap) reapExpired(now int64) {
 		if w, ok := value.(*waiter); !ok || w.ttlMs < now {
 			self.m.Delete(key)
 			deleteCount++
-
 		}
 		return true
 	})
