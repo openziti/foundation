@@ -164,14 +164,16 @@ func (indexer *Indexer) AddFkConstraint(symbol EntitySymbol, nullable bool, casc
 
 	indexer.AddConstraint(index)
 
-	if baseStore, ok := symbol.GetLinkedType().(Constrained); ok {
-		baseStore.AddConstraint(&fkDeleteCascadeConstraint{
-			symbol:      symbol,
-			cascadeType: cascade,
-		})
-	} else {
-		panic(errors.Errorf("linked store %v is not constrained, can't enforce validity of constraint on delete",
-			symbol.GetLinkedType().GetEntityType()))
+	if cascade != CascadeCreateUpdate {
+		if baseStore, ok := symbol.GetLinkedType().(Constrained); ok {
+			baseStore.AddConstraint(&fkDeleteCascadeConstraint{
+				symbol:      symbol,
+				cascadeType: cascade,
+			})
+		} else {
+			panic(errors.Errorf("linked store %v is not constrained, can't enforce validity of constraint on delete",
+				symbol.GetLinkedType().GetEntityType()))
+		}
 	}
 }
 
