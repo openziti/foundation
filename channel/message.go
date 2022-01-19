@@ -295,6 +295,7 @@ func (m *Message) WithPriority(p Priority) SendContext {
 	return &MutableSendContext{
 		Message: m,
 		p:       p,
+		context: context.Background(),
 	}
 }
 

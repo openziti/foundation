@@ -44,7 +44,7 @@ func (pq priorityHeap) Less(i, j int) bool {
 	if pq[i].p == pq[j].p {
 		return pq[i].m.sequence < pq[j].m.sequence
 	} else {
-		return pq[i].p > pq[j].p
+		return pq[i].p < pq[j].p
 	}
 }
 

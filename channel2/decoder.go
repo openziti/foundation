@@ -35,7 +35,7 @@ func (d Decoder) Decode(msg *Message) ([]byte, bool) {
 
 		data, err := meta.MarshalTraceMessageDecode()
 		if err != nil {
-			pfxlog.Logger().Errorf("unexpected error (%s)", err)
+			pfxlog.Logger().WithError(err).Error("unexpected error marshalling trace message")
 			return nil, true
 		}
 
@@ -43,7 +43,7 @@ func (d Decoder) Decode(msg *Message) ([]byte, bool) {
 	case ContentTypePingType:
 		data, err := NewTraceMessageDecode(DECODER, "Ping").MarshalTraceMessageDecode()
 		if err != nil {
-			pfxlog.Logger().Errorf("unexpected error (%s)", err)
+			pfxlog.Logger().WithError(err).Error("unexpected error marshalling trace message")
 			return nil, true
 		}
 
@@ -59,19 +59,34 @@ func (d Decoder) Decode(msg *Message) ([]byte, bool) {
 
 		data, err := meta.MarshalTraceMessageDecode()
 		if err != nil {
-			pfxlog.Logger().Errorf("unexpected error (%s)", err)
+			pfxlog.Logger().WithError(err).Error("unexpected error marshalling trace message")
 			return nil, true
 		}
 
 		return data, true
 
 	case ContentTypeLatencyType:
-		data, err := NewTraceMessageDecode(DECODER, "Latency").MarshalTraceMessageDecode()
+		meta := NewTraceMessageDecode(DECODER, "Latency")
+		if time, found := msg.GetUint64Header(128); found {
+			meta["time"] = time
+		}
+		data, err := meta.MarshalTraceMessageDecode()
 		if err != nil {
-			pfxlog.Logger().Errorf("unexpected error (%s)", err)
+			pfxlog.Logger().WithError(err).Error("unexpected error marshalling trace message")
 			return nil, true
 		}
+		return data, true
 
+	case ContentTypeLatencyResponseType:
+		meta := NewTraceMessageDecode(DECODER, "LatencyResponse")
+		if time, found := msg.GetUint64Header(128); found {
+			meta["time"] = time
+		}
+		data, err := meta.MarshalTraceMessageDecode()
+		if err != nil {
+			pfxlog.Logger().WithError(err).Error("unexpected error marshalling trace message")
+			return nil, true
+		}
 		return data, true
 	}
 
