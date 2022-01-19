@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/channel"
 	"github.com/openziti/foundation/channel2"
 	"time"
 )
@@ -116,7 +117,7 @@ type LatencyHandler interface {
 	ChannelClosed()
 }
 
-func AddLatencyProbe(ch channel2.Channel, interval time.Duration, handler LatencyHandler) {
+func AddLatencyProbe(ch channel.Channel, interval time.Duration, handler LatencyHandler) {
 	probe := &latencyProbe{
 		handler:  handler,
 		ch:       ch,
@@ -128,7 +129,7 @@ func AddLatencyProbe(ch channel2.Channel, interval time.Duration, handler Latenc
 
 type latencyProbe struct {
 	handler  LatencyHandler
-	ch       channel2.Channel
+	ch       channel.Channel
 	interval time.Duration
 }
 
@@ -136,7 +137,7 @@ func (self *latencyProbe) ContentType() int32 {
 	return channel2.ContentTypeLatencyResponseType
 }
 
-func (self *latencyProbe) HandleReceive(m *channel2.Message, _ channel2.Channel) {
+func (self *latencyProbe) HandleReceive(m *channel.Message, _ channel.Channel) {
 	if sentTime, ok := m.GetUint64Header(latencyProbeTime); ok {
 		latency := time.Duration(time.Now().UnixNano() - int64(sentTime))
 		self.handler.LatencyReported(latency)
@@ -152,9 +153,10 @@ func (self *latencyProbe) run() {
 	defer self.handler.ChannelClosed()
 
 	for !self.ch.IsClosed() {
-		request := channel2.NewMessage(channel2.ContentTypeLatencyType, nil)
+		request := channel.NewMessage(channel.ContentTypeLatencyType, nil)
 		request.PutUint64Header(latencyProbeTime, uint64(time.Now().UnixNano()))
-		if err := self.ch.SendPrioritizedWithTimeout(request, channel2.High, 10*time.Second); err != nil {
+		sendContext := request.WithPriority(channel.High).WithTimeout(10 * time.Second)
+		if err := self.ch.Send(sendContext); err != nil {
 			log.WithError(err).Error("unexpected error sending latency probe")
 		}
 		time.Sleep(self.interval)

@@ -14,7 +14,7 @@
 	limitations under the License.
 */
 
-package channel2
+package channel
 
 import (
 	"fmt"
@@ -120,9 +120,5 @@ func (h TraceHandler) msgToString(msg *trace_pb.ChannelMessage) string {
 	if msg.ReplyFor != -1 {
 		replyFor = fmt.Sprintf(">%d", msg.ReplyFor)
 	}
-	meta := DecodeTraceAndFormat(msg.Decode)
-	if meta == "" {
-		meta = fmt.Sprintf("missing decode, content-type=%v", msg.ContentType)
-	}
-	return fmt.Sprintf("%-16s %8s %s #%-5d %5s | %s\n", msg.Identity, msg.Channel, flow, msg.Sequence, replyFor, meta)
+	return fmt.Sprintf("%-16s %8s %s #%-5d %5s | %s\n", msg.Identity, msg.Channel, flow, msg.Sequence, replyFor, DecodeTraceAndFormat(msg.Decode))
 }
