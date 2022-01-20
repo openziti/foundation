@@ -20,20 +20,34 @@ import (
 	"errors"
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
+	"github.com/openziti/foundation/metrics/metrics_pb"
 	"time"
 )
 
+// HandlerType is used to define known handler types
+type HandlerType string
+
+const (
+	HandlerTypeInfluxDB HandlerType = "influxdb"
+	HandlerTypeJSONFile HandlerType = "jsonfile"
+	HandlerTypeFile     HandlerType = "file"
+)
+
+// Handler represents a sink for metric events
+type Handler interface {
+	// AcceptMetrics is called when new metrics become available
+	AcceptMetrics(message *metrics_pb.MetricsMessage)
+}
+
 type Config struct {
-	handlers       map[Handler]Handler
+	Handlers       []Handler
 	Source         string
 	Tags           map[string]string
 	ReportInterval time.Duration
-	EventSink      Handler
 }
 
 func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 	cfg := &Config{
-		handlers:       make(map[Handler]Handler),
 		ReportInterval: 15 * time.Second,
 	}
 
@@ -46,7 +60,7 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 				if submap, ok := v.(map[interface{}]interface{}); ok {
 					if outputFileConfig, err := LoadOutputFileConfig(submap); err == nil {
 						if outputFileHandler, err := NewOutputFileMetricsHandler(outputFileConfig); err == nil {
-							cfg.handlers[outputFileHandler] = outputFileHandler
+							cfg.Handlers = append(cfg.Handlers, outputFileHandler)
 							pfxlog.Logger().Infof("added metrics output file handler")
 						} else {
 							return nil, fmt.Errorf("error creating metrics output file handler (%s)", err)
@@ -62,7 +76,7 @@ func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 				if submap, ok := v.(map[interface{}]interface{}); ok {
 					if influxCfg, err := LoadInfluxConfig(submap); err == nil {
 						if influxHandler, err := NewInfluxDBMetricsHandler(influxCfg); err == nil {
-							cfg.handlers[influxHandler] = influxHandler
+							cfg.Handlers = append(cfg.Handlers, influxHandler)
 							pfxlog.Logger().Infof("added influx handler")
 						} else {
 							return nil, fmt.Errorf("error creating influx handler (%s)", err)
