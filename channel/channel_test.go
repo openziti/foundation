@@ -17,7 +17,7 @@ import (
 var testAddress = "tcp:localhost:28433"
 
 func TestWriteAndReply(t *testing.T) {
-	server := newEchoServer(t)
+	server := newEchoServer()
 	server.start(t)
 	defer server.stop(t)
 
@@ -39,7 +39,7 @@ func TestWriteAndReply(t *testing.T) {
 }
 
 func TestSendTimeout(t *testing.T) {
-	server := newEchoServer(t)
+	server := newEchoServer()
 	server.start(t)
 	defer server.stop(t)
 
@@ -73,7 +73,7 @@ func TestSendTimeout(t *testing.T) {
 }
 
 func TestInQueueTimeout(t *testing.T) {
-	server := newEchoServer(t)
+	server := newEchoServer()
 	server.start(t)
 	defer server.stop(t)
 
@@ -118,7 +118,7 @@ func TestInQueueTimeout(t *testing.T) {
 }
 
 func TestWriteTimeout(t *testing.T) {
-	server := newEchoServer(t)
+	server := newEchoServer()
 	server.pingHandler = server.blockOnPing
 	server.start(t)
 	defer server.stop(t)
@@ -161,7 +161,7 @@ func TestWriteTimeout(t *testing.T) {
 
 func TestNoWriteTimeout(t *testing.T) {
 	t.Skip("skipping long running test")
-	server := newEchoServer(t)
+	server := newEchoServer()
 	server.pingHandler = server.blockOnPing
 	server.start(t)
 	defer server.stop(t)
@@ -200,6 +200,44 @@ func TestNoWriteTimeout(t *testing.T) {
 	req.NoError(err)
 }
 
+func TestPriorityOrdering(t *testing.T) {
+	server := newEchoServer()
+	server.start(t)
+	defer server.stop(t)
+
+	req := require.New(t)
+
+	options := DefaultOptions()
+	options.WriteTimeout = 100 * time.Millisecond
+
+	ch := dialServer(options, t)
+	defer func() { _ = ch.Close() }()
+
+	msg := NewMessage(ContentTypePingType, []byte(fmt.Sprintf("hello-%v", 0)))
+	blockingSendContext := NewBlockingContext(msg)
+	req.NoError(ch.Send(blockingSendContext))
+	req.NoError(blockingSendContext.waitForBlocked(50 * time.Millisecond))
+
+	lowCtx := NewNotifyContext(NewMessage(ContentTypePingType, nil).WithPriority(Low))
+	req.NoError(ch.Send(lowCtx))
+
+	stdCtx := NewNotifyContext(NewMessage(ContentTypePingType, nil).WithPriority(Standard))
+	req.NoError(ch.Send(stdCtx))
+
+	highCtx := NewNotifyContext(NewMessage(ContentTypePingType, nil).WithPriority(High))
+	req.NoError(ch.Send(highCtx))
+
+	highestCtx := NewNotifyContext(NewMessage(ContentTypePingType, nil).WithPriority(Highest))
+	req.NoError(ch.Send(highestCtx))
+
+	blockingSendContext.Unblock(10 * time.Millisecond)
+
+	highestCtx.AssertNext(t, 10*time.Millisecond)
+	highCtx.AssertNext(t, 10*time.Millisecond)
+	stdCtx.AssertNext(t, 10*time.Millisecond)
+	lowCtx.AssertNext(t, 10*time.Millisecond)
+}
+
 func dialServer(options *Options, t *testing.T) Channel {
 	req := require.New(t)
 	addr, err := tcp.AddressParser{}.Parse(testAddress)
@@ -214,7 +252,7 @@ func dialServer(options *Options, t *testing.T) Channel {
 	return ch
 }
 
-func newEchoServer(t *testing.T) *echoServer {
+func newEchoServer() *echoServer {
 	options := DefaultOptions()
 	options.MaxOutstandingConnects = 1
 	options.MaxQueuedConnects = 1
@@ -324,5 +362,31 @@ func (self *BlockingContext) Unblock(timeout time.Duration) bool {
 		return true
 	case <-time.After(timeout):
 		return false
+	}
+}
+
+func NewNotifyContext(wrapped SendContext) *NotifyContext {
+	return &NotifyContext{
+		SendContext: wrapped,
+		notify:      make(chan SendContext, 10),
+	}
+}
+
+type NotifyContext struct {
+	SendContext
+	notify chan SendContext
+}
+
+func (self *NotifyContext) NotifyBeforeWrite() {
+	self.notify <- self
+}
+
+func (self *NotifyContext) AssertNext(t *testing.T, timeout time.Duration) {
+	select {
+	case next := <-self.notify:
+		require.Equal(t, self, next)
+		require.Equal(t, self.Priority(), next.Priority())
+	case <-time.After(timeout):
+		require.FailNow(t, "timed out")
 	}
 }
