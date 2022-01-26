@@ -16,7 +16,10 @@
 
 package metrics
 
-import "github.com/rcrowley/go-metrics"
+import (
+	"github.com/openziti/foundation/util/concurrenz"
+	"github.com/rcrowley/go-metrics"
+)
 
 // Meter represents a metric which is measuring a count and a rate
 type Meter interface {
@@ -26,10 +29,19 @@ type Meter interface {
 
 type meterImpl struct {
 	metrics.Meter
-	dispose func()
+	name     string
+	registry *registryImpl
+	concurrenz.RefCount
 }
 
-func (meter *meterImpl) Dispose() {
-	meter.Stop()
-	meter.dispose()
+func (self *meterImpl) Name() string {
+	return self.name
+}
+
+func (self *meterImpl) Dispose() {
+	self.registry.disposeRefCounted(self)
+}
+
+func (self *meterImpl) stop() {
+	self.Stop()
 }

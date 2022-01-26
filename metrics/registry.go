@@ -40,6 +40,8 @@ type Registry interface {
 	Histogram(name string) Histogram
 	Timer(name string) Timer
 	EachMetric(visitor func(name string, metric Metric))
+
+	IsValidMetric(name string) bool
 	Poll() *metrics_pb.MetricsMessage
 	DisposeAll()
 }
@@ -66,6 +68,10 @@ func (registry *registryImpl) DisposeAll() {
 	registry.EachMetric(func(name string, metric Metric) {
 		metric.Dispose()
 	})
+}
+
+func (registry *registryImpl) IsValidMetric(name string) bool {
+	return registry.metricMap.Has(name)
 }
 
 func (registry *registryImpl) SourceId() string {
@@ -113,43 +119,65 @@ func (registry *registryImpl) FuncGauge(name string, f func() int64) Gauge {
 }
 
 func (registry *registryImpl) Meter(name string) Meter {
-	metric, present := registry.metricMap.Get(name)
-	if present {
-		meter, ok := metric.(Meter)
-		if !ok {
-			panic(fmt.Errorf("metric '%v' already exists and is not a meter. It is a %v", name, reflect.TypeOf(metric).Name()))
+	metric := registry.getRefCounted(name, func() refCounted {
+		return &meterImpl{
+			Meter:    metrics.NewMeter(),
+			registry: registry,
+			name:     name,
 		}
-		return meter
-	}
+	})
 
-	meter := &meterImpl{
-		Meter: metrics.NewMeter(),
-		dispose: func() {
-			registry.dispose(name)
-		},
+	meter, ok := metric.(Meter)
+	if !ok {
+		panic(fmt.Errorf("metric '%v' already exists and is not a meter. It is a %v", name, reflect.TypeOf(metric).Name()))
 	}
-	registry.metricMap.Set(name, meter)
 	return meter
 }
 
 func (registry *registryImpl) Histogram(name string) Histogram {
-	metric, present := registry.metricMap.Get(name)
-	if present {
-		histogram, ok := metric.(Histogram)
-		if !ok {
-			panic(fmt.Errorf("metric '%v' already exists and is not a histogram. It is a %v", name, reflect.TypeOf(metric).Name()))
+	metric := registry.getRefCounted(name, func() refCounted {
+		return &histogramImpl{
+			Histogram: metrics.NewHistogram(metrics.NewExpDecaySample(128, 0.015)),
+			registry:  registry,
+			name:      name,
 		}
-		return histogram
-	}
+	})
 
-	histogram := &histogramImpl{
-		Histogram: metrics.NewHistogram(metrics.NewExpDecaySample(128, 0.015)),
-		dispose: func() {
-			registry.dispose(name)
-		},
+	histogram, ok := metric.(Histogram)
+	if !ok {
+		panic(fmt.Errorf("metric '%v' already exists and is not a histogram. It is a %v", name, reflect.TypeOf(metric).Name()))
 	}
-	registry.metricMap.Set(name, histogram)
 	return histogram
+}
+
+func (registry *registryImpl) getRefCounted(name string, factory func() refCounted) refCounted {
+	metric := registry.metricMap.Upsert(name, nil, func(exist bool, valueInMap interface{}, newValue interface{}) interface{} {
+		if exist {
+			if h, ok := valueInMap.(refCounted); ok {
+				h.IncrRefCount()
+			}
+			return valueInMap
+		}
+
+		newVal := factory()
+		newVal.IncrRefCount()
+		return newVal
+	})
+
+	histogram, ok := metric.(refCounted)
+	if !ok {
+		panic(fmt.Errorf("metric '%v' already exists and is not an instance of refCouted. It is a %v", name, reflect.TypeOf(metric).Name()))
+	}
+	return histogram
+}
+
+func (registry *registryImpl) disposeRefCounted(metric refCounted) {
+	registry.metricMap.RemoveCb(metric.Name(), func(key string, v interface{}, exists bool) bool {
+		if !exists {
+			return true
+		}
+		return v == metric && metric.DecrRefCount() < 1
+	})
 }
 
 func (registry *registryImpl) Timer(name string) Timer {
@@ -249,4 +277,11 @@ func (registry *registryImpl) Poll() *metrics_pb.MetricsMessage {
 	})
 
 	return (*metrics_pb.MetricsMessage)(builder)
+}
+
+type refCounted interface {
+	IncrRefCount() int32
+	DecrRefCount() int32
+	Name() string
+	stop()
 }
