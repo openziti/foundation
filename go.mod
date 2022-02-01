@@ -32,7 +32,7 @@ require (
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
-	go.etcd.io/bbolt v1.3.5-0.20200615073812-232d8fc87f50
+	go.etcd.io/bbolt v1.3.6
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	google.golang.org/protobuf v1.27.1
