@@ -83,6 +83,10 @@ func (self address) bindableAddress() string {
 	return fmt.Sprintf("%s:%d", self.hostname, self.port)
 }
 
+func (a address) Type() string {
+	return "transwarp"
+}
+
 type AddressParser struct{}
 
 func (self AddressParser) Parse(s string) (transport.Address, error) {
