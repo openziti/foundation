@@ -67,6 +67,10 @@ func (a address) bindableAddress() string {
 	return fmt.Sprintf("%s:%d", a.hostname, a.port)
 }
 
+func (a address) Type() string {
+	return "ws"
+}
+
 type AddressParser struct{}
 
 func (ap AddressParser) Parse(s string) (transport.Address, error) {
