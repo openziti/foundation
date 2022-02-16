@@ -23,24 +23,25 @@ import (
 )
 
 func NewBaseStore(entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
-	return newBaseStore(nil, entityType, entityNotFoundF, basePath...)
+	return newBaseStore(nil, nil, entityType, entityNotFoundF, basePath...)
 }
 
-func NewChildBaseStore(parent CrudStore, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
-	return newBaseStore(parent, parent.GetEntityType(), entityNotFoundF, basePath...)
+func NewChildBaseStore(parent CrudStore, parentMapper func(Entity) Entity, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
+	return newBaseStore(parent, parentMapper, parent.GetEntityType(), entityNotFoundF, basePath...)
 }
 
-func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
+func newBaseStore(parent CrudStore, parentMapper func(Entity) Entity, entityType string, entityNotFoundF func(id string) error, basePath ...string) *BaseStore {
 	entityPath := append([]string{}, basePath...)
 	if parent == nil {
 		entityPath = append(entityPath, entityType)
 	}
 	result := &BaseStore{
-		parent:     parent,
-		entityType: entityType,
-		entityPath: entityPath,
-		symbols:    map[string]EntitySymbol{},
-		mapSymbols: map[string]*entityMapSymbol{},
+		parent:       parent,
+		parentMapper: parentMapper,
+		entityType:   entityType,
+		entityPath:   entityPath,
+		symbols:      map[string]EntitySymbol{},
+		mapSymbols:   map[string]*entityMapSymbol{},
 
 		Indexer:         *NewIndexer(RootBucket, IndexesBucket),
 		links:           map[string]LinkCollection{},
@@ -52,8 +53,27 @@ func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id s
 	if result.parent != nil {
 		// result.impl isn't initialized here, so we need to defer evaluation
 		result.parent.AddDeleteHandler(func(ctx MutateContext, entityId string) error {
-			if result.IsEntityPresent(ctx.Tx(), entityId) {
+			entity := result.impl.NewStoreEntity()
+			found, err := result.BaseLoadOneById(ctx.Tx(), entityId, entity)
+			if err != nil {
+				return err
+			}
+			if found {
+				ctx.AddEvent(result.impl, EventDelete, entity)
 				return result.impl.cleanupExternal(ctx, entityId)
+			}
+			return nil
+		})
+
+		// result.impl isn't initialized here, so we need to defer evaluation
+		result.parent.AddUpdateHandler(func(ctx MutateContext, entityId string) error {
+			entity := result.impl.NewStoreEntity()
+			found, err := result.BaseLoadOneById(ctx.Tx(), entityId, entity)
+			if err != nil {
+				return err
+			}
+			if found {
+				ctx.AddEvent(result.impl, EventUpdate, entity)
 			}
 			return nil
 		})
@@ -64,6 +84,7 @@ func newBaseStore(parent CrudStore, entityType string, entityNotFoundF func(id s
 
 type BaseStore struct {
 	parent        CrudStore
+	parentMapper  func(childEntity Entity) Entity
 	entityType    string
 	entityPath    []string
 	symbols       map[string]EntitySymbol
@@ -74,6 +95,7 @@ type BaseStore struct {
 	links           map[string]LinkCollection
 	refCountedLinks map[string]RefCountedLinkCollection
 	entityNotFoundF func(id string) error
+	updateHandlers  EntityChangeHandlers
 	deleteHandlers  EntityChangeHandlers
 	events.EventEmmiter
 
@@ -157,6 +179,13 @@ func (store *BaseStore) GetValueCursor(tx *bbolt.Tx, id []byte, path ...string) 
 		return nil
 	}
 	return bucket.Cursor()
+}
+
+func (store *BaseStore) AddUpdateHandler(handler EntityChangeHandler) {
+	if store.parent != nil {
+		store.parent.AddUpdateHandler(handler)
+	}
+	store.updateHandlers.Add(handler)
 }
 
 func (store *BaseStore) AddDeleteHandler(handler EntityChangeHandler) {
