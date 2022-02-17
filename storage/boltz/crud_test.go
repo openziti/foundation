@@ -19,14 +19,11 @@ package boltz
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/kataras/go-events"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
 	"math/rand"
 	"sort"
 	"testing"
-	"time"
 )
 
 const (
@@ -36,7 +33,6 @@ const (
 	fieldRoleAttributes = "roleAttributes"
 
 	entityTypeEmployee = "employees"
-	entityTypeManager  = "managers"
 	entityTypeLocation = "locations"
 )
 
@@ -1076,9 +1072,9 @@ func TestEvents(t *testing.T) {
 	test.init(false)
 	defer test.cleanup()
 
-	eventChecker := newTestEventChecker(test.Assertions)
-	eventChecker.addHandlers(test.empStore)
-	eventChecker.addHandlers(test.mgrStore)
+	eventChecker := NewTestEventChecker(test.Assertions)
+	eventChecker.AddHandlers(test.empStore)
+	eventChecker.AddHandlers(test.mgrStore)
 
 	first := &Employee{
 		Id:   uuid.NewString(),
@@ -1089,23 +1085,23 @@ func TestEvents(t *testing.T) {
 		return test.empStore.Create(NewMutateContext(tx), first)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, first.Id, EventCreate)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventCreate)
+	eventChecker.RequireNoEvent()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		first.Name = "first1"
 		return test.empStore.Update(NewMutateContext(tx), first, nil)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, first.Id, EventUpdate)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventUpdate)
+	eventChecker.RequireNoEvent()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		return test.empStore.DeleteById(NewMutateContext(tx), first.Id)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, first.Id, EventDelete)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventDelete)
+	eventChecker.RequireNoEvent()
 }
 
 func TestParentChildEvents(t *testing.T) {
@@ -1114,9 +1110,9 @@ func TestParentChildEvents(t *testing.T) {
 	test.init(false)
 	defer test.cleanup()
 
-	eventChecker := newTestEventChecker(test.Assertions)
-	eventChecker.addHandlers(test.empStore)
-	eventChecker.addHandlers(test.mgrStore)
+	eventChecker := NewTestEventChecker(test.Assertions)
+	eventChecker.AddHandlers(test.empStore)
+	eventChecker.AddHandlers(test.mgrStore)
 
 	mgr := &Manager{
 		Employee: Employee{
@@ -1129,34 +1125,34 @@ func TestParentChildEvents(t *testing.T) {
 		return test.mgrStore.Create(NewMutateContext(tx), mgr)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventCreate)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventCreate)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventCreate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventCreate)
+	eventChecker.RequireNoEvent()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		mgr.Name = "mgr1"
 		return test.mgrStore.Update(NewMutateContext(tx), mgr, nil)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventUpdate)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventUpdate)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventUpdate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventUpdate)
+	eventChecker.RequireNoEvent()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		mgr.Name = "mgr2"
 		return test.empStore.Update(NewMutateContext(tx), &mgr.Employee, nil)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventUpdate)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventUpdate)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventUpdate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventUpdate)
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		return test.mgrStore.DeleteById(NewMutateContext(tx), mgr.Id)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventDelete)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventDelete)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventDelete)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventDelete)
+	eventChecker.RequireNoEvent()
 
 	// check delete again, this time invoked from the child store
 	mgr = &Manager{
@@ -1170,108 +1166,15 @@ func TestParentChildEvents(t *testing.T) {
 		return test.mgrStore.Create(NewMutateContext(tx), mgr)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventCreate)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventCreate)
-	eventChecker.requireNoEvent()
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventCreate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventCreate)
+	eventChecker.RequireNoEvent()
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		return test.empStore.DeleteById(NewMutateContext(tx), mgr.Id)
 	})
 	test.NoError(err)
-	eventChecker.requireEvent(entityTypeEmployee, mgr.Id, EventDelete)
-	eventChecker.requireEvent(entityTypeManager, mgr.Id, EventDelete)
-	eventChecker.requireNoEvent()
-}
-
-func newTestEventChecker(req *require.Assertions) *testEventChecker {
-	return &testEventChecker{
-		Assertions: req,
-		eventC:     make(chan *testEvent, 10),
-		errC:       make(chan error, 10),
-	}
-}
-
-type testEventChecker struct {
-	*require.Assertions
-	errC   chan error
-	eventC chan *testEvent
-}
-
-func (self *testEventChecker) addHandlers(store CrudStore) {
-	for _, eventType := range []events.EventName{EventCreate, EventUpdate, EventDelete} {
-		entityType := entityTypeEmployee
-		if store.IsChildStore() {
-			entityType = entityTypeManager
-		}
-		store.AddListener(eventType, self.newHandler(entityType, eventType).accept)
-	}
-}
-
-func (self *testEventChecker) newHandler(entityType string, eventType events.EventName) *testEventHandler {
-	return &testEventHandler{
-		entityType:   entityType,
-		eventType:    eventType,
-		eventChecker: self,
-	}
-}
-
-func (self *testEventChecker) requireEvent(entityType, id string, eventType events.EventName) {
-	select {
-	case event := <-self.eventC:
-		self.NotNil(event)
-		self.Equal(entityType, event.entityType)
-		self.Equal(id, event.entityId)
-		self.Equal(eventType, event.eventType)
-	case err := <-self.errC:
-		self.NoError(err)
-	case <-time.After(time.Second):
-		self.FailNow("timed out waiting for event")
-	}
-}
-
-func (self *testEventChecker) requireNoEvent() {
-	select {
-	case event := <-self.eventC:
-		self.Nil(event, "no event expected")
-	case err := <-self.errC:
-		self.NoError(err)
-	case <-time.After(100 * time.Millisecond):
-	}
-}
-
-type testEventHandler struct {
-	entityType   string
-	eventType    events.EventName
-	eventChecker *testEventChecker
-}
-
-func (self *testEventHandler) accept(i ...interface{}) {
-	var emp *Employee
-	if len(i) != 1 {
-		self.eventChecker.errC <- errors.Errorf("expected 1 entity, got %v", len(i))
-	}
-	ok := false
-	if self.entityType == entityTypeEmployee {
-		emp, ok = i[0].(*Employee)
-	} else {
-		var mgr *Manager
-		mgr, ok = i[0].(*Manager)
-		emp = &mgr.Employee
-	}
-
-	if !ok {
-		self.eventChecker.errC <- errors.Errorf("expected %v, got %T", self.entityType, i[0])
-		return
-	}
-	self.eventChecker.eventC <- &testEvent{
-		entityType: self.entityType,
-		entityId:   emp.Id,
-		eventType:  self.eventType,
-	}
-}
-
-type testEvent struct {
-	entityType string
-	entityId   string
-	eventType  events.EventName
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventDelete)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventDelete)
+	eventChecker.RequireNoEvent()
 }
