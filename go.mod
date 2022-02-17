@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.7
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/kataras/go-events v0.0.3-0.20201007151548-c411dc70c0a6
 	github.com/lucas-clemente/quic-go v0.23.0
@@ -33,8 +33,8 @@ require (
 	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.6
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+	golang.org/x/sys v0.0.0-20220209214540-3681064d5158
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v2 v2.4.0
 )
