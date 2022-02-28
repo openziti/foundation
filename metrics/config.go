@@ -48,7 +48,7 @@ type Config struct {
 
 func LoadConfig(srcmap map[interface{}]interface{}) (*Config, error) {
 	cfg := &Config{
-		ReportInterval: 15 * time.Second,
+		ReportInterval: DefaultMetricsReportInterval,
 	}
 
 	pfxlog.Logger().Infof("Loading metrics configs")
