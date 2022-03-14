@@ -82,6 +82,14 @@ type pool struct {
 }
 
 func (self *pool) Queue(work func()) error {
+	return self.queueImpl(work, nil)
+}
+
+func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
+	return self.queueImpl(work, time.After(timeout))
+}
+
+func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
 	if self.getCount() == 0 {
 		self.tryAddWorker()
 	}
@@ -93,22 +101,7 @@ func (self *pool) Queue(work func()) error {
 		return errors.New("pool stopped")
 	case <-self.externalCloseNotify:
 		return errors.New("pool stopped (via external close notify)")
-	}
-}
-
-func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
-	if atomic.LoadUint32(&self.count) == 0 {
-		self.tryAddWorker()
-	}
-
-	select {
-	case self.queue <- work:
-		return nil
-	case <-self.closeNotify:
-		return errors.New("pool stopped")
-	case <-self.externalCloseNotify:
-		return errors.New("pool stopped (via external close notify)")
-	case <-time.After(timeout):
+	case <-timeoutC:
 		return errors.New("timeout")
 	}
 }
@@ -121,10 +114,13 @@ func (self *pool) Shutdown() {
 
 func (self *pool) worker(initialWork func()) {
 	defer func() {
-		if self.panicHandler != nil {
-			if err := recover(); err != nil {
+		if err := recover(); err != nil {
+			if self.panicHandler != nil {
 				self.panicHandler(err)
+			} else {
+				fmt.Printf("panic during pool worker executing (%+v)\n", err)
 			}
+			self.tryAddWorker()
 		}
 	}()
 
