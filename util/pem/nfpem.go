@@ -14,6 +14,7 @@
 	limitations under the License.
 */
 
+// Package nfpem provides convenience functions for dealing with PEM encoded x509 data.
 package nfpem
 
 import (
@@ -23,9 +24,8 @@ import (
 	"fmt"
 )
 
-// An initial limit of how deep a valid cert chain might be.
-const certDepth = 4
-
+// DecodeAll accepts a byte array of PEM encoded data returns PEM blocks of data.
+// The blocks will be in the order that they are provided in the original bytes.
 func DecodeAll(pemBytes []byte) []*pem.Block {
 	var blocks []*pem.Block
 	if len(pemBytes) < 1 {
@@ -40,18 +40,37 @@ func DecodeAll(pemBytes []byte) []*pem.Block {
 	return blocks
 }
 
+// EncodeToString returns PEM encoded data in the form of a string generated
+// from the supplied certificate.
 func EncodeToString(cert *x509.Certificate) string {
+	return string(EncodeToBytes(cert))
+}
+
+// EncodeToBytes returns PEM encoded data in the form of a string generated
+// from the supplied certificate.
+func EncodeToBytes(cert *x509.Certificate) []byte {
 	result := pem.EncodeToMemory(&pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert.Raw,
 	})
 
-	return string(result)
+	return result
 }
 
+// PemToX509 accepts a PEM string and returns an array of x509.Certificate. Any blocks that
+// cannot be parsed as certificates are discard. Certificate are returned to the
+// order they are encountered in the PEM string.
+//
+// Deprecated: Use PemStringToCertificates
 func PemToX509(pem string) []*x509.Certificate {
+	return PemStringToCertificates(pem)
+}
 
-	pemBytes := []byte(pem)
+// PemBytesToCertificates accepts PEM bytes and returns an array of x509.Certificate. Any blocks that
+// cannot be parsed as a x509.Certificate is discard. Certificate are returned to the
+// order they are encountered in the PEM string.
+func PemBytesToCertificates(pem []byte) []*x509.Certificate {
+	pemBytes := pem
 	certs := make([]*x509.Certificate, 0)
 	for _, block := range DecodeAll(pemBytes) {
 		xcerts, err := x509.ParseCertificate(block.Bytes)
@@ -62,16 +81,49 @@ func PemToX509(pem string) []*x509.Certificate {
 	return certs
 }
 
-//Assumes the first PEM block is the target
+// PemStringToCertificates accepts a PEM string and returns an array of x509.Certificate. Any blocks that
+// cannot be parsed as certificates are discard. Certificate are returned to the
+// order they are encountered in the PEM string.
+func PemStringToCertificates(pem string) []*x509.Certificate {
+	return PemBytesToCertificates([]byte(pem))
+}
+
+// FingerprintFromPem returns the fingerprint of the first certificate encountered in a pem string
+// Deprecated: Use FingerprintFromPemString or FingerprintFromPemBytes
 func FingerprintFromPem(pem string) string {
-	certs := PemToX509(pem)
+	certs := PemStringToCertificates(pem)
 	if len(certs) == 0 {
 		return ""
 	}
-	return FingerprintFromX509(certs[0])
+	return FingerprintFromCertificate(certs[0])
 }
 
+// FingerprintFromPemString returns the sha1 fingerprint of the first parsable certificate in a pem string
+func FingerprintFromPemString(pem string) string {
+	certs := PemStringToCertificates(pem)
+	if len(certs) == 0 {
+		return ""
+	}
+	return FingerprintFromCertificate(certs[0])
+}
+
+// FingerprintFromPemBytes returns the sha1 fingerprint of the first parsable certificate in a pem string
+func FingerprintFromPemBytes(pem []byte) string {
+	certs := PemBytesToCertificates(pem)
+	if len(certs) == 0 {
+		return ""
+	}
+	return FingerprintFromCertificate(certs[0])
+}
+
+// FingerprintFromX509 returns the sha1 fingerprint of the supplied certificate
+// Deprecated: Use FingerprintFromCertificate
 func FingerprintFromX509(cert *x509.Certificate) string {
+	return FingerprintFromCertificate(cert)
+}
+
+// FingerprintFromCertificate returns the sha1 fingerprint of the supplied certificate
+func FingerprintFromCertificate(cert *x509.Certificate) string {
 	if cert == nil {
 		return ""
 	}

@@ -19,8 +19,6 @@ package boltz
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/openziti/foundation/storage/ast"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
 	"math/rand"
@@ -41,157 +39,17 @@ const (
 type testStores struct {
 	employee *employeeStoreImpl
 	location *locationStoreImpl
-}
-
-type Employee struct {
-	Id             string
-	Name           string
-	ManagerId      *string
-	RoleAttributes []string
-}
-
-func (entity *Employee) GetId() string {
-	return entity.Id
-}
-
-func (entity *Employee) SetId(id string) {
-	entity.Id = id
-}
-
-func (entity *Employee) LoadValues(_ CrudStore, bucket *TypedBucket) {
-	entity.Name = bucket.GetStringOrError(fieldName)
-	entity.ManagerId = bucket.GetString(fieldManager)
-	entity.RoleAttributes = bucket.GetStringList(fieldRoleAttributes)
-}
-
-func (entity *Employee) SetValues(ctx *PersistContext) {
-	ctx.SetString(fieldName, entity.Name)
-	ctx.SetStringP(fieldManager, entity.ManagerId)
-	ctx.SetStringList(fieldRoleAttributes, entity.RoleAttributes)
-}
-
-func (entity *Employee) GetEntityType() string {
-	return entityTypeEmployee
-}
-
-func newEmployeeStore() *employeeStoreImpl {
-	store := &employeeStoreImpl{
-		BaseStore: NewBaseStore(entityTypeEmployee, func(id string) error {
-			return errors.Errorf("entity of type %v with id %v not found", entityTypeEmployee, id)
-		}, "stores"),
-	}
-	store.InitImpl(store)
-	return store
-}
-
-type employeeStoreImpl struct {
-	*BaseStore
-	stores *testStores
-
-	symbolLocations EntitySetSymbol
-	indexName       ReadIndex
-	indexRoles      SetReadIndex
-
-	locationsCollection LinkCollection
-}
-
-func (store *employeeStoreImpl) NewStoreEntity() Entity {
-	return &Employee{}
-}
-
-func (store *employeeStoreImpl) initializeLocal(constraint bool) {
-	store.AddIdSymbol("id", ast.NodeTypeString)
-	symbolName := store.AddSymbol(fieldName, ast.NodeTypeString)
-	store.indexName = store.AddUniqueIndex(symbolName)
-
-	rolesSymbol := store.AddSetSymbol(fieldRoleAttributes, ast.NodeTypeString)
-	store.indexRoles = store.AddSetIndex(rolesSymbol)
-
-	managerSymbol := store.AddFkSymbol(fieldManager, store)
-
-	directReportsSymbol := store.AddFkSetSymbol(fieldDirectReports, store)
-	if constraint {
-		store.AddFkConstraint(managerSymbol, true, CascadeNone)
-	} else {
-		store.AddNullableFkIndex(managerSymbol, directReportsSymbol)
-	}
-
-	store.symbolLocations = store.AddFkSetSymbol(entityTypeLocation, store.stores.location)
-
-}
-
-func (store *employeeStoreImpl) initializeLinked() {
-	store.locationsCollection = store.AddLinkCollection(store.symbolLocations, store.stores.location.symbolEmployees)
-}
-
-func (store *employeeStoreImpl) getEmployeesWithRoleAttribute(tx *bbolt.Tx, role string) []string {
-	var result []string
-	store.indexRoles.Read(tx, []byte(role), func(val []byte) {
-		result = append(result, string(val))
-	})
-	sort.Strings(result)
-	return result
-}
-
-type Location struct {
-	Id string
-}
-
-func (entity *Location) GetId() string {
-	return entity.Id
-}
-
-func (entity *Location) SetId(id string) {
-	entity.Id = id
-}
-
-func (entity *Location) LoadValues(CrudStore, *TypedBucket) {
-}
-
-func (entity *Location) SetValues(*PersistContext) {
-}
-
-func (entity *Location) GetEntityType() string {
-	return entityTypeLocation
-}
-
-func newLocationStore() *locationStoreImpl {
-	store := &locationStoreImpl{
-		BaseStore: NewBaseStore(entityTypeLocation, func(id string) error {
-			return errors.Errorf("entity of type %v with id %v not found", entityTypeLocation, id)
-		}, "stores"),
-	}
-	store.InitImpl(store)
-	return store
-}
-
-type locationStoreImpl struct {
-	*BaseStore
-	stores              *testStores
-	symbolEmployees     EntitySetSymbol
-	employeesCollection LinkCollection
-}
-
-func (store *locationStoreImpl) NewStoreEntity() Entity {
-	return &Location{}
-}
-
-func (store *locationStoreImpl) initializeLocal() {
-	store.AddIdSymbol("id", ast.NodeTypeString)
-	store.symbolEmployees = store.AddFkSetSymbol(entityTypeEmployee, store.stores.employee)
-}
-
-func (store *locationStoreImpl) initializeLinked() {
-	store.employeesCollection = store.AddLinkCollection(store.symbolEmployees, store.stores.employee.symbolLocations)
+	manager  *managerStoreImpl
 }
 
 type crudTest struct {
 	dbTest
 	empStore *employeeStoreImpl
+	mgrStore *managerStoreImpl
 	locStore *locationStoreImpl
 }
 
-func (test *crudTest) init(constaint bool) {
+func (test *crudTest) init(constraint bool) {
 	test.dbTest.init()
 
 	stores := &testStores{
@@ -199,24 +57,30 @@ func (test *crudTest) init(constaint bool) {
 		location: newLocationStore(),
 	}
 
+	stores.manager = newManagerStore(stores.employee)
+
 	stores.employee.stores = stores
 	stores.location.stores = stores
 
-	stores.employee.initializeLocal(constaint)
+	stores.employee.initializeLocal(constraint)
 	stores.location.initializeLocal()
+	stores.manager.initializeLocal()
 
 	stores.employee.initializeLinked()
 	stores.location.initializeLinked()
+	stores.manager.initializeLinked()
 
 	err := test.db.Update(func(tx *bbolt.Tx) error {
 		stores.employee.InitializeIndexes(tx, test)
 		stores.location.InitializeIndexes(tx, test)
+		stores.manager.InitializeIndexes(tx, test)
 		return nil
 	})
 	test.NoError(err)
 
 	test.empStore = stores.employee
 	test.locStore = stores.location
+	test.mgrStore = stores.manager
 }
 
 func TestCrud(t *testing.T) {
@@ -660,7 +524,8 @@ func (test *crudTest) requireIntegrityErrorAndFixResult(store CrudStore, errMsg 
 	}
 }
 
-func (test *crudTest) testUniqueIndex(_ *testing.T) {
+func (test *crudTest) testUniqueIndex(t *testing.T) {
+	test.switchTestContext(t)
 	newEmployee := func(name string, roles ...string) *Employee {
 		return &Employee{
 			Id:   uuid.New().String(),
@@ -767,7 +632,8 @@ func (test *crudTest) testUniqueIndex(_ *testing.T) {
 	test.NoError(err)
 }
 
-func (test *crudTest) testSetIndex(_ *testing.T) {
+func (test *crudTest) testSetIndex(t *testing.T) {
+	test.switchTestContext(t)
 	newEmployee := func(name string, roles ...string) *Employee {
 		return &Employee{
 			Id:             uuid.New().String(),
@@ -879,7 +745,8 @@ func (test *crudTest) testSetIndex(_ *testing.T) {
 	test.NoError(err)
 }
 
-func (test *crudTest) testFkIndex(_ *testing.T) {
+func (test *crudTest) testFkIndex(t *testing.T) {
+	test.switchTestContext(t)
 	newEmployee := func(name string, managerId *string) *Employee {
 		return &Employee{
 			Id:        uuid.New().String(),
@@ -954,7 +821,7 @@ func (test *crudTest) testFkIndex(_ *testing.T) {
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		ctx := NewMutateContext(tx)
-		// Need to delete referencing entities first
+		// Need to delete referencing entities mgr
 		test.NoError(test.empStore.DeleteById(ctx, employee1.Id))
 		test.NoError(test.empStore.DeleteById(ctx, employee3.Id))
 		test.NoError(test.empStore.DeleteById(ctx, employee4.Id))
@@ -983,7 +850,8 @@ func (test *crudTest) sortedIdList(employees ...*Employee) []string {
 	return result
 }
 
-func (test *crudTest) testLinkCollection(_ *testing.T) {
+func (test *crudTest) testLinkCollection(t *testing.T) {
+	test.switchTestContext(t)
 	employee := &Employee{
 		Id:   uuid.New().String(),
 		Name: uuid.New().String(),
@@ -1041,7 +909,8 @@ func (test *crudTest) testLinkCollection(_ *testing.T) {
 	test.NoError(err)
 }
 
-func (test *crudTest) testCompositeSymbol(_ *testing.T) {
+func (test *crudTest) testCompositeSymbol(t *testing.T) {
+	test.switchTestContext(t)
 	var employees []*Employee
 
 	for i := 0; i < 10; i++ {
@@ -1195,4 +1064,117 @@ func toUniqueSortedSlice(vals []string) []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+func TestEvents(t *testing.T) {
+	test := &crudTest{}
+	test.Assertions = require.New(t)
+	test.init(false)
+	defer test.cleanup()
+
+	eventChecker := NewTestEventChecker(test.Assertions)
+	eventChecker.AddHandlers(test.empStore)
+	eventChecker.AddHandlers(test.mgrStore)
+
+	first := &Employee{
+		Id:   uuid.NewString(),
+		Name: "first",
+	}
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		return test.empStore.Create(NewMutateContext(tx), first)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventCreate)
+	eventChecker.RequireNoEvent()
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		first.Name = "first1"
+		return test.empStore.Update(NewMutateContext(tx), first, nil)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventUpdate)
+	eventChecker.RequireNoEvent()
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		return test.empStore.DeleteById(NewMutateContext(tx), first.Id)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, first, EventDelete)
+	eventChecker.RequireNoEvent()
+}
+
+func TestParentChildEvents(t *testing.T) {
+	test := &crudTest{}
+	test.Assertions = require.New(t)
+	test.init(false)
+	defer test.cleanup()
+
+	eventChecker := NewTestEventChecker(test.Assertions)
+	eventChecker.AddHandlers(test.empStore)
+	eventChecker.AddHandlers(test.mgrStore)
+
+	mgr := &Manager{
+		Employee: Employee{
+			Id:   uuid.NewString(),
+			Name: "mgr",
+		},
+	}
+
+	err := test.db.Update(func(tx *bbolt.Tx) error {
+		return test.mgrStore.Create(NewMutateContext(tx), mgr)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventCreate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventCreate)
+	eventChecker.RequireNoEvent()
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		mgr.Name = "mgr1"
+		return test.mgrStore.Update(NewMutateContext(tx), mgr, nil)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventUpdate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventUpdate)
+	eventChecker.RequireNoEvent()
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		mgr.Name = "mgr2"
+		return test.empStore.Update(NewMutateContext(tx), &mgr.Employee, nil)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventUpdate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventUpdate)
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		return test.mgrStore.DeleteById(NewMutateContext(tx), mgr.Id)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventDelete)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventDelete)
+	eventChecker.RequireNoEvent()
+
+	// check delete again, this time invoked from the child store
+	mgr = &Manager{
+		Employee: Employee{
+			Id:   uuid.NewString(),
+			Name: "mgr",
+		},
+	}
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		return test.mgrStore.Create(NewMutateContext(tx), mgr)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventCreate)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventCreate)
+	eventChecker.RequireNoEvent()
+
+	err = test.db.Update(func(tx *bbolt.Tx) error {
+		return test.empStore.DeleteById(NewMutateContext(tx), mgr.Id)
+	})
+	test.NoError(err)
+	eventChecker.RequireEvent(TestEntityTypeParent, mgr, EventDelete)
+	eventChecker.RequireEvent(TestEntityTypeChild, mgr, EventDelete)
+	eventChecker.RequireNoEvent()
 }

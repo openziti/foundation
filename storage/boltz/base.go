@@ -138,10 +138,12 @@ type CrudStore interface {
 	NewStoreEntity() Entity
 
 	AddDeleteHandler(handler EntityChangeHandler)
+	AddUpdateHandler(handler EntityChangeHandler)
 	NewIndexingContext(isCreate bool, ctx MutateContext, id string, holder errorz.ErrorHolder) *IndexingContext
 
 	CheckIntegrity(tx *bbolt.Tx, fix bool, errorSink func(err error, fixed bool)) error
 
+	AddEvent(ctx MutateContext, entity Entity, name events.EventName)
 	events.EventEmmiter
 }
 

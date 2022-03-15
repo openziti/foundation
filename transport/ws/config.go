@@ -2,6 +2,7 @@ package ws
 
 import (
 	"fmt"
+	"github.com/openziti/foundation/transport"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -22,14 +23,14 @@ type WSConfig struct {
 
 func NewDefaultWSConfig() *WSConfig {
 	return &WSConfig{
-		writeTimeout:      time.Second * 10,
-		readTimeout:       time.Second * 5,
-		idleTimeout:       time.Second * 5,
-		pongTimeout:       time.Second * 60,
-		handshakeTimeout:  time.Second * 10,
-		readBufferSize:    4096,
-		writeBufferSize:   4096,
-		enableCompression: true,
+		writeTimeout:      transport.DefaultWsWriteTimeout,
+		readTimeout:       transport.DefaultWsReadTimeout,
+		idleTimeout:       transport.DefaultWsIdleTimeout,
+		pongTimeout:       transport.DefaultWsPongTimeout,
+		handshakeTimeout:  transport.DefaultWsHandshakeTimeout,
+		readBufferSize:    transport.DefaultWsReadBufferSize,
+		writeBufferSize:   transport.DefaultWsWriteBufferSize,
+		enableCompression: transport.DefaultWsEnableCompression,
 	}
 }
 
@@ -69,7 +70,7 @@ func (self *WSConfig) Load(data map[interface{}]interface{}) error {
 			return errors.New("invalid 'pingInterval' value")
 		}
 	} else {
-		self.pingInterval = (self.pongTimeout * 9) / 10
+		self.pingInterval = transport.DefaultWsPingInterval
 	}
 	if v, found := data["handshakeTimeout"]; found {
 		if i, ok := v.(int); ok {

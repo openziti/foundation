@@ -18,6 +18,7 @@ package boltz
 
 import (
 	"github.com/google/uuid"
+	"github.com/kataras/go-events"
 	"github.com/openziti/foundation/storage/ast"
 	"github.com/openziti/foundation/util/errorz"
 	"github.com/openziti/foundation/util/stringz"
@@ -132,6 +133,13 @@ func (store *BaseStore) NewIndexingContext(isCreate bool, ctx MutateContext, id 
 	}
 }
 
+func (store *BaseStore) AddEvent(ctx MutateContext, entity Entity, name events.EventName) {
+	if store.parent != nil {
+		store.parent.AddEvent(ctx, store.parentMapper(entity), name)
+	}
+	ctx.AddEvent(store, name, entity)
+}
+
 func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	if entity == nil {
 		return errors.Errorf("cannot create %v from nil value", store.GetSingularEntityType())
@@ -162,7 +170,7 @@ func (store *BaseStore) Create(ctx MutateContext, entity Entity) error {
 	indexingContext := store.NewIndexingContext(true, ctx, entity.GetId(), bucket)
 	indexingContext.ProcessAfterUpdate()
 
-	ctx.AddEvent(store, EventCreate, entity)
+	store.AddEvent(ctx, entity, EventCreate)
 	return bucket.Err
 }
 
@@ -198,7 +206,16 @@ func (store *BaseStore) Update(ctx MutateContext, entity Entity, checker FieldCh
 	entity.SetValues(persistCtx)
 	indexingContext.ProcessAfterUpdate() // add new values, using updated values in store
 
-	ctx.AddEvent(store, EventUpdate, entity)
+	// for consistent ordering we do this before update handlers,
+	// since child events will be generated there. It's ok to do
+	// this early as if there is an error, the events won't be
+	// propagated
+	store.AddEvent(ctx, entity, EventUpdate)
+
+	if err := store.updateHandlers.Handle(ctx, entity.GetId()); err != nil {
+		return err
+	}
+
 	return bucket.Err
 }
 
@@ -394,6 +411,12 @@ func (store *BaseStore) DeleteById(ctx MutateContext, id string) error {
 		return store.entityNotFoundF(id)
 	}
 
+	// for consistent ordering we do this before delete handlers,
+	// since child events will be generated there. It's ok to do
+	// this early as if there is an error, the events won't be
+	// propagated
+	store.AddEvent(ctx, entity, EventDelete)
+
 	if err := store.deleteHandlers.Handle(ctx, id); err != nil {
 		return err
 	}
@@ -408,8 +431,6 @@ func (store *BaseStore) DeleteById(ctx MutateContext, id string) error {
 		return nil
 	}
 	bucket.DeleteEntity(id)
-
-	ctx.AddEvent(store, EventDelete, entity)
 
 	return bucket.Err
 }

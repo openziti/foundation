@@ -67,6 +67,10 @@ func (a address) bindableAddress() (*net.UDPAddr, error) {
 	return net.ResolveUDPAddr("udp", fmt.Sprintf("%v:%v", a.hostname, a.port))
 }
 
+func (a address) Type() string {
+	return "udp"
+}
+
 type AddressParser struct{}
 
 func (ap AddressParser) Parse(s string) (transport.Address, error) {

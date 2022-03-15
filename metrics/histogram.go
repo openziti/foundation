@@ -16,7 +16,10 @@
 
 package metrics
 
-import "github.com/rcrowley/go-metrics"
+import (
+	"github.com/openziti/foundation/util/concurrenz"
+	"github.com/rcrowley/go-metrics"
+)
 
 // Histogram represents a metric which is measuring the distribution of values for some measurement
 type Histogram interface {
@@ -27,9 +30,19 @@ type Histogram interface {
 
 type histogramImpl struct {
 	metrics.Histogram
-	dispose func()
+	name     string
+	registry *registryImpl
+	concurrenz.RefCount
 }
 
-func (histogram *histogramImpl) Dispose() {
-	histogram.dispose()
+func (self *histogramImpl) Name() string {
+	return self.name
+}
+
+func (self *histogramImpl) Dispose() {
+	self.registry.disposeRefCounted(self)
+}
+
+func (self *histogramImpl) stop() {
+	// no resources to cleanup
 }
