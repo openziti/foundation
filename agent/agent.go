@@ -72,7 +72,7 @@ type Options struct {
 	ShutdownCleanup *bool
 
 	// Custom Operations
-	CustomOps map[byte]func(conn io.ReadWriter) error
+	CustomOps map[byte]func(conn net.Conn) error
 }
 
 // Listen starts the gops agent on a host process. Once agent started, users
@@ -170,7 +170,12 @@ func (self *handler) listen() {
 }
 
 func (self *handler) handleConnection(conn net.Conn) {
-	defer func() { _ = conn.Close() }()
+	async := false
+	defer func() {
+		if !async {
+			_ = conn.Close()
+		}
+	}()
 
 	logger := pfxlog.Logger()
 
@@ -191,7 +196,8 @@ func (self *handler) handleConnection(conn net.Conn) {
 		return
 	}
 
-	if err := self.handle(conn, buf[len(buf)-1]); err != nil {
+	var err error
+	if async, err = self.handle(conn, buf[len(buf)-1]); err != nil {
 		logger.WithError(err).Error("error while processing gops request")
 		_, _ = conn.Write([]byte(err.Error()))
 	}
@@ -237,14 +243,14 @@ func formatBytes(val uint64) string {
 	return fmt.Sprintf("%d bytes", val)
 }
 
-func (self *handler) handle(conn io.ReadWriter, op byte) error {
+func (self *handler) handle(conn net.Conn, op byte) (bool, error) {
 	switch op {
 	case StackTrace:
-		return pprof.Lookup("goroutine").WriteTo(conn, 2)
+		return false, pprof.Lookup("goroutine").WriteTo(conn, 2)
 	case GC:
 		runtime.GC()
 		_, err := conn.Write([]byte("ok"))
-		return err
+		return false, err
 	case MemStats:
 		var s runtime.MemStats
 		runtime.ReadMemStats(&s)
@@ -285,7 +291,7 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		_ = pprof.WriteHeapProfile(conn)
 	case CPUProfile:
 		if err := pprof.StartCPUProfile(conn); err != nil {
-			return err
+			return false, err
 		}
 		time.Sleep(30 * time.Second)
 		pprof.StopCPUProfile()
@@ -297,36 +303,36 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 	case BinaryDump:
 		executable, err := os.Executable()
 		if err != nil {
-			return err
+			return false, err
 		}
 		f, err := os.Open(executable)
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer func() { _ = f.Close() }()
 
 		_, err = bufio.NewReader(f).WriteTo(conn)
-		return err
+		return false, err
 	case Trace:
 		if err := trace.Start(conn); err != nil {
-			return err
+			return false, err
 		}
 		time.Sleep(5 * time.Second)
 		trace.Stop()
 	case SetGCPercent:
 		perc, err := binary.ReadVarint(bufio.NewReader(conn))
 		if err != nil {
-			return err
+			return false, err
 		}
 		_, _ = fmt.Fprintf(conn, "New GC percent set to %v. Previous value was %v.\n", perc, debug.SetGCPercent(int(perc)))
 
 	case SetLogLevel:
 		param, err := bufio.NewReader(conn).ReadByte()
 		if err != nil {
-			return err
+			return false, err
 		}
 		if param < byte(logrus.PanicLevel) || param > byte(logrus.TraceLevel) {
-			return errors.Errorf("invalid log level %v", param)
+			return false, errors.Errorf("invalid log level %v", param)
 		}
 
 		oldLevel := logrus.GetLevel()
@@ -340,16 +346,16 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		reader := bufio.NewReader(conn)
 		channel, err := self.readVarString(reader, 1024)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		level, err := reader.ReadByte()
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		if level < byte(logrus.PanicLevel) || level > byte(logrus.TraceLevel) {
-			return errors.Errorf("invalid log level %v", level)
+			return false, errors.Errorf("invalid log level %v", level)
 		}
 
 		var prevLevel string
@@ -371,7 +377,7 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 		reader := bufio.NewReader(conn)
 		channel, err := self.readVarString(reader, 1024)
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		var prevLevel string
@@ -391,11 +397,14 @@ func (self *handler) handle(conn io.ReadWriter, op byte) error {
 	default:
 		if self.options.CustomOps != nil {
 			if customHandler, found := self.options.CustomOps[op]; found {
-				return customHandler(conn)
+				if err := customHandler(conn); err != nil {
+					return false, err
+				}
+				return op == CustomOpAsync, nil
 			}
 		}
 	}
-	return nil
+	return false, nil
 }
 
 func (self *handler) readVarString(reader *bufio.Reader, maxLen int64) (string, error) {
