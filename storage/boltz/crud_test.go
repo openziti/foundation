@@ -816,8 +816,10 @@ func (test *crudTest) testFkIndex(t *testing.T) {
 		return test.empStore.DeleteById(ctx, employee2.Id)
 	})
 	empIdList := test.sortedIdList(employee1, employee3, employee4)
-	test.EqualError(err, fmt.Sprintf("cannot delete employees with id %v is referenced by employees with id %v, field manager",
-		employee2.Id, empIdList[0]))
+	test.EqualError(err, fmt.Sprintf("cannot delete employees with id %v is referenced by employees with id(s) %v, field manager",
+		employee2.Id, []string{empIdList[0]}))
+
+	test.True(IsReferenceExistsError(err))
 
 	err = test.db.Update(func(tx *bbolt.Tx) error {
 		ctx := NewMutateContext(tx)

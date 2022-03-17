@@ -39,8 +39,40 @@ func (err *RecordNotFoundError) Error() string {
 	return fmt.Sprintf("%v with %v %v not found", err.EntityType, err.Field, err.Id)
 }
 
-var testError = &RecordNotFoundError{}
+var testErrorNotFound = &RecordNotFoundError{}
 
 func IsErrNotFoundErr(err error) bool {
-	return errors.As(err, &testError)
+	return errors.As(err, &testErrorNotFound)
+}
+
+func NewReferenceByIdsError(localType, localId, remoteType string, remoteIds []string, remoteField string) error {
+	return &ReferenceExistsError{
+		localType:   localType,
+		localId:     localId,
+		remoteType:  remoteType,
+		remoteIds:   remoteIds,
+		remoteField: remoteField,
+	}
+}
+
+func NewReferenceByIdError(localType, localId, remoteType, remoteId, remoteField string) error {
+	return NewReferenceByIdsError(localType, localId, remoteType, []string{remoteId}, remoteField)
+}
+
+var testErrorReferenceExists = &ReferenceExistsError{}
+
+type ReferenceExistsError struct {
+	localType   string
+	remoteType  string
+	remoteField string
+	localId     string
+	remoteIds   []string
+}
+
+func IsReferenceExistsError(err error) bool {
+	return errors.As(err, &testErrorReferenceExists)
+}
+
+func (err *ReferenceExistsError) Error() string {
+	return fmt.Sprintf("cannot delete %v with id %v is referenced by %v with id(s) %v, field %v", err.localType, err.localId, err.remoteType, err.remoteIds, err.remoteField)
 }
