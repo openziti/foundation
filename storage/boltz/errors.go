@@ -47,11 +47,11 @@ func IsErrNotFoundErr(err error) bool {
 
 func NewReferenceByIdsError(localType, localId, remoteType string, remoteIds []string, remoteField string) error {
 	return &ReferenceExistsError{
-		localType:   localType,
-		localId:     localId,
-		remoteType:  remoteType,
-		remoteIds:   remoteIds,
-		remoteField: remoteField,
+		LocalType:   localType,
+		LocalId:     localId,
+		RemoteType:  remoteType,
+		RemoteIds:   remoteIds,
+		RemoteField: remoteField,
 	}
 }
 
@@ -62,11 +62,11 @@ func NewReferenceByIdError(localType, localId, remoteType, remoteId, remoteField
 var testErrorReferenceExists = &ReferenceExistsError{}
 
 type ReferenceExistsError struct {
-	localType   string
-	remoteType  string
-	remoteField string
-	localId     string
-	remoteIds   []string
+	LocalType   string
+	RemoteType  string
+	RemoteField string
+	LocalId     string
+	RemoteIds   []string
 }
 
 func IsReferenceExistsError(err error) bool {
@@ -74,5 +74,5 @@ func IsReferenceExistsError(err error) bool {
 }
 
 func (err *ReferenceExistsError) Error() string {
-	return fmt.Sprintf("cannot delete %v with id %v is referenced by %v with id(s) %v, field %v", err.localType, err.localId, err.remoteType, err.remoteIds, err.remoteField)
+	return fmt.Sprintf("cannot delete %v with id %v is referenced by %v with id(s) %v, field %v", err.LocalType, err.LocalId, err.RemoteType, err.RemoteIds, err.RemoteField)
 }
