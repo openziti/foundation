@@ -102,6 +102,13 @@ func ParseGopsAddress(args []string) (string, error) {
 }
 
 func MakeRequest(addr string, signal byte, params []byte, out io.Writer) error {
+	return MakeRequestF(addr, signal, params, func(conn net.Conn) error {
+		_, err := io.Copy(out, conn)
+		return err
+	})
+}
+
+func MakeRequestF(addr string, signal byte, params []byte, f func(conn net.Conn) error) error {
 	network := "tcp"
 	if addr == "" {
 		network = "unix"
@@ -159,6 +166,5 @@ func MakeRequest(addr string, signal byte, params []byte, out io.Writer) error {
 		return err
 	}
 
-	_, err = io.Copy(out, conn)
-	return err
+	return f(conn)
 }

@@ -59,4 +59,7 @@ const (
 
 	// ClearChannelLogLevel clears the log level for a channel
 	ClearChannelLogLevel = byte(0x14)
+
+	// CustomOpAsync reserved for application specific operations which execute async
+	CustomOpAsync = byte(0x15)
 )

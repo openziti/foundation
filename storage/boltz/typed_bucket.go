@@ -50,12 +50,46 @@ type FieldChecker interface {
 	IsUpdated(string) bool
 }
 
+type UpdatedFields interface {
+	FieldChecker
+	ToSlice() []string
+}
+
+func UpdatedFieldsToSlice(fields UpdatedFields) ([]string, error) {
+	if fields == nil {
+		return nil, nil
+	}
+	result := fields.ToSlice()
+	if len(result) == 0 {
+		return nil, errors.New("no fields updated, nothing to do")
+	}
+	return result, nil
+}
+
+func SliceToUpdatedFields(val []string) UpdatedFields {
+	if len(val) == 0 {
+		return nil
+	}
+	result := MapFieldChecker{}
+	for _, k := range val {
+		result[k] = struct{}{}
+	}
+	return result
+}
+
 type MapFieldChecker map[string]struct{}
 
 func (m MapFieldChecker) IsUpdated(name string) bool {
 	_, found := m[name]
 	return found
+}
 
+func (m MapFieldChecker) ToSlice() []string {
+	var result []string
+	for k := range m {
+		result = append(result, k)
+	}
+	return result
 }
 
 func NewMappedFieldChecker(checker FieldChecker, mappings map[string]string) FieldChecker {
