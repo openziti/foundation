@@ -308,8 +308,11 @@ func (index *uniqueIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 
 		if len(newValue) > 0 {
 			if indexBucket.Get(newValue) != nil {
-				ctx.ErrHolder.SetError(errors.Errorf("duplicate value '%v' in unique index on %v store",
-					string(newValue), index.symbol.GetStore().GetEntityType()))
+				ctx.ErrHolder.SetError(&UniqueIndexDuplicateError{
+					Field:      index.symbol.GetName(),
+					Value:      string(newValue),
+					EntityType: index.symbol.GetStore().GetEntityType(),
+				})
 			} else {
 				ctx.ErrHolder.SetError(indexBucket.PutValue(newValue, ctx.RowId).Err)
 			}
