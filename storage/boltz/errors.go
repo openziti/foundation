@@ -39,8 +39,59 @@ func (err *RecordNotFoundError) Error() string {
 	return fmt.Sprintf("%v with %v %v not found", err.EntityType, err.Field, err.Id)
 }
 
-var testError = &RecordNotFoundError{}
+var testErrorNotFound = &RecordNotFoundError{}
 
 func IsErrNotFoundErr(err error) bool {
-	return errors.As(err, &testError)
+	return errors.As(err, &testErrorNotFound)
+}
+
+func NewReferenceByIdsError(localType, localId, remoteType string, remoteIds []string, remoteField string) error {
+	return &ReferenceExistsError{
+		LocalType:   localType,
+		LocalId:     localId,
+		RemoteType:  remoteType,
+		RemoteIds:   remoteIds,
+		RemoteField: remoteField,
+	}
+}
+
+func NewReferenceByIdError(localType, localId, remoteType, remoteId, remoteField string) error {
+	return NewReferenceByIdsError(localType, localId, remoteType, []string{remoteId}, remoteField)
+}
+
+var testErrorReferenceExists = &ReferenceExistsError{}
+
+// ReferenceExistsError is an error returned when an operation cannot be completed due to a referential constraint.
+// Typically, when deleting an entity (called local) that is referenced by another entity (called the remote)
+type ReferenceExistsError struct {
+	LocalType   string
+	RemoteType  string
+	RemoteField string
+	LocalId     string
+	RemoteIds   []string
+}
+
+func IsReferenceExistsError(err error) bool {
+	return errors.As(err, &testErrorReferenceExists)
+}
+
+func (err *ReferenceExistsError) Error() string {
+	return fmt.Sprintf("cannot delete %v with id %v is referenced by %v with id(s) %v, field %v", err.LocalType, err.LocalId, err.RemoteType, err.RemoteIds, err.RemoteField)
+}
+
+var testUniqueIndexDuplicateError = &UniqueIndexDuplicateError{}
+
+// UniqueIndexDuplicateError is an error that is returned when a unique index is violated due to duplicate values
+type UniqueIndexDuplicateError struct {
+	Field      string
+	Value      string
+	EntityType string
+}
+
+func IsUniqueIndexDuplicateError(err error) bool {
+	return errors.As(err, &testUniqueIndexDuplicateError)
+}
+
+func (err *UniqueIndexDuplicateError) Error() string {
+	return fmt.Sprintf("duplicate value '%v' in unique index on %v store", err.Value, err.EntityType)
 }

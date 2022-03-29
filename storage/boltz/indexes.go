@@ -308,8 +308,11 @@ func (index *uniqueIndex) ProcessAfterUpdate(ctx *IndexingContext) {
 
 		if len(newValue) > 0 {
 			if indexBucket.Get(newValue) != nil {
-				ctx.ErrHolder.SetError(errors.Errorf("duplicate value '%v' in unique index on %v store",
-					string(newValue), index.symbol.GetStore().GetEntityType()))
+				ctx.ErrHolder.SetError(&UniqueIndexDuplicateError{
+					Field:      index.symbol.GetName(),
+					Value:      string(newValue),
+					EntityType: index.symbol.GetStore().GetEntityType(),
+				})
 			} else {
 				ctx.ErrHolder.SetError(indexBucket.PutValue(newValue, ctx.RowId).Err)
 			}
@@ -807,9 +810,12 @@ func (index *fkDeleteConstraint) ProcessBeforeDelete(ctx *IndexingContext) {
 		rtSymbol := index.symbol.GetRuntimeSymbol()
 		if rtSymbol.OpenCursor(ctx.Tx(), ctx.RowId).IsValid() {
 			_, firstId := rtSymbol.Eval(ctx.Tx(), ctx.RowId)
-			ctx.ErrHolder.SetError(errors.Errorf("cannot delete %v with id %v is referenced by %v with id %v, field %v",
-				index.symbol.GetStore().GetEntityType(), string(ctx.RowId), index.fkSymbol.GetStore().GetEntityType(),
-				string(firstId), index.fkSymbol.GetName()))
+			ctx.ErrHolder.SetError(NewReferenceByIdError(
+				index.symbol.GetStore().GetEntityType(),
+				string(ctx.RowId),
+				index.fkSymbol.GetStore().GetEntityType(),
+				string(firstId),
+				index.fkSymbol.GetName()))
 		}
 	}
 }
@@ -926,9 +932,11 @@ func (index *fkDeleteCascadeConstraint) ProcessBeforeDelete(ctx *IndexingContext
 
 		if index.cascadeType == CascadeNone {
 			for cursor := targetStore.IterateValidIds(ctx.Tx(), filter); cursor.IsValid(); cursor.Next() {
-				ctx.ErrHolder.SetError(errors.Errorf("cannot delete %v with id %v is referenced by %v with id %v, field %v",
-					index.symbol.GetLinkedType().GetSingularEntityType(), string(ctx.RowId),
-					index.symbol.GetStore().GetSingularEntityType(), string(cursor.Current()),
+				ctx.ErrHolder.SetError(NewReferenceByIdError(
+					index.symbol.GetLinkedType().GetSingularEntityType(),
+					string(ctx.RowId),
+					index.symbol.GetStore().GetSingularEntityType(),
+					string(cursor.Current()),
 					index.symbol.GetName()))
 				return
 			}
