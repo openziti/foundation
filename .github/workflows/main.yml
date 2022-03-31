@@ -37,5 +37,6 @@ jobs:
         run: |
           $(go env GOPATH)/bin/ziti-ci configure-git
           $(go env GOPATH)/bin/ziti-ci tag -v -f version
-          $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/fabric update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
+          $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/storage update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
+          $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/transport update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
           $(go env GOPATH)/bin/ziti-ci trigger-github-build openziti/sdk-golang update-dependency --token ${{ secrets.ZITI_CI_GH_TOKEN }}
