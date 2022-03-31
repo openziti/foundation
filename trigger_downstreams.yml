@@ -1,3 +1,0 @@
-after_script:
-  - ziti-ci trigger-travis-build openziti/sdk-golang update-dependency
-  - ziti-ci trigger-travis-build openziti/fabric update-dependency
