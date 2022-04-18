@@ -56,7 +56,7 @@ func Test_Versions_EncDec(t *testing.T) {
 
 			t.Run("version output matches input", func(t *testing.T) {
 				req := require.New(t)
-				req.Equal(version, outVal.Version)
+				req.Equal(version, outVal.Version + "1")
 			})
 
 			t.Run("revision output matches input", func(t *testing.T) {
