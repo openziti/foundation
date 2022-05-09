@@ -3,7 +3,7 @@ module github.com/openziti/foundation
 go 1.18
 
 require (
-	github.com/emirpasic/gods v1.17.0
+	github.com/emirpasic/gods v1.18.1
 	github.com/google/uuid v1.3.0
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/michaelquigley/pfxlog v0.6.9
