@@ -19,7 +19,6 @@ package metrics
 import (
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/ptypes"
 	influxdb "github.com/influxdata/influxdb1-client"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/metrics/metrics_pb"
@@ -96,14 +95,9 @@ func (reporter *influxReporter) run() {
 }
 
 func AsBatch(msg *metrics_pb.MetricsMessage) (*influxdb.BatchPoints, error) {
-
 	var pts []influxdb.Point
 
-	ts, err := ptypes.Timestamp(msg.Timestamp)
-
-	if err != nil {
-		return nil, err
-	}
+	ts := msg.Timestamp.AsTime()
 
 	tags := make(map[string]string)
 	for k, v := range msg.Tags {
@@ -199,8 +193,8 @@ func LoadInfluxConfig(src map[interface{}]interface{}) (*influxConfig, error) {
 
 	if value, found := src["url"]; found {
 		if urlSrc, ok := value.(string); ok {
-			if url, err := url.Parse(urlSrc); err == nil {
-				cfg.url = *url
+			if influxUrl, err := url.Parse(urlSrc); err == nil {
+				cfg.url = *influxUrl
 			} else {
 				return nil, fmt.Errorf("cannot parse influx 'url' value (%s)", err)
 			}

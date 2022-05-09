@@ -17,22 +17,16 @@
 package metrics
 
 import (
-	"github.com/golang/protobuf/ptypes"
-	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/metrics/metrics_pb"
 	"github.com/rcrowley/go-metrics"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"time"
 )
 
 type messageBuilder metrics_pb.MetricsMessage
 
 func newMessageBuilder(sourceId string, tags map[string]string) *messageBuilder {
-	now := time.Now()
-	nowTS, err := ptypes.TimestampProto(now)
-	if err != nil {
-		pfxlog.Logger().Errorf("The now time (%v) is out of range for valid timestamps. Your clock is wrong", now)
-	}
-	builder := &messageBuilder{Timestamp: nowTS}
+	builder := &messageBuilder{Timestamp: timestamppb.New(time.Now())}
 	builder.SourceId = sourceId
 	builder.Tags = tags
 
