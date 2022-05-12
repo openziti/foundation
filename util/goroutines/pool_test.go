@@ -25,46 +25,46 @@ func TestPool(t *testing.T) {
 	req.NoError(err)
 
 	p := val.(*pool)
-	req.Equal(2, int(p.getCount()))
+	req.Equal(2, int(p.GetWorkerCount()))
 
 	busyWork := &poolBusier{workPool: p}
 	busyWork.KeepBusy(2, 0)
 	time.Sleep(50 * time.Millisecond)
-	count := p.getCount()
+	count := p.GetWorkerCount()
 	req.True(count == 2 || count == 3, "count should be within 1 of min. was %v", count)
 	req.NoError(busyWork.CloseAndWait())
 	time.Sleep(5 * time.Millisecond)
 
 	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.getCount()))
+	req.Equal(2, int(p.GetWorkerCount()))
 
 	busyWork.KeepBusy(8, 0)
 	time.Sleep(50 * time.Millisecond)
-	count = p.getCount()
+	count = p.GetWorkerCount()
 	req.True(count == 8 || count == 9, "count should be within 1 of min. was %v", count)
 	req.NoError(busyWork.CloseAndWait())
 
 	time.Sleep(50 * time.Millisecond)
-	req.Equal(count, p.getCount())
+	req.Equal(count, p.GetWorkerCount())
 
 	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.getCount()))
+	req.Equal(2, int(p.GetWorkerCount()))
 
 	busyWork.KeepBusy(15, 0)
 	time.Sleep(50 * time.Millisecond)
-	req.Equal(10, int(p.getCount()))
+	req.Equal(10, int(p.GetWorkerCount()))
 	req.NoError(busyWork.CloseAndWait())
 
 	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.getCount()))
+	req.Equal(2, int(p.GetWorkerCount()))
 
 	busyWork.KeepBusy(15, 12)
 	time.Sleep(50 * time.Millisecond)
-	req.Equal(10, int(p.getCount()))
+	req.Equal(10, int(p.GetWorkerCount()))
 	req.NoError(busyWork.CloseAndWait())
 
 	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.getCount()))
+	req.Equal(2, int(p.GetWorkerCount()))
 }
 
 func TestQueueOrError(t *testing.T) {
