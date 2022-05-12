@@ -1,11 +1,23 @@
 package goroutines
 
 import (
-	"errors"
 	"fmt"
 	"github.com/openziti/foundation/util/concurrenz"
+	"github.com/pkg/errors"
 	"sync/atomic"
 	"time"
+)
+
+type strErr string
+
+func (s strErr) Error() string {
+	return string(s)
+}
+
+const (
+	TimeoutError     = strErr("timed out")
+	QueueFullError   = strErr("queue full")
+	PoolStoppedError = strErr("pool shutdown")
 )
 
 // Pool represents a goroutine worker pool that can be configured with a queue size and min and max sizes.
@@ -14,9 +26,15 @@ import (
 type Pool interface {
 	// Queue submits a unit of work to the pool. It will return an error if the pool is shutdown
 	Queue(func()) error
+
 	// QueueWithTimeout submits a unit of work to the pool. It will return an error if the pool is shutdown or
 	// if the work cannot be submitted to the work queue before the given timeout elapses
 	QueueWithTimeout(func(), time.Duration) error
+
+	// QueueOrError submits a unit of work to the pool. It will return an error if the pool is shutdown or
+	// if the work cannot be submitted to the work queue immediately
+	QueueOrError(func()) error
+
 	// Shutdown stops all workers as they finish work and prevents new work from being submitted to the queue
 	Shutdown()
 }
@@ -98,11 +116,28 @@ func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
 	case self.queue <- work:
 		return nil
 	case <-self.closeNotify:
-		return errors.New("pool stopped")
+		return errors.Wrap(PoolStoppedError, "cannot queue")
 	case <-self.externalCloseNotify:
-		return errors.New("pool stopped (via external close notify)")
+		return errors.Wrap(PoolStoppedError, "cannot queue, pool stopped externally")
 	case <-timeoutC:
-		return errors.New("timeout")
+		return errors.Wrap(TimeoutError, "cannot queue")
+	}
+}
+
+func (self *pool) QueueOrError(work func()) error {
+	if self.getCount() == 0 {
+		self.tryAddWorker()
+	}
+
+	select {
+	case self.queue <- work:
+		return nil
+	case <-self.closeNotify:
+		return errors.Wrap(PoolStoppedError, "cannot queue")
+	case <-self.externalCloseNotify:
+		return errors.Wrap(PoolStoppedError, "cannot queue, pool stopped externally")
+	default:
+		return errors.Wrap(QueueFullError, "cannot queue")
 	}
 }
 

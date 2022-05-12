@@ -67,6 +67,46 @@ func TestPool(t *testing.T) {
 	req.Equal(2, int(p.getCount()))
 }
 
+func TestQueueOrError(t *testing.T) {
+	val, err := NewPool(PoolConfig{
+		QueueSize:   1,
+		MinWorkers:  1,
+		MaxWorkers:  1,
+		IdleTime:    100 * time.Millisecond,
+		CloseNotify: nil,
+		PanicHandler: func(err interface{}) {
+			fmt.Printf("panic: %v\n", err)
+		},
+	})
+	req := require.New(t)
+	req.NoError(err)
+
+	running := make(chan struct{})
+
+	err = val.QueueOrError(func() {
+		close(running)
+		time.Sleep(100 * time.Millisecond)
+	})
+	req.NoError(err)
+
+	select {
+	case <-running:
+	case <-time.After(time.Second):
+		req.FailNow("timed out waiting for first task to run")
+	}
+
+	err = val.QueueOrError(func() {
+		time.Sleep(100 * time.Millisecond)
+	})
+	req.NoError(err)
+
+	err = val.QueueOrError(func() {
+		time.Sleep(100 * time.Millisecond)
+	})
+	req.Error(err)
+	req.ErrorIs(err, QueueFullError)
+}
+
 type poolBusier struct {
 	workPool Pool
 	stopped  concurrenz.AtomicBoolean
