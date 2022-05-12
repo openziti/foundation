@@ -17,10 +17,11 @@
 package concurrenz
 
 import (
+	"reflect"
 	"sync"
 )
 
-type CopyOnWriteSlice[T comparable] struct {
+type CopyOnWriteSlice[T any] struct {
 	value AtomicValue[[]T]
 	lock  sync.Mutex
 }
@@ -45,7 +46,7 @@ func (self *CopyOnWriteSlice[T]) Delete(toRemove T) {
 	currentSlice := self.value.Load()
 	newSlice := make([]T, 0, len(currentSlice))
 	for _, val := range currentSlice {
-		if val != toRemove {
+		if reflect.ValueOf(val).Interface() != reflect.ValueOf(toRemove).Interface() {
 			newSlice = append(newSlice, val)
 		}
 	}
