@@ -35,6 +35,15 @@ type Pool interface {
 	// if the work cannot be submitted to the work queue immediately
 	QueueOrError(func()) error
 
+	// GetWorkerCount returns the current number of goroutines servicing the work queue
+	GetWorkerCount() uint32
+
+	// GetQueueSize returns the current number of work items in the work queue
+	GetQueueSize() uint32
+
+	// GetBusyWorkers returns the current number workers busy doing work from the work queue
+	GetBusyWorkers() uint32
+
 	// Shutdown stops all workers as they finish work and prevents new work from being submitted to the queue
 	Shutdown()
 }
@@ -55,6 +64,11 @@ type PoolConfig struct {
 	// Provides a way to specify what happens if a worker encounters a panic
 	// if no PanicHandler is provided, panics will not be caught
 	PanicHandler func(err interface{})
+	// Optional callback which is called whenever work completes, with the
+	// time the work took to complete
+	OnWorkCallback func(workTime time.Duration)
+	// Optional callback which is called when the pool is created
+	OnCreate func(Pool)
 }
 
 func (self *PoolConfig) Validate() error {
@@ -80,6 +94,10 @@ func NewPool(config PoolConfig) (Pool, error) {
 		externalCloseNotify: config.CloseNotify,
 		closeNotify:         make(chan struct{}),
 		panicHandler:        config.PanicHandler,
+		onWorkCallback:      config.OnWorkCallback,
+	}
+	if config.OnCreate != nil {
+		config.OnCreate(result)
 	}
 	for result.count < result.minWorkers {
 		result.tryAddWorker()
@@ -89,14 +107,17 @@ func NewPool(config PoolConfig) (Pool, error) {
 
 type pool struct {
 	queue               chan func()
+	queueSize           uint32
 	count               uint32
 	minWorkers          uint32
 	maxWorkers          uint32
+	busyWorkers         uint32
 	maxIdle             time.Duration
 	stopped             concurrenz.AtomicBoolean
 	externalCloseNotify <-chan struct{}
 	closeNotify         chan struct{}
 	panicHandler        func(err interface{})
+	onWorkCallback      func(workTime time.Duration)
 }
 
 func (self *pool) Queue(work func()) error {
@@ -108,12 +129,13 @@ func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
 }
 
 func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
-	if self.getCount() == 0 {
+	if self.GetWorkerCount() == 0 {
 		self.tryAddWorker()
 	}
 
 	select {
 	case self.queue <- work:
+		self.incrQueueSize()
 		return nil
 	case <-self.closeNotify:
 		return errors.Wrap(PoolStoppedError, "cannot queue")
@@ -125,12 +147,13 @@ func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
 }
 
 func (self *pool) QueueOrError(work func()) error {
-	if self.getCount() == 0 {
+	if self.GetWorkerCount() == 0 {
 		self.tryAddWorker()
 	}
 
 	select {
 	case self.queue <- work:
+		self.incrQueueSize()
 		return nil
 	case <-self.closeNotify:
 		return errors.Wrap(PoolStoppedError, "cannot queue")
@@ -164,17 +187,18 @@ func (self *pool) worker(initialWork func()) {
 	}()
 
 	if initialWork != nil {
-		initialWork()
+		self.runWork(initialWork)
 		initialWork = nil
 	}
 
 	for {
 		select {
 		case work := <-self.queue:
+			self.decrQueueSize()
 			self.startExtraWorkerIfQueueBusy()
-			work()
+			self.runWork(work)
 		case <-time.After(self.maxIdle):
-			if self.getCount() > self.minWorkers {
+			if self.GetWorkerCount() > self.minWorkers {
 				return
 			}
 		case <-self.closeNotify:
@@ -186,10 +210,11 @@ func (self *pool) worker(initialWork func()) {
 }
 
 func (self *pool) startExtraWorkerIfQueueBusy() {
-	if self.getCount() < self.maxWorkers {
+	if self.GetWorkerCount() < self.maxWorkers {
 		if self.incrementCount() <= self.maxWorkers {
 			select {
 			case work := <-self.queue:
+				self.decrQueueSize()
 				go self.worker(work)
 			default:
 				self.decrementCount()
@@ -201,7 +226,7 @@ func (self *pool) startExtraWorkerIfQueueBusy() {
 }
 
 func (self *pool) tryAddWorker() {
-	if self.getCount() < self.maxWorkers {
+	if self.GetWorkerCount() < self.maxWorkers {
 		if self.incrementCount() <= self.maxWorkers {
 			go self.worker(nil)
 		} else {
@@ -210,7 +235,19 @@ func (self *pool) tryAddWorker() {
 	}
 }
 
-func (self *pool) getCount() uint32 {
+func (self *pool) runWork(work func()) {
+	self.incrBusyWorkers()
+	defer self.decrBusyWorkers()
+	if self.onWorkCallback != nil {
+		start := time.Now()
+		work()
+		self.onWorkCallback(time.Now().Sub(start))
+	} else {
+		work()
+	}
+}
+
+func (self *pool) GetWorkerCount() uint32 {
 	return atomic.LoadUint32(&self.count)
 }
 
@@ -220,4 +257,28 @@ func (self *pool) incrementCount() uint32 {
 
 func (self *pool) decrementCount() uint32 {
 	return atomic.AddUint32(&self.count, ^uint32(0))
+}
+
+func (self *pool) GetQueueSize() uint32 {
+	return atomic.LoadUint32(&self.queueSize)
+}
+
+func (self *pool) incrQueueSize() uint32 {
+	return atomic.AddUint32(&self.queueSize, 1)
+}
+
+func (self *pool) decrQueueSize() uint32 {
+	return atomic.AddUint32(&self.queueSize, ^uint32(0))
+}
+
+func (self *pool) GetBusyWorkers() uint32 {
+	return atomic.LoadUint32(&self.busyWorkers)
+}
+
+func (self *pool) incrBusyWorkers() uint32 {
+	return atomic.AddUint32(&self.busyWorkers, 1)
+}
+
+func (self *pool) decrBusyWorkers() uint32 {
+	return atomic.AddUint32(&self.busyWorkers, ^uint32(0))
 }
