@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"github.com/openziti/foundation/metrics/metrics_pb"
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -20,7 +20,7 @@ func setUpTest(t *testing.T) *testData {
 		registry: &usageRegistryImpl{
 			registryImpl: registryImpl{
 				sourceId:  t.Name(),
-				metricMap: cmap.New(),
+				metricMap: cmap.New[any](),
 			},
 			intervalBucketChan: make(chan *bucketEvent, 1),
 		}}

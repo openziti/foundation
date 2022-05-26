@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/foundation/metrics/metrics_pb"
-	"github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/pkg/errors"
 	"github.com/rcrowley/go-metrics"
 	"reflect"
@@ -50,14 +50,14 @@ func NewRegistry(sourceId string, tags map[string]string) Registry {
 	return &registryImpl{
 		sourceId:  sourceId,
 		tags:      tags,
-		metricMap: cmap.New(),
+		metricMap: cmap.New[any](),
 	}
 }
 
 type registryImpl struct {
 	sourceId  string
 	tags      map[string]string
-	metricMap cmap.ConcurrentMap
+	metricMap cmap.ConcurrentMap[any]
 }
 
 func (registry *registryImpl) dispose(name string) {
