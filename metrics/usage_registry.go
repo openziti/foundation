@@ -11,6 +11,7 @@ import (
 // UsageRegistry extends registry to allow collecting usage metrics
 type UsageRegistry interface {
 	Registry
+	PollWithoutUsageMetrics() *metrics_pb.MetricsMessage
 	IntervalCounter(name string, intervalSize time.Duration) IntervalCounter
 	FlushToHandler(handler Handler)
 	Flush()
@@ -85,6 +86,10 @@ func (self *usageRegistryImpl) Poll() *metrics_pb.MetricsMessage {
 	self.intervalBuckets = nil
 
 	return (*metrics_pb.MetricsMessage)(builder)
+}
+
+func (self *usageRegistryImpl) PollWithoutUsageMetrics() *metrics_pb.MetricsMessage {
+	return self.registryImpl.Poll()
 }
 
 func (self *usageRegistryImpl) reportInterval(counter *intervalCounterImpl, intervalStartUTC int64, values map[string]uint64) {
