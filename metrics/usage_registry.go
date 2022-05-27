@@ -3,7 +3,7 @@ package metrics
 import (
 	"fmt"
 	"github.com/openziti/foundation/metrics/metrics_pb"
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	"reflect"
 	"time"
 )
@@ -22,7 +22,7 @@ func NewUsageRegistry(sourceId string, tags map[string]string, closeNotify <-cha
 		registryImpl: registryImpl{
 			sourceId:  sourceId,
 			tags:      tags,
-			metricMap: cmap.New(),
+			metricMap: cmap.New[any](),
 		},
 		intervalBucketChan: make(chan *bucketEvent, 16),
 		closeNotify:        closeNotify,
