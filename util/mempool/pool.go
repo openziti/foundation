@@ -20,12 +20,41 @@ type Pool interface {
 	AcquireBuffer() *DefaultPooledBuffer
 }
 
+func NewPool(poolSize int, bufSize int) Pool {
+	pool := &pool{
+		bufChan: make(chan *DefaultPooledBuffer, poolSize),
+	}
+
+	pool.newBuf = func() *DefaultPooledBuffer {
+		buffer := make([]byte, bufSize)
+		pooled := &DefaultPooledBuffer{
+			Buf: buffer,
+		}
+		pooled.release = func() {
+			pooled.Buf = buffer
+			select {
+			case pool.bufChan <- pooled:
+			default: // if pool is full, drop the buffer
+			}
+		}
+		return pooled
+	}
+
+	return pool
+}
+
 type pool struct {
 	bufChan chan *DefaultPooledBuffer
+	newBuf  func() *DefaultPooledBuffer
 }
 
 func (p *pool) AcquireBuffer() *DefaultPooledBuffer {
-	return <-p.bufChan
+	select {
+	case buf := <-p.bufChan:
+		return buf
+	default:
+		return p.newBuf()
+	}
 }
 
 type PooledBuffer interface {
@@ -34,7 +63,7 @@ type PooledBuffer interface {
 }
 
 type DefaultPooledBuffer struct {
-	Buf []byte
+	Buf     []byte
 	release func()
 }
 
@@ -46,14 +75,14 @@ func (buffer *DefaultPooledBuffer) Release() {
 	buffer.release()
 }
 
-func NewPool(poolSize int, bufSize int) Pool {
-	pool := &pool {
-		bufChan : make(chan *DefaultPooledBuffer, poolSize),
+func NewStrictPool(poolSize int, bufSize int) Pool {
+	pool := &strictPool{
+		bufChan: make(chan *DefaultPooledBuffer, poolSize),
 	}
 	for i := 0; i < poolSize; i++ {
 		buffer := make([]byte, bufSize)
 		pooled := &DefaultPooledBuffer{
-			Buf:  buffer,
+			Buf: buffer,
 		}
 		pooled.release = func() {
 			pooled.Buf = buffer
@@ -63,4 +92,12 @@ func NewPool(poolSize int, bufSize int) Pool {
 	}
 
 	return pool
+}
+
+type strictPool struct {
+	bufChan chan *DefaultPooledBuffer
+}
+
+func (p *strictPool) AcquireBuffer() *DefaultPooledBuffer {
+	return <-p.bufChan
 }
