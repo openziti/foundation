@@ -118,13 +118,17 @@ func (registry *registryImpl) FuncGauge(name string, f func() int64) Gauge {
 	return gauge
 }
 
+func (registry *registryImpl) newMeter(name string) *meterImpl {
+	return &meterImpl{
+		Meter:    metrics.NewMeter(),
+		registry: registry,
+		name:     name,
+	}
+}
+
 func (registry *registryImpl) Meter(name string) Meter {
 	metric := registry.getRefCounted(name, func() refCounted {
-		return &meterImpl{
-			Meter:    metrics.NewMeter(),
-			registry: registry,
-			name:     name,
-		}
+		return registry.newMeter(name)
 	})
 
 	meter, ok := metric.(Meter)
@@ -134,13 +138,17 @@ func (registry *registryImpl) Meter(name string) Meter {
 	return meter
 }
 
+func (registry *registryImpl) newHistogram(name string) *histogramImpl {
+	return &histogramImpl{
+		Histogram: metrics.NewHistogram(metrics.NewExpDecaySample(128, 0.015)),
+		registry:  registry,
+		name:      name,
+	}
+}
+
 func (registry *registryImpl) Histogram(name string) Histogram {
 	metric := registry.getRefCounted(name, func() refCounted {
-		return &histogramImpl{
-			Histogram: metrics.NewHistogram(metrics.NewExpDecaySample(128, 0.015)),
-			registry:  registry,
-			name:      name,
-		}
+		return registry.newHistogram(name)
 	})
 
 	histogram, ok := metric.(Histogram)
