@@ -84,26 +84,31 @@ func Test_Versions_EncDec(t *testing.T) {
 }
 
 func Test_Compare(t *testing.T) {
-	v1 := ParseSemVer("v0.18.4")
 	req := require.New(t)
+	v1, err := ParseSemVer("v0.18.4")
+	req.NoError(err)
 	req.Equal("0.18.4", v1.String())
-	req.True(v1.Equals(ParseSemVer("0.18.4")))
+	req.True(v1.Equals(MustParseSemVer("0.18.4")))
 
-	v2 := ParseSemVer("0.18.5")
+	v2, err := ParseSemVer("0.18.5")
+	req.NoError(err)
 	req.Equal("0.18.5", v2.String())
-	req.True(v2.Equals(ParseSemVer("0.18.5")))
+	req.True(v2.Equals(MustParseSemVer("0.18.5")))
 
-	v3 := ParseSemVer("0.18.6")
+	v3, err := ParseSemVer("0.18.6")
+	req.NoError(err)
 	req.Equal("0.18.6", v3.String())
-	req.True(v3.Equals(ParseSemVer("0.18.6")))
+	req.True(v3.Equals(MustParseSemVer("0.18.6")))
 
-	v4 := ParseSemVer("0.19.6")
+	v4, err := ParseSemVer("0.19.6")
+	req.NoError(err)
 	req.Equal("0.19.6", v4.String())
-	req.True(v4.Equals(ParseSemVer("0.19.6")))
+	req.True(v4.Equals(MustParseSemVer("0.19.6")))
 
-	v5 := ParseSemVer("2.0.0")
+	v5, err := ParseSemVer("2.0.0")
+	req.NoError(err)
 	req.Equal("2.0.0", v5.String())
-	req.True(v5.Equals(ParseSemVer("2.0.0")))
+	req.True(v5.Equals(MustParseSemVer("2.0.0")))
 
 	req.Equal(1, v2.CompareTo(v1))
 	req.Equal(0, v2.CompareTo(v2))

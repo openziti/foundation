@@ -47,6 +47,14 @@ func init() {
 
 var developmentVersion *SemVer
 
+func MustParseSemVer(version string) *SemVer {
+	v, err := ParseSemVer(version)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 func ParseSemVer(version string) (*SemVer, error) {
 	result := &SemVer{}
 	if err := result.parse(version); err != nil {
