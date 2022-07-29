@@ -16,12 +16,15 @@
 
 package uuidz
 
-import "encoding/hex"
+import (
+	"encoding/hex"
+	"fmt"
+)
 
 // Derived from google/uuid, licensed under BSD-like
 func ToString(uuid []byte) string {
-	if len(uuid) < 16 {
-		return ""
+	if len(uuid) != 16 {
+		return fmt.Sprintf("invalid-uuid-size-of-%v-bytes", len(uuid))
 	}
 	buf := make([]byte, 36)
 	hex.Encode(buf, uuid[:4])
