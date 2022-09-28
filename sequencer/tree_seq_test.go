@@ -211,14 +211,12 @@ func Test_treeSeqClosedMultiple(t *testing.T) {
 			}
 		}()
 
-		current := uint32(1)
-		next := current
+		next := uint32(1)
 		for {
 			if err := seq.PutSequenced(next, next); err != nil {
 				writerC <- err
 				return
 			}
-			current = next
 			next++
 			time.Sleep(time.Millisecond)
 		}

@@ -65,7 +65,9 @@ func AddStackDumpHandler() {
 func DumpStackOnTick(tickerChan <-chan time.Time, fileFormatter func(time.Time) string) {
 	go func() {
 		for t := range tickerChan {
-			DumpStackToFile(fileFormatter(t))
+			if err := DumpStackToFile(fileFormatter(t)); err != nil {
+				fmt.Printf("error dumping stackdump to file [%v]\n", err)
+			}
 		}
 	}()
 }

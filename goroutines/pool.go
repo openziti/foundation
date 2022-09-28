@@ -21,8 +21,9 @@ const (
 )
 
 // Pool represents a goroutine worker pool that can be configured with a queue size and min and max sizes.
-//      The pool will start with min size goroutines and will add more if the queue isn't staying empty.
-//      After a worker has been idle for a configured time, it will stop
+//
+//	The pool will start with min size goroutines and will add more if the queue isn't staying empty.
+//	After a worker has been idle for a configured time, it will stop
 type Pool interface {
 	// Queue submits a unit of work to the pool. It will return an error if the pool is shutdown
 	Queue(func()) error
@@ -188,7 +189,6 @@ func (self *pool) worker(initialWork func()) {
 
 	if initialWork != nil {
 		self.runWork(initialWork)
-		initialWork = nil
 	}
 
 	for {
@@ -241,7 +241,7 @@ func (self *pool) runWork(work func()) {
 	if self.onWorkCallback != nil {
 		start := time.Now()
 		work()
-		self.onWorkCallback(time.Now().Sub(start))
+		self.onWorkCallback(time.Since(start))
 	} else {
 		work()
 	}

@@ -43,10 +43,13 @@ func (self *semaphoreImpl) Acquire() {
 }
 
 func (self *semaphoreImpl) AcquireWithTimeout(t time.Duration) bool {
+	timer := time.NewTimer(t)
+	defer timer.Stop()
+
 	select {
 	case <-self.c:
 		return true
-	case <-time.After(t):
+	case <-timer.C:
 		return false
 	}
 }
