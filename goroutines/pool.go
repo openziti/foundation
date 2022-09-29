@@ -2,7 +2,6 @@ package goroutines
 
 import (
 	"fmt"
-	"github.com/openziti/foundation/v2/concurrenz"
 	"github.com/pkg/errors"
 	"sync/atomic"
 	"time"
@@ -114,7 +113,7 @@ type pool struct {
 	maxWorkers          uint32
 	busyWorkers         uint32
 	maxIdle             time.Duration
-	stopped             concurrenz.AtomicBoolean
+	stopped             atomic.Bool
 	externalCloseNotify <-chan struct{}
 	closeNotify         chan struct{}
 	panicHandler        func(err interface{})

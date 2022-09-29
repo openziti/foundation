@@ -465,7 +465,7 @@ type multiWriterSeqEntry struct {
 }
 
 func (seq *multiWriterBtreeSeq) Put(val interface{}) error {
-	if seq.closed.Get() {
+	if seq.closed.Load() {
 		return errors.New("can't write to closed sequencer")
 	}
 

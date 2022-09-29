@@ -5,6 +5,7 @@ import (
 	"fmt"
 	concurrenz2 "github.com/openziti/foundation/v2/concurrenz"
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -109,19 +110,19 @@ func TestQueueOrError(t *testing.T) {
 
 type poolBusier struct {
 	workPool Pool
-	stopped  concurrenz2.AtomicBoolean
+	stopped  atomic.Bool
 	errorC   chan error
 	done     chan struct{}
 }
 
 func (self *poolBusier) KeepBusy(count int, panicCount int) {
-	self.stopped.Set(false)
+	self.stopped.Store(false)
 	self.done = make(chan struct{})
 	self.errorC = make(chan error, count)
 	go func() {
 		defer close(self.done)
 		sema := concurrenz2.NewSemaphore(count)
-		for !self.stopped.Get() {
+		for !self.stopped.Load() {
 			sema.Acquire()
 			var err error
 			if panicCount > 0 {
@@ -145,7 +146,7 @@ func (self *poolBusier) KeepBusy(count int, panicCount int) {
 }
 
 func (self *poolBusier) CloseAndWait() error {
-	self.stopped.Set(true)
+	self.stopped.Store(true)
 	<-self.done
 	select {
 	case err := <-self.errorC:

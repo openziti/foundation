@@ -1,7 +1,7 @@
 package sequencer
 
 import (
-	"github.com/openziti/foundation/v2/concurrenz"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,7 +15,7 @@ func NewNoopSequencer(channelDepth int) Sequencer {
 type noopSeq struct {
 	ch          chan interface{}
 	closeNotify chan struct{}
-	closed      concurrenz.AtomicBoolean
+	closed      atomic.Bool
 }
 
 func (seq *noopSeq) PutSequenced(_ uint32, event interface{}) error {
