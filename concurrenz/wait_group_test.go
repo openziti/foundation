@@ -25,12 +25,10 @@ import (
 
 func Test_WaitGroupCloseFirst(t *testing.T) {
 	wg := NewWaitGroup()
-	var notifiers []chan struct{}
 
 	for i := 0; i < 10; i++ {
 		notifier := make(chan struct{})
 		close(notifier)
-		notifiers = append(notifiers, notifier)
 		wg.AddNotifier(notifier)
 	}
 
@@ -59,7 +57,7 @@ func Test_WaitGroupTimed(t *testing.T) {
 
 	start := time.Now()
 	assert.True(t, wg.WaitForDone(time.Second))
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	fmt.Printf("elapsed: %v\n", elapsed)
 	assert.True(t, elapsed >= 100*time.Millisecond)
 	assert.True(t, elapsed <= 150*time.Millisecond)
@@ -94,7 +92,7 @@ func Test_WaitGroupTimedHalf(t *testing.T) {
 
 	start := time.Now()
 	assert.True(t, wg.WaitForDone(time.Second))
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	fmt.Printf("elapsed: %v\n", elapsed)
 	assert.True(t, elapsed >= 100*time.Millisecond)
 	assert.True(t, elapsed <= 150*time.Millisecond)
@@ -122,7 +120,7 @@ func Test_WaitGroupTimout(t *testing.T) {
 
 	start := time.Now()
 	assert.False(t, wg.WaitForDone(50*time.Millisecond))
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	fmt.Printf("elapsed: %v\n", elapsed)
 	assert.True(t, elapsed >= 50*time.Millisecond)
 	assert.True(t, elapsed <= 60*time.Millisecond)

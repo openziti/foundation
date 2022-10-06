@@ -19,8 +19,8 @@ package sequencer
 import (
 	"github.com/emirpasic/gods/trees/btree"
 	"github.com/emirpasic/gods/utils"
-	"github.com/openziti/foundation/v2/concurrenz"
 	"github.com/pkg/errors"
+	"sync/atomic"
 	"time"
 )
 
@@ -40,12 +40,12 @@ type singleWriterBtreeSeq struct {
 	ch            chan interface{}
 	tree          *btree.Tree
 	nextSeq       uint32
-	closed        concurrenz.AtomicBoolean
+	closed        atomic.Bool
 	closeNotify   chan struct{}
 }
 
 func (seq *singleWriterBtreeSeq) PutSequenced(itemSeq uint32, val interface{}) error {
-	if seq.closed.Get() {
+	if seq.closed.Load() {
 		return ErrClosed
 	}
 	if seq.nextSeq == itemSeq {

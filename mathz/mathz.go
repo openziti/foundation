@@ -16,6 +16,8 @@
 
 package mathz
 
+import "golang.org/x/exp/constraints"
+
 func MaxInt64(a, b int64) int64 {
 	if a >= b {
 		return a
@@ -35,4 +37,11 @@ func MinInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func Min[T constraints.Ordered](x, y T) T {
+	if x < y {
+		return x
+	}
+	return y
 }

@@ -68,9 +68,7 @@ type SemVer struct {
 }
 
 func (self *SemVer) parse(version string) error {
-	if strings.HasPrefix(version, "v") {
-		version = strings.TrimPrefix(version, "v")
-	}
+	version = strings.TrimPrefix(version, "v")
 
 	for _, part := range strings.Split(version, ".") {
 		if err := self.parsePart(part); err != nil {

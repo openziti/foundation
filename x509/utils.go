@@ -25,12 +25,10 @@ import (
 
 // MarshalToPem takes the list of x509 certs and writes them in pem format to the provided writer
 func MarshalToPem(certs []*x509.Certificate, writer io.Writer) error {
-	if certs != nil {
-		for _, cert := range certs {
-			encodeErr := pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-			if encodeErr != nil {
-				return errors.Errorf("unexpected error while writing pem. no further attempt to marshall certificates will be done: %s", encodeErr)
-			}
+	for _, cert := range certs {
+		encodeErr := pem.Encode(writer, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+		if encodeErr != nil {
+			return errors.Errorf("unexpected error while writing pem. no further attempt to marshall certificates will be done: %s", encodeErr)
 		}
 	}
 	return nil
