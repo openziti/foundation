@@ -52,3 +52,17 @@ func (self *CopyOnWriteSlice[T]) Delete(toRemove T) {
 	}
 	self.value.Store(newSlice)
 }
+
+func (self *CopyOnWriteSlice[T]) DeleteIf(filter func(T) bool) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	currentSlice := self.value.Load()
+	newSlice := make([]T, 0, len(currentSlice))
+	for _, val := range currentSlice {
+		if !filter(val) {
+			newSlice = append(newSlice, val)
+		}
+	}
+	self.value.Store(newSlice)
+}

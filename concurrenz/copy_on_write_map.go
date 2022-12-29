@@ -40,6 +40,20 @@ func (self *CopyOnWriteMap[K, V]) Get(key K) V {
 	return self.value.Load()[key]
 }
 
+func (self *CopyOnWriteMap[K, V]) Delete(key K) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	var current = self.value.Load()
+	mapCopy := map[K]V{}
+	for k, v := range current {
+		if k != key {
+			mapCopy[k] = v
+		}
+	}
+	self.value.Store(mapCopy)
+}
+
 func (self *CopyOnWriteMap[K, V]) AsMap() map[K]V {
 	return self.value.Load()
 }
