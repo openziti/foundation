@@ -74,6 +74,21 @@ func TestCloseSlice_Delete(t *testing.T) {
 		req.Equal(0, len(tc))
 	})
 
+	t.Run("adding and removing a single element succeeds with DeleteIf", func(t *testing.T) {
+		req := require.New(t)
+		cw := &CopyOnWriteSlice[testHandler]{}
+
+		h := &testHandlerImpl{}
+		cw.Append(h)
+		cw.DeleteIf(func(handler testHandler) bool {
+			return handler == h
+		})
+
+		tc := cw.Value()
+		req.NotNil(tc)
+		req.Equal(0, len(tc))
+	})
+
 	t.Run("delete on empty cow slice does not panic", func(t *testing.T) {
 		req := require.New(t)
 		cw := &CopyOnWriteSlice[testHandler]{}
