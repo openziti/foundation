@@ -29,5 +29,10 @@ func (self *AtomicValue[T]) Load() T {
 	if val := (*atomic.Value)(self).Load(); val != nil {
 		result = val.(T)
 	}
+
 	return result
+}
+
+func (self *AtomicValue[T]) CompareAndSwap(old, new T) bool {
+	return (*atomic.Value)(self).CompareAndSwap(old, new)
 }

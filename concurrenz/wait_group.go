@@ -23,8 +23,9 @@ import (
 )
 
 // WaitGroup provides a facility to wait for an arbitrarily size collection of notification channels to be completed
-//           The methods are multi-thread safe, but notifiers added after WaitForDone has been called are not guaranteed
-//           to be waited for
+//
+//	The methods are multi-thread safe, but notifiers added after WaitForDone has been called are not guaranteed
+//	to be waited for
 type WaitGroup interface {
 	// AddNotifier adds a notifier to the wait group
 	AddNotifier(ch <-chan struct{})

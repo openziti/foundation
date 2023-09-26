@@ -52,7 +52,8 @@ func PromptPassword(prompt string, allowEmpty bool) (string, error) {
 }
 
 // Prompt will output the given prompt and return the line entered by the user.
-//        The line will be trimmed of white-space.
+//
+//	The line will be trimmed of white-space.
 func Prompt(prompt string) (string, error) {
 	fmt.Print(prompt)
 

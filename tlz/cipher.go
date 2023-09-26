@@ -52,7 +52,7 @@ func GetMinTlsVersion() uint16 {
 	return tls.VersionTLS12
 }
 
-//Note: This will only affect TLS1.2 and lower, TLS1.3 has a separate smaller cipher set managed by Go.
+// Note: This will only affect TLS1.2 and lower, TLS1.3 has a separate smaller cipher set managed by Go.
 func GetCipherSuites() []uint16 {
 	once.Do(setDefaultCipherSuites)
 	return defaultCipherSuites
