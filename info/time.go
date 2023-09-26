@@ -19,7 +19,6 @@ package info
 import "time"
 
 // Return the current time in milliseconds.
-//
 func NowInMilliseconds() int64 {
 	return time.Now().UnixNano() / 1000000
 }
