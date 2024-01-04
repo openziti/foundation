@@ -8,7 +8,7 @@ require (
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20220921023135-46d9e7742f1e
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.15.0
 )
 
