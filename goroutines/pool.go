@@ -78,7 +78,6 @@ func (self *PoolConfig) Validate() error {
 	if self.MinWorkers > self.MaxWorkers {
 		return fmt.Errorf("min workers must be less than or equal to max workers. min workers=%v, max workers=%v", self.MinWorkers, self.MaxWorkers)
 	}
-
 	return nil
 }
 
@@ -129,13 +128,10 @@ func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
 }
 
 func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
-	if self.GetWorkerCount() == 0 {
-		self.tryAddWorker()
-	}
-
 	select {
 	case self.queue <- work:
 		self.incrQueueSize()
+		self.ensureNoStarvation()
 		return nil
 	case <-self.closeNotify:
 		return errors.Wrap(PoolStoppedError, "cannot queue")
@@ -147,13 +143,10 @@ func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
 }
 
 func (self *pool) QueueOrError(work func()) error {
-	if self.GetWorkerCount() == 0 {
-		self.tryAddWorker()
-	}
-
 	select {
 	case self.queue <- work:
 		self.incrQueueSize()
+		self.ensureNoStarvation()
 		return nil
 	case <-self.closeNotify:
 		return errors.Wrap(PoolStoppedError, "cannot queue")
@@ -161,6 +154,12 @@ func (self *pool) QueueOrError(work func()) error {
 		return errors.Wrap(PoolStoppedError, "cannot queue, pool stopped externally")
 	default:
 		return errors.Wrap(QueueFullError, "cannot queue")
+	}
+}
+
+func (self *pool) ensureNoStarvation() {
+	if self.minWorkers == 0 && self.GetWorkerCount() == 0 {
+		self.tryAddWorker()
 	}
 }
 
@@ -183,7 +182,12 @@ func (self *pool) worker(initialWork func()) {
 	}()
 
 	defer func() {
-		self.decrementCount()
+		// There's a small race condition where the last worker can exit due to idle
+		// right as something is queued. If we're the last worker, check again, just
+		// to be sure there's nothing queued.
+		if newCount := self.decrementCount(); newCount == 0 {
+			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
+		}
 	}()
 
 	if initialWork != nil {
