@@ -9,3 +9,9 @@ updates:
   - dependency-name: github.com/lucas-clemente/quic-go
     versions:
     - "> 0.18.1"
+  groups:
+    non-major:
+      applies-to: version-updates
+      update-types:
+        - "minor"
+        - "patch"
