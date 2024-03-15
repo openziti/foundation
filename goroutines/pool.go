@@ -128,6 +128,7 @@ func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
 }
 
 func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
+	self.ensureNoStarvation()
 	select {
 	case self.queue <- work:
 		self.incrQueueSize()
