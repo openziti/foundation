@@ -27,7 +27,6 @@ type VersionProvider interface {
 	Version() string
 	BuildDate() string
 	Revision() string
-	Branch() string
 	AsVersionInfo() *VersionInfo
 	EncoderDecoder() VersionEncDec
 }

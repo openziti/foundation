@@ -7,12 +7,7 @@ import (
 )
 
 type DefaultVersionProvider struct {
-	SourceBranch string
 	VersionInfo
-}
-
-func (v DefaultVersionProvider) Branch() string {
-	return v.SourceBranch
 }
 
 func (v DefaultVersionProvider) EncoderDecoder() VersionEncDec {
