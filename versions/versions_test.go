@@ -139,4 +139,11 @@ func Test_Compare(t *testing.T) {
 
 	versionInfo = &VersionInfo{Version: "v0.0.0"}
 	req.True(versionInfo.HasMinimumVersion("0.18.5"))
+
+	// ensure invalid versions are still invalid
+	_, err = ParseSemVer("2.0.0~alpha1")
+	req.EqualError(err, `strconv.ParseInt: parsing "0~alpha1": invalid syntax`)
+
+	_, err = ParseSemVer("2.0.0-rc2")
+	req.EqualError(err, `strconv.ParseInt: parsing "0-rc2": invalid syntax`)
 }
