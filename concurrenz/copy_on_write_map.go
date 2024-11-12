@@ -63,3 +63,21 @@ func (self *CopyOnWriteMap[K, V]) Clear() {
 	defer self.lock.Unlock()
 	self.value.Store(map[K]V{})
 }
+
+func (self *CopyOnWriteMap[K, V]) DeleteIf(f func(key K, val V) bool) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	matched := false
+	var current = self.value.Load()
+	mapCopy := map[K]V{}
+	for k, v := range current {
+		if !f(k, v) {
+			mapCopy[k] = v
+		} else {
+			matched = true
+		}
+	}
+	self.value.Store(mapCopy)
+	return matched
+}
