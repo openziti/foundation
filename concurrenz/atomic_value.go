@@ -36,3 +36,12 @@ func (self *AtomicValue[T]) Load() T {
 func (self *AtomicValue[T]) CompareAndSwap(old, new T) bool {
 	return (*atomic.Value)(self).CompareAndSwap(old, new)
 }
+
+func (self *AtomicValue[T]) Swap(new T) T {
+	result := (*atomic.Value)(self).Swap(new)
+	var old T
+	if v, ok := result.(T); ok {
+		old = v
+	}
+	return old
+}
