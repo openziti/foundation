@@ -1,6 +1,8 @@
 module github.com/openziti/foundation/v2
 
-go 1.19
+go 1.23.0
+
+toolchain go1.23.1
 
 require (
 	github.com/emirpasic/gods v1.18.1
@@ -8,8 +10,8 @@ require (
 	github.com/speps/go-hashids v2.0.0+incompatible
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20220921023135-46d9e7742f1e
-	golang.org/x/sys v0.30.0
-	golang.org/x/term v0.29.0
+	golang.org/x/sys v0.31.0
+	golang.org/x/term v0.30.0
 )
 
 require (
