@@ -29,11 +29,12 @@ func main() {
 		fmt.Printf("invalid number of arguments count (%v). Usage: half-close-test <client|server> <address>", len(os.Args))
 	}
 
-	if os.Args[1] == "client" {
+	switch os.Args[1] {
+	case "client":
 		client(os.Args[2])
-	} else if os.Args[1] == "server" {
+	case "server":
 		server(os.Args[2])
-	} else {
+	default:
 		fmt.Println("invalid arguments. Usage: half-close-test <client|server> <address>")
 	}
 }
