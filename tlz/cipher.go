@@ -52,6 +52,13 @@ func GetMinTlsVersion() uint16 {
 	return tls.VersionTLS12
 }
 
+func GetMaxTlsVersion() uint16 {
+	if FipsEnabled() {
+		return tls.VersionTLS12
+	}
+	return tls.VersionTLS13
+}
+
 // Note: This will only affect TLS1.2 and lower, TLS1.3 has a separate smaller cipher set managed by Go.
 func GetCipherSuites() []uint16 {
 	once.Do(setDefaultCipherSuites)
