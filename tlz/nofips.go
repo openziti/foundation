@@ -1,4 +1,4 @@
-//go:build !goexperiment.opensslcrypto
+//go:build !goexperiment.opensslcrypto && !requirefips
 
 package tlz
 
