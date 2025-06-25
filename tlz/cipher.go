@@ -53,9 +53,6 @@ func GetMinTlsVersion() uint16 {
 }
 
 func GetMaxTlsVersion() uint16 {
-	if FipsEnabled() {
-		return tls.VersionTLS12
-	}
 	return tls.VersionTLS13
 }
 
