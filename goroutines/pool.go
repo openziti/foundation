@@ -69,6 +69,8 @@ type PoolConfig struct {
 	OnWorkCallback func(workTime time.Duration)
 	// Optional callback which is called when the pool is created
 	OnCreate func(Pool)
+	// A function to identify the pool type. WorkerFunction must call embedded function to start the worker
+	WorkerFunction func(uint32, func())
 }
 
 func (self *PoolConfig) Validate() error {
@@ -94,7 +96,15 @@ func NewPool(config PoolConfig) (Pool, error) {
 		closeNotify:         make(chan struct{}),
 		panicHandler:        config.PanicHandler,
 		onWorkCallback:      config.OnWorkCallback,
+		workF:               config.WorkerFunction,
 	}
+
+	if result.workF == nil {
+		result.workF = func(workerNumber uint32, worker func()) {
+			worker()
+		}
+	}
+
 	if config.OnCreate != nil {
 		config.OnCreate(result)
 	}
@@ -117,6 +127,7 @@ type pool struct {
 	closeNotify         chan struct{}
 	panicHandler        func(err interface{})
 	onWorkCallback      func(workTime time.Duration)
+	workF               func(uint32, func())
 }
 
 func (self *pool) Queue(work func()) error {
@@ -215,11 +226,13 @@ func (self *pool) worker(initialWork func()) {
 
 func (self *pool) startExtraWorkerIfQueueBusy() {
 	if self.GetWorkerCount() < self.maxWorkers {
-		if self.incrementCount() <= self.maxWorkers {
+		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
 			select {
 			case work := <-self.queue:
 				self.decrQueueSize()
-				go self.worker(work)
+				go self.workF(workerNumber, func() {
+					self.worker(work)
+				})
 			default:
 				self.decrementCount()
 			}
@@ -231,8 +244,10 @@ func (self *pool) startExtraWorkerIfQueueBusy() {
 
 func (self *pool) tryAddWorker() {
 	if self.GetWorkerCount() < self.maxWorkers {
-		if self.incrementCount() <= self.maxWorkers {
-			go self.worker(nil)
+		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
+			go self.workF(workerNumber, func() {
+				self.worker(nil)
+			})
 		} else {
 			self.decrementCount()
 		}
