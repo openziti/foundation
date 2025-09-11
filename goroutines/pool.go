@@ -2,9 +2,10 @@ package goroutines
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type strErr string
@@ -197,7 +198,14 @@ func (self *pool) worker(initialWork func()) {
 		// There's a small race condition where the last worker can exit due to idle
 		// right as something is queued. If we're the last worker, check again, just
 		// to be sure there's nothing queued.
-		if newCount := self.decrementCount(); newCount == 0 {
+		//
+		// There's another race condition where if minWorkers is 1, multiple can exit
+		// at the same time and the count can drop to 0. If that happens, start a new
+		// worker
+		newCount := self.decrementCount()
+		if newCount < self.minWorkers {
+			self.tryAddWorker()
+		} else if newCount == 0 {
 			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
 		}
 	}()
