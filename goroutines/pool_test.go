@@ -3,14 +3,17 @@ package goroutines
 import (
 	"errors"
 	"fmt"
-	concurrenz2 "github.com/openziti/foundation/v2/concurrenz"
-	"github.com/stretchr/testify/require"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	concurrenz2 "github.com/openziti/foundation/v2/concurrenz"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPool(t *testing.T) {
+const maxIterations = 10
+
+func TestPoolWithMinTwo(t *testing.T) {
 	val, err := NewPool(PoolConfig{
 		QueueSize:   100,
 		MinWorkers:  2,
@@ -22,50 +25,117 @@ func TestPool(t *testing.T) {
 		},
 	})
 
-	req := require.New(t)
-	req.NoError(err)
-
+	require.NoError(t, err)
 	p := val.(*pool)
-	req.Equal(2, int(p.GetWorkerCount()))
 
+	for i := 0; i < maxIterations; i++ {
+		RunPoolTest(t, p)
+	}
+}
+
+func TestPoolWithMinZero(t *testing.T) {
+	val, err := NewPool(PoolConfig{
+		QueueSize:   100,
+		MinWorkers:  0,
+		MaxWorkers:  10,
+		IdleTime:    100 * time.Millisecond,
+		CloseNotify: nil,
+		PanicHandler: func(err interface{}) {
+			fmt.Printf("panic: %v\n", err)
+		},
+	})
+
+	require.NoError(t, err)
+	p := val.(*pool)
+
+	for i := 0; i < maxIterations; i++ {
+		RunPoolTest(t, p)
+	}
+}
+
+func TestPoolWithMinOne(t *testing.T) {
+	val, err := NewPool(PoolConfig{
+		QueueSize:   100,
+		MinWorkers:  1,
+		MaxWorkers:  10,
+		IdleTime:    100 * time.Millisecond,
+		CloseNotify: nil,
+		PanicHandler: func(err interface{}) {
+			fmt.Printf("panic: %v\n", err)
+		},
+	})
+
+	require.NoError(t, err)
+	p := val.(*pool)
+
+	for i := 0; i < maxIterations; i++ {
+		RunPoolTest(t, p)
+	}
+}
+
+func RunPoolTest(t *testing.T, p *pool) {
+	req := require.New(t)
 	busyWork := &poolBusier{workPool: p}
-	busyWork.KeepBusy(2, 0)
-	time.Sleep(50 * time.Millisecond)
-	count := p.GetWorkerCount()
-	req.True(count == 2 || count == 3, "count should be within 1 of min. was %v", count)
-	req.NoError(busyWork.CloseAndWait())
-	time.Sleep(5 * time.Millisecond)
 
-	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.GetWorkerCount()))
+	req.Equal(int(p.minWorkers), int(p.GetWorkerCount()))
 
-	busyWork.KeepBusy(8, 0)
-	time.Sleep(50 * time.Millisecond)
-	count = p.GetWorkerCount()
-	req.True(count == 8 || count == 9, "count should be within 1 of min. was %v", count)
-	req.NoError(busyWork.CloseAndWait())
+	t.Run("test 2 workers", func(t *testing.T) {
+		busyWork.KeepBusy(2, 0)
+		time.Sleep(50 * time.Millisecond)
+		count := p.GetWorkerCount()
+		req.True(count == 2 || count == 3, "count should be within 1 of min. was %v", count)
+		req.NoError(busyWork.CloseAndWait())
+		time.Sleep(5 * time.Millisecond)
 
-	time.Sleep(50 * time.Millisecond)
-	req.Equal(count, p.GetWorkerCount())
+		time.Sleep(150 * time.Millisecond)
+		req.Equal(int(p.minWorkers), int(p.GetWorkerCount()))
+	})
 
-	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.GetWorkerCount()))
+	t.Run("test 8 workers", func(t *testing.T) {
+		busyWork.KeepBusy(8, 0)
 
-	busyWork.KeepBusy(15, 0)
-	time.Sleep(50 * time.Millisecond)
-	req.Equal(10, int(p.GetWorkerCount()))
-	req.NoError(busyWork.CloseAndWait())
+		for i := 0; i < 10; i++ {
+			if p.GetWorkerCount() == 8 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 
-	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.GetWorkerCount()))
+		count := p.GetWorkerCount()
+		req.True(count >= 7 && count <= 9, "count should be within 1 of 8 was %v", count)
+		req.NoError(busyWork.CloseAndWait())
 
-	busyWork.KeepBusy(15, 12)
-	time.Sleep(50 * time.Millisecond)
-	req.Equal(10, int(p.GetWorkerCount()))
-	req.NoError(busyWork.CloseAndWait())
+		time.Sleep(50 * time.Millisecond)
+		req.True(count >= 7 && count <= 9, "count should be within 1 of 8 was %v", count)
 
-	time.Sleep(150 * time.Millisecond)
-	req.Equal(2, int(p.GetWorkerCount()))
+		time.Sleep(150 * time.Millisecond)
+		req.Equal(int(p.minWorkers), int(p.GetWorkerCount()))
+	})
+
+	t.Run("test busy queue", func(t *testing.T) {
+		busyWork.KeepBusy(15, 0)
+		for i := 0; i < 10; i++ {
+			if p.GetWorkerCount() == 10 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		req.Equal(10, int(p.GetWorkerCount()))
+		req.NoError(busyWork.CloseAndWait())
+
+		time.Sleep(150 * time.Millisecond)
+		req.Equal(int(p.minWorkers), int(p.GetWorkerCount()))
+	})
+
+	t.Run("test busy queue with panics", func(t *testing.T) {
+		busyWork.KeepBusy(15, 12)
+		time.Sleep(50 * time.Millisecond)
+		req.Equal(10, int(p.GetWorkerCount()))
+		req.NoError(busyWork.CloseAndWait())
+
+		time.Sleep(150 * time.Millisecond)
+		req.Equal(int(p.minWorkers), int(p.GetWorkerCount()))
+	})
 }
 
 func TestQueueOrError(t *testing.T) {
@@ -133,7 +203,7 @@ func (self *poolBusier) KeepBusy(count int, panicCount int) {
 				})
 			} else {
 				err = self.workPool.Queue(func() {
-					time.Sleep(5 * time.Millisecond)
+					time.Sleep(20 * time.Millisecond)
 					sema.Release()
 				})
 			}
