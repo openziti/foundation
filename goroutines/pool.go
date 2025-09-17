@@ -109,9 +109,11 @@ func NewPool(config PoolConfig) (Pool, error) {
 	if config.OnCreate != nil {
 		config.OnCreate(result)
 	}
-	for result.count < result.minWorkers {
+
+	for i := uint32(0); i < result.minWorkers; i++ {
 		result.tryAddWorker()
 	}
+
 	return result, nil
 }
 
@@ -204,7 +206,7 @@ func (self *pool) worker(initialWork func()) {
 		// worker
 		newCount := self.decrementCount()
 		if newCount < self.minWorkers {
-			self.tryAddWorker()
+			time.AfterFunc(10*time.Millisecond, self.tryAddWorker)
 		} else if newCount == 0 {
 			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
 		}
