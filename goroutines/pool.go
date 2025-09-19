@@ -2,6 +2,7 @@ package goroutines
 
 import (
 	"fmt"
+	"math"
 	"sync/atomic"
 	"time"
 
@@ -88,10 +89,19 @@ func NewPool(config PoolConfig) (Pool, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
+
+	if config.MinWorkers > math.MaxInt32 {
+		return nil, fmt.Errorf("min workers must be less than or equal to %v", math.MaxInt32)
+	}
+
+	if config.MaxWorkers > math.MaxInt32 {
+		return nil, fmt.Errorf("max workers must be less than or equal to %v", math.MaxInt32)
+	}
+
 	result := &pool{
 		queue:               make(chan func(), int(config.QueueSize)),
-		minWorkers:          config.MinWorkers,
-		maxWorkers:          config.MaxWorkers,
+		minWorkers:          int32(config.MinWorkers),
+		maxWorkers:          int32(config.MaxWorkers),
 		maxIdle:             config.IdleTime,
 		externalCloseNotify: config.CloseNotify,
 		closeNotify:         make(chan struct{}),
@@ -109,18 +119,20 @@ func NewPool(config PoolConfig) (Pool, error) {
 	if config.OnCreate != nil {
 		config.OnCreate(result)
 	}
-	for result.count < result.minWorkers {
+
+	for i := int32(0); i < result.minWorkers; i++ {
 		result.tryAddWorker()
 	}
+
 	return result, nil
 }
 
 type pool struct {
 	queue               chan func()
 	queueSize           uint32
-	count               uint32
-	minWorkers          uint32
-	maxWorkers          uint32
+	count               int32
+	minWorkers          int32
+	maxWorkers          int32
 	busyWorkers         uint32
 	maxIdle             time.Duration
 	stopped             atomic.Bool
@@ -195,18 +207,20 @@ func (self *pool) worker(initialWork func()) {
 	}()
 
 	defer func() {
-		// There's a small race condition where the last worker can exit due to idle
-		// right as something is queued. If we're the last worker, check again, just
-		// to be sure there's nothing queued.
-		//
-		// There's another race condition where if minWorkers is 1, multiple can exit
-		// at the same time and the count can drop to 0. If that happens, start a new
-		// worker
-		newCount := self.decrementCount()
-		if newCount < self.minWorkers {
-			self.tryAddWorker()
-		} else if newCount == 0 {
-			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
+		if !self.stopped.Load() {
+			// There's a small race condition where the last worker can exit due to idle
+			// right as something is queued. If we're the last worker, check again, just
+			// to be sure there's nothing queued.
+			//
+			// There's another race condition where if minWorkers is 1, multiple can exit
+			// at the same time and the count can drop to 0. If that happens, start a new
+			// worker
+			newCount := self.decrementCount()
+			if newCount < self.minWorkers {
+				self.addWorkerIfBelowMin()
+			} else if newCount == 0 {
+				time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
+			}
 		}
 	}()
 
@@ -221,24 +235,25 @@ func (self *pool) worker(initialWork func()) {
 			self.startExtraWorkerIfQueueBusy()
 			self.runWork(work)
 		case <-time.After(self.maxIdle):
-			if self.GetWorkerCount() > self.minWorkers {
+			if self.getWorkerCount() > self.minWorkers {
 				return
 			}
 		case <-self.closeNotify:
 			return
 		case <-self.externalCloseNotify:
+			self.Shutdown()
 			return
 		}
 	}
 }
 
 func (self *pool) startExtraWorkerIfQueueBusy() {
-	if self.GetWorkerCount() < self.maxWorkers {
+	if self.getWorkerCount() < self.maxWorkers {
 		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
 			select {
 			case work := <-self.queue:
 				self.decrQueueSize()
-				go self.workF(workerNumber, func() {
+				go self.workF(uint32(workerNumber), func() {
 					self.worker(work)
 				})
 			default:
@@ -251,14 +266,24 @@ func (self *pool) startExtraWorkerIfQueueBusy() {
 }
 
 func (self *pool) tryAddWorker() {
-	if self.GetWorkerCount() < self.maxWorkers {
+	if self.getWorkerCount() < self.maxWorkers {
 		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
-			go self.workF(workerNumber, func() {
+			go self.workF(uint32(workerNumber), func() {
 				self.worker(nil)
 			})
 		} else {
 			self.decrementCount()
 		}
+	}
+}
+
+func (self *pool) addWorkerIfBelowMin() {
+	if workerNumber := self.incrementCount(); workerNumber <= self.minWorkers {
+		go self.workF(uint32(workerNumber), func() {
+			self.worker(nil)
+		})
+	} else {
+		self.decrementCount()
 	}
 }
 
@@ -275,15 +300,19 @@ func (self *pool) runWork(work func()) {
 }
 
 func (self *pool) GetWorkerCount() uint32 {
-	return atomic.LoadUint32(&self.count)
+	return uint32(atomic.LoadInt32(&self.count))
 }
 
-func (self *pool) incrementCount() uint32 {
-	return atomic.AddUint32(&self.count, 1)
+func (self *pool) getWorkerCount() int32 {
+	return atomic.LoadInt32(&self.count)
 }
 
-func (self *pool) decrementCount() uint32 {
-	return atomic.AddUint32(&self.count, ^uint32(0))
+func (self *pool) incrementCount() int32 {
+	return atomic.AddInt32(&self.count, 1)
+}
+
+func (self *pool) decrementCount() int32 {
+	return atomic.AddInt32(&self.count, -1)
 }
 
 func (self *pool) GetQueueSize() uint32 {
