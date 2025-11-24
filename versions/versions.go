@@ -64,16 +64,29 @@ func ParseSemVer(version string) (*SemVer, error) {
 
 type SemVer struct {
 	parts []uint
+	pre   string
 }
 
 func (self *SemVer) parse(version string) error {
 	version = strings.TrimPrefix(version, "v")
 
-	for _, part := range strings.Split(version, ".") {
+	parts := strings.Split(version, "-")
+	mainVersion := parts[0]
+
+	for _, part := range strings.Split(mainVersion, ".") {
 		if err := self.parsePart(part); err != nil {
 			return err
 		}
 	}
+
+	if len(parts) == 2 {
+		self.pre = parts[1]
+	}
+
+	if len(parts) > 2 {
+		return fmt.Errorf("invalid version: %s", version)
+	}
+
 	return nil
 }
 
@@ -102,7 +115,47 @@ func (self *SemVer) CompareTo(version *SemVer) int {
 		return -1
 	}
 
-	return 0
+	return self.ComparePre(version)
+}
+
+func (self *SemVer) ComparePre(version *SemVer) int {
+	if self.pre == "" {
+		if version.pre == "" {
+			return 0
+		}
+		return 1
+	}
+
+	if version.pre == "" {
+		return -1
+	}
+
+	prefixes := []string{"pre", "alpha", "beta", "rc"}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(self.pre, prefix) {
+			if strings.HasPrefix(version.pre, prefix) {
+				pre1 := strings.TrimPrefix(self.pre, prefix)
+				pre2 := strings.TrimPrefix(version.pre, prefix)
+				return self.ComparePreVersions(pre1, pre2)
+			}
+			return strings.Compare(self.pre, version.pre)
+		}
+	}
+	return strings.Compare(self.pre, version.pre)
+}
+
+func (self *SemVer) ComparePreVersions(pre1, pre2 string) int {
+	if pre1 == pre2 {
+		return 0
+	}
+
+	if n1, err := strconv.Atoi(pre1); err == nil {
+		if n2, err2 := strconv.Atoi(pre2); err2 == nil {
+			return n1 - n2
+		}
+	}
+
+	return strings.Compare(pre1, pre2)
 }
 
 func (self *SemVer) Equals(version *SemVer) bool {
@@ -118,6 +171,11 @@ func (self *SemVer) String() string {
 
 	for _, part := range self.parts[1:] {
 		result.WriteString(fmt.Sprintf(".%v", part))
+	}
+
+	if self.pre != "" {
+		result.WriteString("-")
+		result.WriteString(self.pre)
 	}
 
 	return result.String()

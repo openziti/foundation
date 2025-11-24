@@ -1,8 +1,9 @@
 package versions
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 /*
@@ -105,16 +106,45 @@ func Test_Compare(t *testing.T) {
 	req.Equal("0.19.6", v4.String())
 	req.True(v4.Equals(MustParseSemVer("0.19.6")))
 
-	v5, err := ParseSemVer("2.0.0")
+	v2p0p0, err := ParseSemVer("2.0.0")
 	req.NoError(err)
-	req.Equal("2.0.0", v5.String())
-	req.True(v5.Equals(MustParseSemVer("2.0.0")))
+	req.Equal("2.0.0", v2p0p0.String())
+	req.True(v2p0p0.Equals(MustParseSemVer("2.0.0")))
+
+	v2p0p0pre1, err := ParseSemVer("2.0.0-pre1")
+	req.NoError(err)
+	req.Equal("2.0.0-pre1", v2p0p0pre1.String())
+	req.True(v2p0p0pre1.Equals(MustParseSemVer("2.0.0-pre1")))
+
+	v2p0p0pre4, err := ParseSemVer("2.0.0-pre4")
+	req.NoError(err)
+	req.Equal("2.0.0-pre4", v2p0p0pre4.String())
+	req.True(v2p0p0pre4.Equals(MustParseSemVer("2.0.0-pre4")))
+
+	v2p0p0pre10, err := ParseSemVer("2.0.0-pre10")
+	req.NoError(err)
+	req.Equal("2.0.0-pre10", v2p0p0pre10.String())
+	req.True(v2p0p0pre10.Equals(MustParseSemVer("2.0.0-pre10")))
 
 	req.Equal(1, v2.CompareTo(v1))
 	req.Equal(0, v2.CompareTo(v2))
 	req.Equal(-1, v2.CompareTo(v3))
 	req.Equal(-1, v2.CompareTo(v4))
-	req.Equal(-1, v2.CompareTo(v5))
+	req.Equal(-1, v2.CompareTo(v2p0p0))
+	req.True(v2p0p0.CompareTo(v2p0p0pre1) > 0)
+	req.True(v2p0p0pre1.CompareTo(v2p0p0) < 0)
+
+	req.True(v2p0p0pre1.CompareTo(v2p0p0pre4) < 0)
+	req.True(v2p0p0pre4.CompareTo(v2p0p0pre1) > 0)
+
+	req.True(v2p0p0pre1.CompareTo(v2p0p0pre10) < 0)
+	req.True(v2p0p0pre10.CompareTo(v2p0p0pre1) > 0)
+
+	req.True(v2p0p0pre1.CompareTo(v2p0p0pre10) < 0)
+	req.True(v2p0p0pre10.CompareTo(v2p0p0pre1) > 0)
+
+	req.True(v2p0p0pre4.CompareTo(v2p0p0pre10) < 0)
+	req.True(v2p0p0pre10.CompareTo(v2p0p0pre4) > 0)
 
 	versionInfo := &VersionInfo{Version: "v0.14.7"}
 	req.False(versionInfo.HasMinimumVersion("0.18.5"))
@@ -144,6 +174,8 @@ func Test_Compare(t *testing.T) {
 	_, err = ParseSemVer("2.0.0~alpha1")
 	req.EqualError(err, `strconv.ParseInt: parsing "0~alpha1": invalid syntax`)
 
-	_, err = ParseSemVer("2.0.0-rc2")
-	req.EqualError(err, `strconv.ParseInt: parsing "0-rc2": invalid syntax`)
+	rc, err := ParseSemVer("2.0.0-rc2")
+	req.NoError(err)
+	req.Equal("2.0.0-rc2", rc.String())
+	req.True(rc.Equals(MustParseSemVer("2.0.0-rc2")))
 }
