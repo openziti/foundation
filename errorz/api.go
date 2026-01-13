@@ -16,12 +16,15 @@
 
 package errorz
 
+import "net/http"
+
 type ApiError struct {
 	Code        string `json:"code"`
 	Message     string `json:"message"`
 	Status      int    `json:"-"`
 	Cause       error  `json:"cause"`
 	AppendCause bool   `json:"-"`
+	Headers     http.Header
 }
 
 func (e ApiError) Error() string {
