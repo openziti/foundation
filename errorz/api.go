@@ -19,7 +19,7 @@ package errorz
 import "net/http"
 
 type ApiError struct {
-	Code        string `json:"code"`
+	AppCode     string `json:"code"`
 	Message     string `json:"message"`
 	Status      int    `json:"-"`
 	Cause       error  `json:"cause"`
@@ -28,10 +28,14 @@ type ApiError struct {
 }
 
 func (e ApiError) Error() string {
-	s := e.Code + ": " + e.Message
+	s := e.AppCode + ": " + e.Message
 
 	if e.Cause != nil && e.AppendCause {
 		s = s + ": " + e.Cause.Error()
 	}
 	return s
+}
+
+func (e ApiError) Code() int32 {
+	return int32(e.Status)
 }

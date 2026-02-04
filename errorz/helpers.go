@@ -7,7 +7,7 @@ import (
 
 func NewNotFound() *ApiError {
 	return &ApiError{
-		Code:    NotFoundCode,
+		AppCode: NotFoundCode,
 		Message: NotFoundMessage,
 		Status:  NotFoundStatus,
 	}
@@ -15,7 +15,7 @@ func NewNotFound() *ApiError {
 
 func NewUnhandled(cause error) *ApiError {
 	return &ApiError{
-		Code:    UnhandledCode,
+		AppCode: UnhandledCode,
 		Message: UnhandledMessage,
 		Status:  UnhandledStatus,
 		Cause:   cause,
@@ -24,7 +24,7 @@ func NewUnhandled(cause error) *ApiError {
 
 func NewEntityCanNotBeDeleted() *ApiError {
 	return &ApiError{
-		Code:    EntityCanNotBeDeletedCode,
+		AppCode: EntityCanNotBeDeletedCode,
 		Message: EntityCanNotBeDeletedMessage,
 		Status:  EntityCanNotBeDeletedStatus,
 	}
@@ -32,7 +32,7 @@ func NewEntityCanNotBeDeleted() *ApiError {
 
 func NewEntityCanNotBeDeletedFrom(err error) *ApiError {
 	return &ApiError{
-		Code:        EntityCanNotBeDeletedCode,
+		AppCode:     EntityCanNotBeDeletedCode,
 		Message:     EntityCanNotBeDeletedMessage,
 		Status:      EntityCanNotBeDeletedStatus,
 		Cause:       err,
@@ -42,7 +42,7 @@ func NewEntityCanNotBeDeletedFrom(err error) *ApiError {
 
 func NewEntityCanNotBeUpdatedFrom(err error) *ApiError {
 	return &ApiError{
-		Code:        EntityCanNotBeUpdatedCode,
+		AppCode:     EntityCanNotBeUpdatedCode,
 		Message:     EntityCanNotBeUpdatedMessage,
 		Status:      EntityCanNotBeUpdatedStatus,
 		Cause:       err,
@@ -52,7 +52,7 @@ func NewEntityCanNotBeUpdatedFrom(err error) *ApiError {
 
 func NewFieldApiError(fieldError *FieldError) *ApiError {
 	return &ApiError{
-		Code:        InvalidFieldCode,
+		AppCode:     InvalidFieldCode,
 		Message:     InvalidFieldMessage,
 		Status:      InvalidFieldStatus,
 		Cause:       fieldError,
@@ -62,7 +62,7 @@ func NewFieldApiError(fieldError *FieldError) *ApiError {
 
 func NewCouldNotValidate(err error) *ApiError {
 	return &ApiError{
-		Code:    CouldNotValidateCode,
+		AppCode: CouldNotValidateCode,
 		Message: CouldNotValidateMessage,
 		Status:  CouldNotValidateStatus,
 		Cause:   err,
@@ -72,7 +72,7 @@ func NewCouldNotValidate(err error) *ApiError {
 // NewUnauthorized represents a generic unauthorized request that conveys no additional token status
 func NewUnauthorized() *ApiError {
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 	}
@@ -81,13 +81,15 @@ func NewUnauthorized() *ApiError {
 // NewUnauthorizedTokensMissing represents an unauthorized request due to a lack of any supported security token being provided
 func NewUnauthorizedTokensMissing() *ApiError {
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
+			//single string value separate by commas due to OpenAPI 2.0 header limitations (1 value for 1 header)
+			//CSV values for www-authenticate allowed per RFCs.
 			"WWW-Authenticate": {
-				`zt-session realm="zt-session" error="missing" error_description="no token was provided"`,
-				`Bearer realm="openziti-oidc" error="missing" error_description="no token was provided"`,
+				`zt-session realm="zt-session" error="missing" error_description="no token was provided"` + "," +
+					`Bearer realm="openziti-oidc" error="missing" error_description="no token was provided"`,
 			},
 		},
 	}
@@ -96,7 +98,7 @@ func NewUnauthorizedTokensMissing() *ApiError {
 // NewUnauthorizedOidcExpired represents an unauthorized request that the provided OIDC token has expired
 func NewUnauthorizedOidcExpired() *ApiError {
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
@@ -110,7 +112,7 @@ func NewUnauthorizedOidcExpired() *ApiError {
 // NewUnauthorizedOidcInvalid represents an unauthorized request that the provided OIDC token is invalid
 func NewUnauthorizedOidcInvalid() *ApiError {
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
@@ -124,7 +126,7 @@ func NewUnauthorizedOidcInvalid() *ApiError {
 // NewUnauthorizedZtSessionInvalid represents an unauthorized request that the provided legacy (zt-session) token is invalid
 func NewUnauthorizedZtSessionInvalid() *ApiError {
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
@@ -138,16 +140,16 @@ func NewUnauthorizedZtSessionInvalid() *ApiError {
 // NewUnauthorizedSecondaryTokenMissing represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is missing
 func NewUnauthorizedSecondaryTokenMissing(extJwtIds, issuers []string) *ApiError {
 
-	extJwtIdsCsv := strings.Join(extJwtIds, ", ")
-	issuersCsv := strings.Join(issuers, ", ")
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
 
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="missing" error_description="this request requires an additional bearer token" id="%s", issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="missing" error_description="this request requires an additional bearer token" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
 			},
 		},
 	}
@@ -155,16 +157,16 @@ func NewUnauthorizedSecondaryTokenMissing(extJwtIds, issuers []string) *ApiError
 
 // NewUnauthorizedSecondaryTokenExpired represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is expired
 func NewUnauthorizedSecondaryTokenExpired(extJwtIds, issuers []string) *ApiError {
-	extJwtIdsCsv := strings.Join(extJwtIds, ", ")
-	issuersCsv := strings.Join(issuers, ", ")
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
 
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="expired" error_description="this request requires an additional bearer token that has expired" id="%s", issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="expired" error_description="this request requires an additional bearer token that has expired" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
 			},
 		},
 	}
@@ -172,16 +174,16 @@ func NewUnauthorizedSecondaryTokenExpired(extJwtIds, issuers []string) *ApiError
 
 // NewUnauthorizedSecondaryTokenInvalid represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is invalid
 func NewUnauthorizedSecondaryTokenInvalid(extJwtIds, issuers []string) *ApiError {
-	extJwtIdsCsv := strings.Join(extJwtIds, ", ")
-	issuersCsv := strings.Join(issuers, ", ")
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
 
 	return &ApiError{
-		Code:    UnauthorizedCode,
+		AppCode: UnauthorizedCode,
 		Message: UnauthorizedMessage,
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="invalid" error_description="this request requires an additional bearer token that is invalid" id="%s", issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="invalid" error_description="this request requires an additional bearer token that is invalid" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
 			},
 		},
 	}
@@ -189,7 +191,7 @@ func NewUnauthorizedSecondaryTokenInvalid(extJwtIds, issuers []string) *ApiError
 
 func NewInvalidFilter(cause error) *ApiError {
 	return &ApiError{
-		Code:        InvalidFilterCode,
+		AppCode:     InvalidFilterCode,
 		Message:     InvalidFilterMessage,
 		Status:      InvalidFilterStatus,
 		Cause:       cause,
@@ -199,7 +201,7 @@ func NewInvalidFilter(cause error) *ApiError {
 
 func NewInvalidPagination(err error) *ApiError {
 	return &ApiError{
-		Code:        InvalidPaginationCode,
+		AppCode:     InvalidPaginationCode,
 		Message:     InvalidPaginationMessage,
 		Status:      InvalidPaginationStatus,
 		Cause:       err,
@@ -209,7 +211,7 @@ func NewInvalidPagination(err error) *ApiError {
 
 func NewInvalidSort(err error) *ApiError {
 	return &ApiError{
-		Code:        InvalidSortCode,
+		AppCode:     InvalidSortCode,
 		Message:     InvalidSortMessage,
 		Status:      InvalidSortStatus,
 		Cause:       err,
