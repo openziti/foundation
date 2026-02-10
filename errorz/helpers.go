@@ -5,6 +5,24 @@ import (
 	"strings"
 )
 
+const (
+	WwwAuthRealmPrimaryExtJwt   = "openziti-primary-ext-jwt"
+	WwwAuthRealmSecondaryExtJwt = "openziti-secondary-ext-jwt"
+	WwwAuthRealmOidc            = "openziti-oidc"
+	WwwAuthRealmZtSession       = "zt-session"
+
+	WwwAuthErrorMissing = "missing"
+	WwwAuthErrorInvalid = "invalid"
+	WwwAuthErrorExpired = "expired"
+
+	WwwAuthErrorDescMissing = "no matching token was provided"
+	WwwAuthErrorDescInvalid = "token is invalid"
+	WwwAuthErrorDescExpired = "token expired"
+
+	WwwAuthExtJwtId     = "id"
+	WwwAuthExtJwtIssuer = "issuer"
+)
+
 func NewNotFound() *ApiError {
 	return &ApiError{
 		AppCode: NotFoundCode,
@@ -88,8 +106,8 @@ func NewUnauthorizedTokensMissing() *ApiError {
 			//single string value separate by commas due to OpenAPI 2.0 header limitations (1 value for 1 header)
 			//CSV values for www-authenticate allowed per RFCs.
 			"WWW-Authenticate": {
-				`zt-session realm="zt-session" error="missing" error_description="no token was provided"` + "," +
-					`Bearer realm="openziti-oidc" error="missing" error_description="no token was provided"`,
+				fmt.Sprintf(`zt-session realm="%s" error="%s" error_description="%s"`, WwwAuthRealmZtSession, WwwAuthErrorMissing, WwwAuthErrorDescMissing) + "," +
+					fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s"`, WwwAuthRealmOidc, WwwAuthErrorMissing, WwwAuthErrorDescMissing),
 			},
 		},
 	}
@@ -103,7 +121,7 @@ func NewUnauthorizedOidcExpired() *ApiError {
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				`Bearer realm="openziti-oidc" error="expired" error_description="token expired"`,
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s"`, WwwAuthRealmOidc, WwwAuthErrorExpired, WwwAuthErrorDescExpired),
 			},
 		},
 	}
@@ -117,7 +135,7 @@ func NewUnauthorizedOidcInvalid() *ApiError {
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				`Bearer realm="openziti-oidc" error="invalid" error_description="token is invalid"`,
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s"`, WwwAuthRealmOidc, WwwAuthErrorInvalid, WwwAuthErrorDescInvalid),
 			},
 		},
 	}
@@ -131,14 +149,14 @@ func NewUnauthorizedZtSessionInvalid() *ApiError {
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				`zt-session realm="zt-session" error="invalid" error_description="token is invalid"`,
+				fmt.Sprintf(`zt-session realm="%s" error="%s" error_description="%s"`, WwwAuthRealmZtSession, WwwAuthErrorInvalid, WwwAuthErrorDescInvalid),
 			},
 		},
 	}
 }
 
-// NewUnauthorizedSecondaryTokenMissing represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is missing
-func NewUnauthorizedSecondaryTokenMissing(extJwtIds, issuers []string) *ApiError {
+// NewUnauthorizedPrimaryExtTokenMissing represents an unauthorized primary auth request that the required a JWT token, ext-jwt-signers configuration, is missing
+func NewUnauthorizedPrimaryExtTokenMissing(extJwtIds, issuers []string) *ApiError {
 
 	extJwtIdsCsv := strings.Join(extJwtIds, "|")
 	issuersCsv := strings.Join(issuers, "|")
@@ -149,14 +167,14 @@ func NewUnauthorizedSecondaryTokenMissing(extJwtIds, issuers []string) *ApiError
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="missing" error_description="this request requires an additional bearer token" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmPrimaryExtJwt, WwwAuthErrorMissing, WwwAuthErrorDescMissing, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
 			},
 		},
 	}
 }
 
-// NewUnauthorizedSecondaryTokenExpired represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is expired
-func NewUnauthorizedSecondaryTokenExpired(extJwtIds, issuers []string) *ApiError {
+// NewUnauthorizedPrimaryExtTokenExpired represents an unauthorized primary auth request that required a JWT token, ext-jwt-signers configuration, is expired
+func NewUnauthorizedPrimaryExtTokenExpired(extJwtIds, issuers []string) *ApiError {
 	extJwtIdsCsv := strings.Join(extJwtIds, "|")
 	issuersCsv := strings.Join(issuers, "|")
 
@@ -166,14 +184,14 @@ func NewUnauthorizedSecondaryTokenExpired(extJwtIds, issuers []string) *ApiError
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="expired" error_description="this request requires an additional bearer token that has expired" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmPrimaryExtJwt, WwwAuthErrorExpired, WwwAuthErrorDescExpired, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
 			},
 		},
 	}
 }
 
-// NewUnauthorizedSecondaryTokenInvalid represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is invalid
-func NewUnauthorizedSecondaryTokenInvalid(extJwtIds, issuers []string) *ApiError {
+// NewUnauthorizedPrimaryExtTokenInvalid represents an unauthorized primary auth request that the required additional JWT token, ext-jwt-signers configuration, is invalid
+func NewUnauthorizedPrimaryExtTokenInvalid(extJwtIds, issuers []string) *ApiError {
 	extJwtIdsCsv := strings.Join(extJwtIds, "|")
 	issuersCsv := strings.Join(issuers, "|")
 
@@ -183,7 +201,61 @@ func NewUnauthorizedSecondaryTokenInvalid(extJwtIds, issuers []string) *ApiError
 		Status:  UnauthorizedStatus,
 		Headers: map[string][]string{
 			"WWW-Authenticate": {
-				fmt.Sprintf(`Bearer realm="openziti-secondary-ext-jwt" error="invalid" error_description="this request requires an additional bearer token that is invalid" id="%s" issuer="%s"`, extJwtIdsCsv, issuersCsv),
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmPrimaryExtJwt, WwwAuthErrorInvalid, WwwAuthErrorDescInvalid, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
+			},
+		},
+	}
+}
+
+//--------------
+
+// NewUnauthorizedSecondaryExtTokenMissing represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is missing
+func NewUnauthorizedSecondaryExtTokenMissing(extJwtIds, issuers []string) *ApiError {
+
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
+
+	return &ApiError{
+		AppCode: UnauthorizedCode,
+		Message: UnauthorizedMessage,
+		Status:  UnauthorizedStatus,
+		Headers: map[string][]string{
+			"WWW-Authenticate": {
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmSecondaryExtJwt, WwwAuthErrorMissing, WwwAuthErrorDescMissing, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
+			},
+		},
+	}
+}
+
+// NewUnauthorizedSecondaryExtTokenExpired represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is expired
+func NewUnauthorizedSecondaryExtTokenExpired(extJwtIds, issuers []string) *ApiError {
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
+
+	return &ApiError{
+		AppCode: UnauthorizedCode,
+		Message: UnauthorizedMessage,
+		Status:  UnauthorizedStatus,
+		Headers: map[string][]string{
+			"WWW-Authenticate": {
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmSecondaryExtJwt, WwwAuthErrorExpired, WwwAuthErrorDescExpired, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
+			},
+		},
+	}
+}
+
+// NewUnauthorizedSecondaryExtTokenInvalid represents an unauthorized request that the required additional JWT token, ext-jwt-signers configuration, is invalid
+func NewUnauthorizedSecondaryExtTokenInvalid(extJwtIds, issuers []string) *ApiError {
+	extJwtIdsCsv := strings.Join(extJwtIds, "|")
+	issuersCsv := strings.Join(issuers, "|")
+
+	return &ApiError{
+		AppCode: UnauthorizedCode,
+		Message: UnauthorizedMessage,
+		Status:  UnauthorizedStatus,
+		Headers: map[string][]string{
+			"WWW-Authenticate": {
+				fmt.Sprintf(`Bearer realm="%s" error="%s" error_description="%s" %s="%s" %s="%s"`, WwwAuthRealmSecondaryExtJwt, WwwAuthErrorInvalid, WwwAuthErrorDescInvalid, WwwAuthExtJwtId, extJwtIdsCsv, WwwAuthExtJwtIssuer, issuersCsv),
 			},
 		},
 	}
