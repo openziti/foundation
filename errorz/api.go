@@ -19,12 +19,12 @@ package errorz
 import "net/http"
 
 type ApiError struct {
-	AppCode     string `json:"code"`
-	Message     string `json:"message"`
-	Status      int    `json:"-"`
-	Cause       error  `json:"cause"`
-	AppendCause bool   `json:"-"`
-	Headers     http.Header
+	AppCode     string      `json:"code"`
+	Message     string      `json:"message"`
+	Status      int         `json:"-"`
+	Cause       error       `json:"cause"`
+	AppendCause bool        `json:"-"`
+	Headers     http.Header `json:"-"`
 }
 
 func (e ApiError) Error() string {
