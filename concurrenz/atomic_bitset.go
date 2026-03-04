@@ -68,3 +68,19 @@ func setBitAtIndex(bitset uint32, index int, val bool) uint32 {
 func isBitSetAtIndex(bitset uint32, index int) bool {
 	return bitset&(1<<index) != 0
 }
+
+func (self *AtomicBitSet) SetBits(startIndex, width int, val uint32) {
+	mask := uint32(((1 << width) - 1) << startIndex)
+	for {
+		current := self.Load()
+		next := (current &^ mask) | ((val << startIndex) & mask)
+		if self.CompareAndSetAll(current, next) {
+			return
+		}
+	}
+}
+
+func (self *AtomicBitSet) GetBits(startIndex, width int) uint32 {
+	mask := uint32(((1 << width) - 1) << startIndex)
+	return (self.Load() & mask) >> startIndex
+}

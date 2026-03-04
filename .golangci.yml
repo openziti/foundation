@@ -2,4 +2,18 @@ version: "2"
 linters:
   settings:
     staticcheck:
-      checks: [ "all", "-ST1000", "-ST1003", "-ST1006", "-ST1020", "-ST1021" ]
+      checks: 
+        - "all" 
+        - "-ST1000" # Incorrect or missing package comment
+        - "-ST1003" # Poorly chosen identifier
+        - "-ST1006" # Poorly chosen receiver name
+        - "-ST1020" # The documentation of an exported function should start with the function’s name
+        - "-ST1021" # The documentation of an exported type should start with type’s name
+        - "-QF1001" # could apply De Morgan's law
+        - "-QF1002" # could use tagged switch on err
+run:
+  build-tags:
+    - apitests
+    - pkcs11
+  # Default: 1m
+  timeout: 8m

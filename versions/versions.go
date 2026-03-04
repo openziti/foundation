@@ -161,11 +161,11 @@ func (self *SemVer) String() string {
 	if len(self.parts) == 0 {
 		return ""
 	}
-	result := strings.Builder{}
-	result.WriteString(fmt.Sprintf("%v", self.parts[0]))
+	result := &strings.Builder{}
+	_, _ = fmt.Fprintf(result, "%v", self.parts[0])
 
 	for _, part := range self.parts[1:] {
-		result.WriteString(fmt.Sprintf(".%v", part))
+		_,_ = fmt.Fprintf(result, ".%v", part)
 	}
 
 	if self.pre != "" {

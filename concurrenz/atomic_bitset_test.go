@@ -55,3 +55,39 @@ func Test_AtomicBitset(t *testing.T) {
 	req.True(bs.CompareAndSet(0, false, true))
 	req.True(bs.IsSet(0))
 }
+
+func Test_AtomicBitset_MultiBit(t *testing.T) {
+	req := require.New(t)
+
+	bs := AtomicBitSet(0)
+
+	// Store a 2-bit value at position 6
+	bs.SetBits(6, 2, 3)
+	req.Equal(uint32(3), bs.GetBits(6, 2))
+
+	// Overwrite with a different value
+	bs.SetBits(6, 2, 1)
+	req.Equal(uint32(1), bs.GetBits(6, 2))
+
+	// Zero it out
+	bs.SetBits(6, 2, 0)
+	req.Equal(uint32(0), bs.GetBits(6, 2))
+
+	// Ensure other bits aren't affected
+	bs.Set(0, true)
+	bs.Set(5, true)
+	bs.SetBits(6, 2, 2)
+	req.True(bs.IsSet(0))
+	req.True(bs.IsSet(5))
+	req.Equal(uint32(2), bs.GetBits(6, 2))
+
+	// Test wider field (3 bits at position 2)
+	bs2 := AtomicBitSet(0)
+	bs2.SetBits(2, 3, 5) // binary 101
+	req.Equal(uint32(5), bs2.GetBits(2, 3))
+	req.False(bs2.IsSet(0))
+	req.False(bs2.IsSet(1))
+	req.True(bs2.IsSet(2))  // bit 2 = 1
+	req.False(bs2.IsSet(3)) // bit 3 = 0
+	req.True(bs2.IsSet(4))  // bit 4 = 1
+}
