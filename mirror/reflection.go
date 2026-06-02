@@ -1,8 +1,9 @@
 package mirror
 
 import (
-	"github.com/pkg/errors"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 func InitializeStructField(container interface{}, fieldName string) error {
@@ -18,7 +19,7 @@ func InitializeStructField(container interface{}, fieldName string) error {
 	}
 
 	fieldVal := containerVal.FieldByName(fieldName)
-	if fieldVal.Kind() != reflect.Ptr {
+	if fieldVal.Kind() != reflect.Pointer {
 		return errors.Errorf("field %v of type %v is not a pointer, is already initialized", fieldName, containerVal.Type().Name())
 	}
 
@@ -30,7 +31,7 @@ func InitializeStructField(container interface{}, fieldName string) error {
 
 func GetValue(something interface{}) reflect.Value {
 	value := reflect.ValueOf(something)
-	if value.Kind() == reflect.Ptr {
+	if value.Kind() == reflect.Pointer {
 		return value.Elem()
 	}
 	return value
