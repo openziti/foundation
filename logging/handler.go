@@ -54,6 +54,8 @@ type AsyncHandler struct {
 	windowStart time.Time
 }
 
+var _ slog.Handler = (*AsyncHandler)(nil)
+
 // queuedRecord carries the originating call's context alongside the record so
 // downstream handlers that consult ctx values (tracing, OTel) see them across
 // the async hop.

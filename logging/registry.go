@@ -178,6 +178,8 @@ type namedHandler struct {
 	name     string
 }
 
+var _ slog.Handler = (*namedHandler)(nil)
+
 func (h *namedHandler) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.registry.resolveLevel(h.name)
 }

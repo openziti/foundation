@@ -34,6 +34,8 @@ type boundHandler struct {
 	attrs  []slog.Attr
 }
 
+var _ slog.Handler = (*boundHandler)(nil)
+
 func (h *boundHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.parent.Enabled(ctx, level)
 }
@@ -72,6 +74,8 @@ type groupedHandler struct {
 	parent slog.Handler
 	name   string
 }
+
+var _ slog.Handler = (*groupedHandler)(nil)
 
 func (h *groupedHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.parent.Enabled(ctx, level)
