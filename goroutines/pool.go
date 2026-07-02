@@ -21,6 +21,16 @@ const (
 	PoolStoppedError = strErr("pool shutdown")
 )
 
+const (
+	// shutdownPollInterval is how often ShutdownAndWait re-checks that the pool
+	// has drained. It's coarse because shutdown is one-time and latency-tolerant.
+	shutdownPollInterval = 50 * time.Millisecond
+
+	// idlePollInterval is how often AwaitIdle re-checks for outstanding work.
+	// It's short so callers that submit work and immediately wait stay responsive.
+	idlePollInterval = 5 * time.Millisecond
+)
+
 // Pool represents a goroutine worker pool that can be configured with a queue size and min and max sizes.
 //
 //	The pool will start with min size goroutines and will add more if the queue isn't staying empty.
@@ -46,8 +56,24 @@ type Pool interface {
 	// GetBusyWorkers returns the current number workers busy doing work from the work queue
 	GetBusyWorkers() uint32
 
+	// GetOutstanding returns the number of work items that have been accepted but not yet completed,
+	// that is, items still queued plus items currently running
+	GetOutstanding() uint32
+
 	// Shutdown stops all workers as they finish work and prevents new work from being submitted to the queue
 	Shutdown()
+
+	// ShutdownAndWait shuts the pool down (see Shutdown) and then blocks until all in-flight work has
+	// completed and all workers have exited, or until the timeout elapses. Queued work that has not
+	// yet started is abandoned, not run. Returns TimeoutError if the timeout elapses before the pool
+	// drains, in which case some work may still be running.
+	ShutdownAndWait(timeout time.Duration) error
+
+	// AwaitIdle blocks until the pool has no outstanding work (nothing queued and nothing running),
+	// or until the timeout elapses, returning TimeoutError on timeout. It is a point-in-time wait:
+	// new work may be submitted concurrently, and if the pool has been shut down with work still
+	// queued, that work is abandoned and AwaitIdle will time out.
+	AwaitIdle(timeout time.Duration) error
 }
 
 // PoolConfig is used to configure a new Pool
@@ -130,6 +156,7 @@ func NewPool(config PoolConfig) (Pool, error) {
 type pool struct {
 	queue               chan func()
 	queueSize           uint32
+	outstanding         int32
 	count               int32
 	minWorkers          int32
 	maxWorkers          int32
@@ -153,31 +180,43 @@ func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
 
 func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
 	self.ensureNoStarvation()
+	// Count the work as outstanding before it can be picked up by a worker, so a
+	// worker can never complete-and-decrement before this increment lands. Undo it
+	// on any path where the work isn't actually enqueued.
+	self.incrOutstanding()
 	select {
 	case self.queue <- work:
 		self.incrQueueSize()
 		self.ensureNoStarvation()
 		return nil
 	case <-self.closeNotify:
+		self.decrOutstanding()
 		return errors.Wrap(PoolStoppedError, "cannot queue")
 	case <-self.externalCloseNotify:
+		self.decrOutstanding()
 		return errors.Wrap(PoolStoppedError, "cannot queue, pool stopped externally")
 	case <-timeoutC:
+		self.decrOutstanding()
 		return errors.Wrap(TimeoutError, "cannot queue")
 	}
 }
 
 func (self *pool) QueueOrError(work func()) error {
+	// See queueImpl: count as outstanding before enqueue, undo if not enqueued.
+	self.incrOutstanding()
 	select {
 	case self.queue <- work:
 		self.incrQueueSize()
 		self.ensureNoStarvation()
 		return nil
 	case <-self.closeNotify:
+		self.decrOutstanding()
 		return errors.Wrap(PoolStoppedError, "cannot queue")
 	case <-self.externalCloseNotify:
+		self.decrOutstanding()
 		return errors.Wrap(PoolStoppedError, "cannot queue, pool stopped externally")
 	default:
+		self.decrOutstanding()
 		return errors.Wrap(QueueFullError, "cannot queue")
 	}
 }
@@ -194,6 +233,51 @@ func (self *pool) Shutdown() {
 	}
 }
 
+func (self *pool) ShutdownAndWait(timeout time.Duration) error {
+	self.Shutdown()
+
+	// Wait for every worker to exit, which means all in-flight work has
+	// completed. Workers stop pulling from the queue and new workers stop being
+	// spawned once the pool is shut down, so the worker count drains to zero.
+	return self.awaitCondition(timeout, shutdownPollInterval, "timed out waiting for in-flight work to complete", func() bool {
+		return self.GetWorkerCount() == 0
+	})
+}
+
+func (self *pool) AwaitIdle(timeout time.Duration) error {
+	// Wait until no work is outstanding (nothing queued, nothing running).
+	return self.awaitCondition(timeout, idlePollInterval, "timed out waiting for pool to become idle", func() bool {
+		return self.GetOutstanding() == 0
+	})
+}
+
+// awaitCondition returns nil once done reports true, or wraps TimeoutError with
+// msg if the timeout elapses first. It waits on channels rather than sleeping,
+// and the deadline timer fires exactly at the timeout, so the wait doesn't
+// overshoot by a poll interval.
+func (self *pool) awaitCondition(timeout, pollInterval time.Duration, msg string, done func() bool) error {
+	if done() {
+		return nil
+	}
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			return errors.Wrap(TimeoutError, msg)
+		case <-ticker.C:
+			if done() {
+				return nil
+			}
+		}
+	}
+}
+
 func (self *pool) worker(initialWork func()) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -207,20 +291,26 @@ func (self *pool) worker(initialWork func()) {
 	}()
 
 	defer func() {
-		if !self.stopped.Load() {
-			// There's a small race condition where the last worker can exit due to idle
-			// right as something is queued. If we're the last worker, check again, just
-			// to be sure there's nothing queued.
-			//
-			// There's another race condition where if minWorkers is 1, multiple can exit
-			// at the same time and the count can drop to 0. If that happens, start a new
-			// worker
-			newCount := self.decrementCount()
-			if newCount < self.minWorkers {
-				self.addWorkerIfBelowMin()
-			} else if newCount == 0 {
-				time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
-			}
+		newCount := self.decrementCount()
+
+		if self.stopped.Load() {
+			// Pool is shutting down. Don't respawn workers. The count is still
+			// decremented (unlike the running case's respawn logic) so that
+			// ShutdownAndWait can observe the pool draining to zero workers.
+			return
+		}
+
+		// There's a small race condition where the last worker can exit due to idle
+		// right as something is queued. If we're the last worker, check again, just
+		// to be sure there's nothing queued.
+		//
+		// There's another race condition where if minWorkers is 1, multiple can exit
+		// at the same time and the count can drop to 0. If that happens, start a new
+		// worker
+		if newCount < self.minWorkers {
+			self.addWorkerIfBelowMin()
+		} else if newCount == 0 {
+			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
 		}
 	}()
 
@@ -228,7 +318,10 @@ func (self *pool) worker(initialWork func()) {
 		self.runWork(initialWork)
 	}
 
-	for {
+	// Once shut down, finish the current work (already done by this point)
+	// and exit without pulling more from the queue. Queued-but-not-started
+	// work is intentionally abandoned.
+	for !self.stopped.Load() {
 		select {
 		case work := <-self.queue:
 			self.decrQueueSize()
@@ -248,6 +341,9 @@ func (self *pool) worker(initialWork func()) {
 }
 
 func (self *pool) startExtraWorkerIfQueueBusy() {
+	if self.stopped.Load() {
+		return
+	}
 	if self.getWorkerCount() < self.maxWorkers {
 		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
 			select {
@@ -266,6 +362,9 @@ func (self *pool) startExtraWorkerIfQueueBusy() {
 }
 
 func (self *pool) tryAddWorker() {
+	if self.stopped.Load() {
+		return
+	}
 	if self.getWorkerCount() < self.maxWorkers {
 		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
 			go self.workF(uint32(workerNumber), func() {
@@ -278,6 +377,9 @@ func (self *pool) tryAddWorker() {
 }
 
 func (self *pool) addWorkerIfBelowMin() {
+	if self.stopped.Load() {
+		return
+	}
 	if workerNumber := self.incrementCount(); workerNumber <= self.minWorkers {
 		go self.workF(uint32(workerNumber), func() {
 			self.worker(nil)
@@ -290,6 +392,7 @@ func (self *pool) addWorkerIfBelowMin() {
 func (self *pool) runWork(work func()) {
 	self.incrBusyWorkers()
 	defer self.decrBusyWorkers()
+	defer self.decrOutstanding()
 	if self.onWorkCallback != nil {
 		start := time.Now()
 		work()
@@ -325,6 +428,24 @@ func (self *pool) incrQueueSize() uint32 {
 
 func (self *pool) decrQueueSize() uint32 {
 	return atomic.AddUint32(&self.queueSize, ^uint32(0))
+}
+
+func (self *pool) GetOutstanding() uint32 {
+	// Clamp to zero: the counter is balanced (incremented before enqueue,
+	// decremented on completion or enqueue failure), so it should never be
+	// negative, but a stray decrement must not surface as a huge uint32.
+	if v := atomic.LoadInt32(&self.outstanding); v > 0 {
+		return uint32(v)
+	}
+	return 0
+}
+
+func (self *pool) incrOutstanding() int32 {
+	return atomic.AddInt32(&self.outstanding, 1)
+}
+
+func (self *pool) decrOutstanding() int32 {
+	return atomic.AddInt32(&self.outstanding, -1)
 }
 
 func (self *pool) GetBusyWorkers() uint32 {

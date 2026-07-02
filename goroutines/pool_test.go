@@ -225,3 +225,177 @@ func (self *poolBusier) CloseAndWait() error {
 		return nil
 	}
 }
+
+func TestShutdownAndWait(t *testing.T) {
+	t.Run("waits for in-flight work and abandons queued work", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{
+			QueueSize:  5,
+			MinWorkers: 0,
+			MaxWorkers: 1,
+			IdleTime:   time.Second,
+		})
+		req.NoError(err)
+
+		started := make(chan struct{})
+		release := make(chan struct{})
+		var ran atomic.Int32
+
+		// in-flight work: blocks until released, so it's still running when we shut down
+		req.NoError(p.QueueOrError(func() {
+			ran.Add(1)
+			close(started)
+			<-release
+		}))
+
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			req.FailNow("timed out waiting for in-flight work to start")
+		}
+
+		// with the single worker busy, this work sits in the queue and must be abandoned
+		for i := 0; i < 3; i++ {
+			req.NoError(p.QueueOrError(func() { ran.Add(1) }))
+		}
+
+		done := make(chan error, 1)
+		go func() { done <- p.ShutdownAndWait(5*time.Second) }()
+
+		// must not return while the in-flight work is still running
+		select {
+		case <-done:
+			req.FailNow("ShutdownAndWait returned before in-flight work completed")
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		close(release)
+
+		select {
+		case err := <-done:
+			req.NoError(err)
+		case <-time.After(time.Second):
+			req.FailNow("ShutdownAndWait did not return after in-flight work completed")
+		}
+
+		req.Equal(int32(1), ran.Load(), "only the in-flight item should run; queued items are abandoned")
+	})
+
+	t.Run("returns immediately when no workers are running", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 1, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+		req.NoError(p.ShutdownAndWait(time.Second))
+	})
+
+	t.Run("times out when in-flight work does not complete", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 1, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+
+		started := make(chan struct{})
+		release := make(chan struct{})
+		req.NoError(p.QueueOrError(func() {
+			close(started)
+			<-release
+		}))
+
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			req.FailNow("timed out waiting for in-flight work to start")
+		}
+
+		err = p.ShutdownAndWait(100 * time.Millisecond)
+		req.Error(err)
+		req.ErrorIs(err, TimeoutError)
+
+		close(release) // let the worker exit cleanly
+	})
+}
+
+func TestAwaitIdle(t *testing.T) {
+	t.Run("waits until submitted work completes", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 5, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+
+		release := make(chan struct{})
+		var completed atomic.Bool
+		req.NoError(p.QueueOrError(func() {
+			<-release
+			completed.Store(true)
+		}))
+
+		got := make(chan error, 1)
+		go func() { got <- p.AwaitIdle(5 * time.Second) }()
+
+		// must not return while the work is still running
+		select {
+		case <-got:
+			req.FailNow("AwaitIdle returned before work completed")
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		close(release)
+
+		select {
+		case err := <-got:
+			req.NoError(err)
+			req.True(completed.Load())
+		case <-time.After(time.Second):
+			req.FailNow("AwaitIdle did not return after work completed")
+		}
+	})
+
+	t.Run("returns immediately when no work is outstanding", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 1, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+		req.NoError(p.AwaitIdle(time.Second))
+	})
+
+	t.Run("times out when work does not complete", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 1, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+
+		release := make(chan struct{})
+		req.NoError(p.QueueOrError(func() { <-release }))
+
+		err = p.AwaitIdle(100 * time.Millisecond)
+		req.Error(err)
+		req.ErrorIs(err, TimeoutError)
+
+		close(release)
+	})
+
+	t.Run("rejected submissions do not leak outstanding work", func(t *testing.T) {
+		req := require.New(t)
+		p, err := NewPool(PoolConfig{QueueSize: 1, MinWorkers: 0, MaxWorkers: 1, IdleTime: time.Second})
+		req.NoError(err)
+
+		started := make(chan struct{})
+		release := make(chan struct{})
+		req.NoError(p.QueueOrError(func() {
+			close(started)
+			<-release
+		}))
+
+		select {
+		case <-started:
+		case <-time.After(time.Second):
+			req.FailNow("timed out waiting for first work item to start")
+		}
+
+		// one more fills the single queue slot; the next is rejected
+		req.NoError(p.QueueOrError(func() {}))
+		req.ErrorIs(p.QueueOrError(func() {}), QueueFullError)
+
+		close(release)
+
+		// despite the rejected submission, the pool must still drain to idle
+		req.NoError(p.AwaitIdle(5 * time.Second))
+		req.Equal(uint32(0), p.GetOutstanding())
+	})
+}
