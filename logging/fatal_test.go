@@ -93,3 +93,38 @@ func TestFatalEmitsDurablyAndExits(t *testing.T) {
 	})
 	require.Equal(t, "v", attrs["k"])
 }
+
+// TestPanicEmitsDurablyAndPanics proves Panic writes its record synchronously
+// (present before any Close, so it survives the stack unwind), carries the
+// attrs and caller PC, and panics with the message. The global level is set
+// above Panic to also prove Panic bypasses level gating, matching logrus.Panic.
+func TestPanicEmitsDurablyAndPanics(t *testing.T) {
+	resetDefaultForTest()
+	rec := &recordingHandler{}
+	async, err := NewAsyncHandler(rec, DefaultOptions())
+	require.NoError(t, err)
+	defer func() { _ = async.Close() }()
+	Configure(async)
+	SetGlobalLevel(LevelPanic + 4) // above Panic: a gated path would drop it
+
+	var recovered any
+	func() {
+		defer func() { recovered = recover() }()
+		Panic(context.Background(), "boom", slog.String("k", "v"))
+	}()
+
+	require.Equal(t, "boom", recovered, "Panic must panic with the message")
+	require.Equal(t, 1, rec.count(), "record must be written synchronously, not left in the queue")
+
+	got := rec.snapshot()[0]
+	require.Equal(t, LevelPanic, got.Level)
+	require.Equal(t, "boom", got.Message)
+	require.NotZero(t, got.PC, "Panic should capture the caller PC")
+
+	attrs := map[string]string{}
+	got.Attrs(func(a slog.Attr) bool {
+		attrs[a.Key] = a.Value.String()
+		return true
+	})
+	require.Equal(t, "v", attrs["k"])
+}

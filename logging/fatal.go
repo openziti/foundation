@@ -62,3 +62,26 @@ func Fatal(ctx context.Context, msg string, attrs ...slog.Attr) {
 	_ = SyncEmit(ctx, r)
 	osExit(1)
 }
+
+// Panic writes msg at LevelPanic and then panics with msg. It is the
+// slog-world equivalent of logrus.Panic, which slog does not provide (slog has
+// only Debug/Info/Warn/Error and never panics itself).
+//
+// Like Fatal, the record is emitted durably through SyncEmit before the stack
+// unwinds, so it flushes any queued records and writes synchronously first, and
+// it bypasses level gating so a panic is never filtered out. Unlike Fatal, the
+// process is not exited: the panic propagates and can be recovered by a
+// deferred handler further up the stack. Call this instead of logging an Error
+// and then calling panic: the plain path drops the record because the async
+// queue never drains before the stack unwinds.
+//
+// The panic value is msg (a string), not a logging type, so a recovering
+// handler sees a self-contained message.
+func Panic(ctx context.Context, msg string, attrs ...slog.Attr) {
+	var pcs [1]uintptr
+	runtime.Callers(2, pcs[:]) // skip runtime.Callers + this frame
+	r := slog.NewRecord(time.Now(), LevelPanic, msg, pcs[0])
+	r.AddAttrs(attrs...)
+	_ = SyncEmit(ctx, r)
+	panic(msg)
+}
