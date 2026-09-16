@@ -23,34 +23,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_AtomicBitset_SetAndClearAndGetPrevious(t *testing.T) {
+func Test_AtomicBitset_GetAndSet_GetAndClear(t *testing.T) {
 	req := require.New(t)
 	var bits AtomicBitSet
 
-	prev := bits.SetAndGetPrevious(3)
+	prev := bits.GetAndSet(3)
 	req.False(prev.IsSet(3))
 	req.True(bits.IsSet(3))
 
-	prev = bits.SetAndGetPrevious(3)
+	prev = bits.GetAndSet(3)
 	req.True(prev.IsSet(3), "setting an already set bit reports it as previously set")
 	req.True(bits.IsSet(3))
 
-	prev = bits.SetAndGetPrevious(7)
+	prev = bits.GetAndSet(7)
 	req.True(prev.IsSet(3), "the previous value carries unrelated bits")
 	req.False(prev.IsSet(7))
 	req.True(bits.IsSet(3))
 	req.True(bits.IsSet(7))
 
-	prev = bits.ClearAndGetPrevious(3)
+	prev = bits.GetAndClear(3)
 	req.True(prev.IsSet(3))
 	req.True(prev.IsSet(7))
 	req.False(bits.IsSet(3))
 	req.True(bits.IsSet(7), "clearing one bit leaves the others")
 
-	prev = bits.ClearAndGetPrevious(3)
+	prev = bits.GetAndClear(3)
 	req.False(prev.IsSet(3), "clearing an already clear bit reports it as previously clear")
 
-	prev = bits.SetAndGetPrevious(31)
+	prev = bits.GetAndSet(31)
 	req.False(prev.IsSet(31))
 	req.True(bits.IsSet(31))
 	req.Equal(uint32(1<<31|1<<7), bits.Load())
@@ -59,7 +59,7 @@ func Test_AtomicBitset_SetAndClearAndGetPrevious(t *testing.T) {
 // Two goroutines each set their own bit and look for the other's in the previous value. Because
 // each operation is a single read-modify-write, at least one of them must see the other's bit;
 // a separate store and load offers no such guarantee. Iterated to give the race a chance.
-func Test_AtomicBitset_SetAndGetPrevious_OneSideAlwaysSeesTheOther(t *testing.T) {
+func Test_AtomicBitset_GetAndSet_OneSideAlwaysSeesTheOther(t *testing.T) {
 	req := require.New(t)
 
 	const first, second = 0, 1
@@ -73,12 +73,12 @@ func Test_AtomicBitset_SetAndGetPrevious_OneSideAlwaysSeesTheOther(t *testing.T)
 		go func() {
 			defer done.Done()
 			start.Wait()
-			firstSawSecond = bits.SetAndGetPrevious(first).IsSet(second)
+			firstSawSecond = bits.GetAndSet(first).IsSet(second)
 		}()
 		go func() {
 			defer done.Done()
 			start.Wait()
-			secondSawFirst = bits.SetAndGetPrevious(second).IsSet(first)
+			secondSawFirst = bits.GetAndSet(second).IsSet(first)
 		}()
 		start.Done()
 		done.Wait()

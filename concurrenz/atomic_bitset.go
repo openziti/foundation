@@ -22,8 +22,8 @@ import "sync/atomic"
 // for concurrent use. The zero value is an empty set.
 type AtomicBitSet uint32
 
-// BitSet is a snapshot of an AtomicBitSet's word, as returned by SetAndGetPrevious. It is a
-// plain value and is not safe to share between goroutines that mutate it.
+// BitSet is a snapshot of an AtomicBitSet's word, as returned by GetAndSet and GetAndClear. It is
+// a plain value and is not safe to share between goroutines that mutate it.
 type BitSet uint32
 
 // IsSet reports whether the bit at index is set in the snapshot.
@@ -34,23 +34,23 @@ func (self BitSet) IsSet(index int) bool {
 // Set sets or clears the bit at index.
 func (self *AtomicBitSet) Set(index int, val bool) {
 	if val {
-		self.SetAndGetPrevious(index)
+		self.GetAndSet(index)
 	} else {
-		self.ClearAndGetPrevious(index)
+		self.GetAndClear(index)
 	}
 }
 
-// SetAndGetPrevious sets the bit at index and returns the set as it was immediately before, in a
-// single atomic read-modify-write. Two goroutines each setting their own bit this way are
-// guaranteed that at least one of them sees the other's bit in the returned value, which a
-// separate store and load cannot promise without ordering both sides.
-func (self *AtomicBitSet) SetAndGetPrevious(index int) BitSet {
+// GetAndSet sets the bit at index and returns the set as it was immediately before, in a single
+// atomic read-modify-write. Two goroutines each setting their own bit this way are guaranteed
+// that at least one of them sees the other's bit in the returned value, which a separate store
+// and load cannot promise without ordering both sides.
+func (self *AtomicBitSet) GetAndSet(index int) BitSet {
 	return BitSet(atomic.OrUint32((*uint32)(self), 1<<index))
 }
 
-// ClearAndGetPrevious clears the bit at index and returns the set as it was immediately before,
-// in a single atomic read-modify-write.
-func (self *AtomicBitSet) ClearAndGetPrevious(index int) BitSet {
+// GetAndClear clears the bit at index and returns the set as it was immediately before, in a
+// single atomic read-modify-write.
+func (self *AtomicBitSet) GetAndClear(index int) BitSet {
 	return BitSet(atomic.AndUint32((*uint32)(self), ^uint32(1<<index)))
 }
 
