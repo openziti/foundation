@@ -175,10 +175,10 @@ func TestPackageDefaultWorksBeforeConfigure(t *testing.T) {
 	require.NotPanics(t, func() { _ = GlobalLevel() })
 	require.NotPanics(t, func() { _ = HandlerFor("x") })
 
-	// A log call against For-logger goes through the bootstrap discard root
-	// without error; the discard's Enabled returns false but namedHandler's
-	// own gate is independent, so Handle is reached and silently drops the
-	// record.
+	// A log call against a For-logger is harmless before Configure: the
+	// bootstrap discard root's Enabled returns false, namedHandler.Enabled
+	// reports that, and slog drops the record before Handle is ever reached.
+	require.False(t, For("x").Enabled(context.Background(), slog.LevelInfo))
 	require.NotPanics(t, func() { For("x").Info("dropped-silently") })
 }
 
@@ -225,6 +225,33 @@ func TestConfigureSwapsRootInPlace(t *testing.T) {
 	require.Equal(t, 1, rec2.count(), "post-swap records reach the new root via the same logger")
 
 	require.Same(t, log, For("x"), "Configure swap must preserve the logger cache")
+}
+
+// A logger captured before a root swap answers Enabled from the current root, so swapping in a
+// stricter root takes effect on that logger immediately.
+func TestConfigureSwapChangesEnabledLive(t *testing.T) {
+	resetDefaultForTest()
+
+	permissive := &rootGate{min: LevelTrace}
+	Configure(permissive)
+	SetGlobalLevel(LevelTrace)
+	log := For("x")
+	ctx := context.Background()
+	require.True(t, log.Enabled(ctx, slog.LevelWarn))
+
+	strict := &rootGate{min: slog.LevelError}
+	Configure(strict)
+	require.False(t, log.Enabled(ctx, slog.LevelWarn), "the swapped-in root's gate applies to the existing logger")
+	require.True(t, log.Enabled(ctx, slog.LevelError))
+
+	log.Warn("declined by the new root before a record is built")
+	log.Error("admitted by the new root")
+	var msgs []string
+	for _, rec := range strict.rec.snapshot() {
+		msgs = append(msgs, rec.Message)
+	}
+	require.Equal(t, []string{"admitted by the new root"}, msgs)
+	require.Empty(t, permissive.rec.snapshot(), "nothing reaches the previous root after the swap")
 }
 
 // TestRegistryConcurrentSetAndFor stress-tests concurrent For lookups and
@@ -282,4 +309,43 @@ func resetDefaultForTest() {
 	defaultRegistry.mu.Unlock()
 	defaultRegistry.SetRoot(discardHandler{})
 	defaultRegistry.global.Set(slog.LevelInfo)
+}
+
+// rootGate is a root handler that admits only levels at or above min and records what reaches
+// Handle, standing in for a root that filters on criteria the registry does not know about.
+type rootGate struct {
+	min slog.Level
+	rec recordingHandler
+}
+
+func (g *rootGate) Enabled(_ context.Context, level slog.Level) bool { return level >= g.min }
+func (g *rootGate) Handle(ctx context.Context, r slog.Record) error  { return g.rec.Handle(ctx, r) }
+func (g *rootGate) WithAttrs([]slog.Attr) slog.Handler               { return g }
+func (g *rootGate) WithGroup(string) slog.Handler                    { return g }
+
+// A named handler is enabled only when both the registry level and the root handler admit the
+// level, so a root that declines is never handed a record.
+func TestRegistryEnabledConsultsRoot(t *testing.T) {
+	gate := &rootGate{min: slog.LevelWarn}
+	r := NewRegistry(gate)
+	r.SetGlobalLevel(LevelTrace)
+
+	logger := r.For("x")
+	ctx := context.Background()
+	require.False(t, logger.Enabled(ctx, slog.LevelInfo), "registry admits info, root does not")
+	require.True(t, logger.Enabled(ctx, slog.LevelWarn))
+
+	logger.Info("declined by root")
+	logger.With("k", "v").WithGroup("g").Info("declined through bound and grouped handlers")
+	logger.Warn("admitted")
+
+	var msgs []string
+	for _, rec := range gate.rec.snapshot() {
+		msgs = append(msgs, rec.Message)
+	}
+	require.Equal(t, []string{"admitted"}, msgs)
+
+	gate.min = LevelTrace
+	r.SetGlobalLevel(slog.LevelError)
+	require.False(t, logger.Enabled(ctx, slog.LevelWarn), "root admits warn, registry does not")
 }
