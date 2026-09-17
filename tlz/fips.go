@@ -1,13 +1,12 @@
-//go:build goexperiment.opensslcrypto && requirefips
-
 package tlz
 
-import (
-    "crypto/boring"
-    _ "crypto/tls/fipsonly"
-)
+import "crypto/fips140"
 
-// returns true if the OpenSSL FIPS provider is active at runtime
+// FipsEnabled reports whether the cryptography libraries are operating in FIPS
+// 140-3 mode.
+//
+// Note that this also works with the Microsoft build of Go when using an OpenSSL backend.
+// In that case, it reports whether the OpenSSL library is operating in FIPS mode.
 func FipsEnabled() bool {
-    return boring.Enabled()
+	return fips140.Enabled()
 }
