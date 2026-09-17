@@ -180,10 +180,16 @@ type namedHandler struct {
 
 var _ slog.Handler = (*namedHandler)(nil)
 
-func (h *namedHandler) Enabled(_ context.Context, level slog.Level) bool {
-	return level >= h.registry.resolveLevel(h.name)
+// Enabled requires both the registry's level for this name and the root handler to admit
+// level, so a root that filters on its own criteria is consulted before slog builds a record.
+func (h *namedHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return level >= h.registry.resolveLevel(h.name) && h.registry.Root().Enabled(ctx, level)
 }
 
+// Handle dispatches r to the current root without re-checking its Enabled: a root swapped in
+// between slog's Enabled check and this call can receive one in-flight record it would have
+// declined, which is accepted rather than paying an extra Enabled call on every record for a
+// swap that happens once at startup.
 func (h *namedHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.registry.Root().Handle(ctx, r)
 }
