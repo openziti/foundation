@@ -264,8 +264,8 @@ func TestShutdownAndWait(t *testing.T) {
 
 		// must not return while the in-flight work is still running
 		select {
-		case <-done:
-			req.FailNow("ShutdownAndWait returned before in-flight work completed")
+		case err := <-done:
+			req.FailNow("ShutdownAndWait returned before in-flight work completed", "err: %v", err)
 		case <-time.After(100 * time.Millisecond):
 		}
 
@@ -332,8 +332,8 @@ func TestAwaitIdle(t *testing.T) {
 
 		// must not return while the work is still running
 		select {
-		case <-got:
-			req.FailNow("AwaitIdle returned before work completed")
+		case err := <-got:
+			req.FailNow("AwaitIdle returned before work completed", "err: %v", err)
 		case <-time.After(100 * time.Millisecond):
 		}
 

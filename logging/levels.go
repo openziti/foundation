@@ -16,7 +16,8 @@
 
 // Package logging is the async slog sink that ziti's logging refactor lands on.
 // It owns the seven canonical log levels (trace through panic), the bounded
-// AsyncHandler, and the SyncEmit path used for fatal/panic durability.
+// AsyncHandler, the SyncEmit path used for fatal/panic durability, and the
+// pfxlog-shaped output handlers (PrettyHandler, NewJSONHandler, NewTextHandler).
 package logging
 
 import (
