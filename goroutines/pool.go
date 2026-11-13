@@ -33,8 +33,9 @@ const (
 
 // Pool represents a goroutine worker pool that can be configured with a queue size and min and max sizes.
 //
-//	The pool will start with min size goroutines and will add more if the queue isn't staying empty.
-//	After a worker has been idle for a configured time, it will stop
+//	The pool starts with min size goroutines. Whenever more work is queued than there are idle workers to
+//	take it, the pool starts another worker, up to max size. After a worker has been idle for a configured
+//	time, it stops, unless that would take the pool below min size.
 type Pool interface {
 	// Queue submits a unit of work to the pool. It will return an error if the pool is shutdown
 	Queue(func()) error
@@ -99,6 +100,10 @@ type PoolConfig struct {
 	OnCreate func(Pool)
 	// A function to identify the pool type. WorkerFunction must call embedded function to start the worker
 	WorkerFunction func(uint32, func())
+
+	// onIdleExit, if set, runs when an idle worker has decided to exit, before it leaves the worker count.
+	// Tests use it to make several workers exit at once.
+	onIdleExit func()
 }
 
 func (self *PoolConfig) Validate() error {
@@ -134,6 +139,7 @@ func NewPool(config PoolConfig) (Pool, error) {
 		panicHandler:        config.PanicHandler,
 		onWorkCallback:      config.OnWorkCallback,
 		workF:               config.WorkerFunction,
+		onIdleExit:          config.onIdleExit,
 	}
 
 	if result.workF == nil {
@@ -155,7 +161,6 @@ func NewPool(config PoolConfig) (Pool, error) {
 
 type pool struct {
 	queue               chan func()
-	queueSize           uint32
 	outstanding         int32
 	count               int32
 	minWorkers          int32
@@ -168,6 +173,7 @@ type pool struct {
 	panicHandler        func(err interface{})
 	onWorkCallback      func(workTime time.Duration)
 	workF               func(uint32, func())
+	onIdleExit          func()
 }
 
 func (self *pool) Queue(work func()) error {
@@ -179,15 +185,15 @@ func (self *pool) QueueWithTimeout(work func(), timeout time.Duration) error {
 }
 
 func (self *pool) queueImpl(work func(), timeoutC <-chan time.Time) error {
-	self.ensureNoStarvation()
+	// A full queue with no idle worker would otherwise block this send until a busy worker finished.
+	self.addWorkerIfBacklogged()
 	// Count the work as outstanding before it can be picked up by a worker, so a
 	// worker can never complete-and-decrement before this increment lands. Undo it
 	// on any path where the work isn't actually enqueued.
 	self.incrOutstanding()
 	select {
 	case self.queue <- work:
-		self.incrQueueSize()
-		self.ensureNoStarvation()
+		self.addWorkerIfBacklogged()
 		return nil
 	case <-self.closeNotify:
 		self.decrOutstanding()
@@ -206,8 +212,7 @@ func (self *pool) QueueOrError(work func()) error {
 	self.incrOutstanding()
 	select {
 	case self.queue <- work:
-		self.incrQueueSize()
-		self.ensureNoStarvation()
+		self.addWorkerIfBacklogged()
 		return nil
 	case <-self.closeNotify:
 		self.decrOutstanding()
@@ -221,8 +226,14 @@ func (self *pool) QueueOrError(work func()) error {
 	}
 }
 
-func (self *pool) ensureNoStarvation() {
-	if self.minWorkers == 0 && self.GetWorkerCount() == 0 {
+// addWorkerIfBacklogged starts a worker, up to max workers, when more work is queued than there are idle
+// workers to take it. Workers count as idle from the time they start until they begin running work, so
+// one that is just starting is credited against the backlog. The counts are read without a lock, so it
+// can occasionally start one worker more than needed; the extra worker exits once it has been idle.
+func (self *pool) addWorkerIfBacklogged() {
+	count := self.getWorkerCount()
+	idle := count - int32(self.GetBusyWorkers())
+	if int32(len(self.queue)) > idle {
 		self.tryAddWorker()
 	}
 }
@@ -278,7 +289,7 @@ func (self *pool) awaitCondition(timeout, pollInterval time.Duration, msg string
 	}
 }
 
-func (self *pool) worker(initialWork func()) {
+func (self *pool) worker() {
 	defer func() {
 		if err := recover(); err != nil {
 			if self.panicHandler != nil {
@@ -300,35 +311,27 @@ func (self *pool) worker(initialWork func()) {
 			return
 		}
 
-		// There's a small race condition where the last worker can exit due to idle
-		// right as something is queued. If we're the last worker, check again, just
-		// to be sure there's nothing queued.
-		//
-		// There's another race condition where if minWorkers is 1, multiple can exit
-		// at the same time and the count can drop to 0. If that happens, start a new
-		// worker
+		// Several workers can exit at once and take the count below min. And work queued
+		// while this worker was deciding to exit counted it as idle, so check the backlog
+		// again now that it's gone.
 		if newCount < self.minWorkers {
 			self.addWorkerIfBelowMin()
-		} else if newCount == 0 {
-			time.AfterFunc(100*time.Millisecond, self.startExtraWorkerIfQueueBusy)
+		} else {
+			self.addWorkerIfBacklogged()
 		}
 	}()
 
-	if initialWork != nil {
-		self.runWork(initialWork)
-	}
-
-	// Once shut down, finish the current work (already done by this point)
-	// and exit without pulling more from the queue. Queued-but-not-started
-	// work is intentionally abandoned.
+	// Once shut down, exit without pulling more from the queue. Queued work that
+	// hasn't started is intentionally abandoned.
 	for !self.stopped.Load() {
 		select {
 		case work := <-self.queue:
-			self.decrQueueSize()
-			self.startExtraWorkerIfQueueBusy()
 			self.runWork(work)
 		case <-time.After(self.maxIdle):
 			if self.getWorkerCount() > self.minWorkers {
+				if self.onIdleExit != nil {
+					self.onIdleExit()
+				}
 				return
 			}
 		case <-self.closeNotify:
@@ -340,27 +343,6 @@ func (self *pool) worker(initialWork func()) {
 	}
 }
 
-func (self *pool) startExtraWorkerIfQueueBusy() {
-	if self.stopped.Load() {
-		return
-	}
-	if self.getWorkerCount() < self.maxWorkers {
-		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
-			select {
-			case work := <-self.queue:
-				self.decrQueueSize()
-				go self.workF(uint32(workerNumber), func() {
-					self.worker(work)
-				})
-			default:
-				self.decrementCount()
-			}
-		} else {
-			self.decrementCount()
-		}
-	}
-}
-
 func (self *pool) tryAddWorker() {
 	if self.stopped.Load() {
 		return
@@ -368,7 +350,7 @@ func (self *pool) tryAddWorker() {
 	if self.getWorkerCount() < self.maxWorkers {
 		if workerNumber := self.incrementCount(); workerNumber <= self.maxWorkers {
 			go self.workF(uint32(workerNumber), func() {
-				self.worker(nil)
+				self.worker()
 			})
 		} else {
 			self.decrementCount()
@@ -382,7 +364,7 @@ func (self *pool) addWorkerIfBelowMin() {
 	}
 	if workerNumber := self.incrementCount(); workerNumber <= self.minWorkers {
 		go self.workF(uint32(workerNumber), func() {
-			self.worker(nil)
+			self.worker()
 		})
 	} else {
 		self.decrementCount()
@@ -393,6 +375,9 @@ func (self *pool) runWork(work func()) {
 	self.incrBusyWorkers()
 	defer self.decrBusyWorkers()
 	defer self.decrOutstanding()
+	// Until it was marked busy, this worker counted as idle, so work queued since it took this item may have
+	// gone without a worker.
+	self.addWorkerIfBacklogged()
 	if self.onWorkCallback != nil {
 		start := time.Now()
 		work()
@@ -419,15 +404,7 @@ func (self *pool) decrementCount() int32 {
 }
 
 func (self *pool) GetQueueSize() uint32 {
-	return atomic.LoadUint32(&self.queueSize)
-}
-
-func (self *pool) incrQueueSize() uint32 {
-	return atomic.AddUint32(&self.queueSize, 1)
-}
-
-func (self *pool) decrQueueSize() uint32 {
-	return atomic.AddUint32(&self.queueSize, ^uint32(0))
+	return uint32(len(self.queue))
 }
 
 func (self *pool) GetOutstanding() uint32 {
